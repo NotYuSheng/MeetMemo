@@ -52,7 +52,7 @@ def transcribe(file_name: str, model_name: str = "turbo"):
             full_transcript += f"{start:.2f}s–{end:.2f}s  speaker_{speaker}: {utterance}\n"
 
         timestamp = get_timestamp()
-        with open(f"transcripts/{file_name}.txt", "w", encoding="utf-8") as f:
+        with open(os.path.join("transcripts", f"{file_name}.txt"), "w", encoding="utf-8") as f:
             f.write(full_transcript)
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
         return {"transcript": full_transcript}
@@ -86,25 +86,19 @@ def health_check():
 def get_job_status(file_name: str):
     logs = get_logs()
     status = []
-    status += f"Job status for {file_name}:\n"
+    status.append(f"Job status for {file_name}:\n")
     for i in logs['logs']:
         if file_name in i:
-            status += i
+            status.append(i)
     return {"file_name": file_name, "status": status}
 
 @app.get("/files/{file_name}")
 def get_file_transcript(file_name: str):
-    file_path = f"transcripts/{file_name}.pdf"
+    file_path = f"transcripts/{file_name}.txt"
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             full_transcript = f.read()
         return {"status": "exists", "full_transcript": full_transcript}
     else:
-        file_path = f"transcripts/{file_name}.txt"
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as f:
-                full_transcript = f.read()
-            return {"status": "exists", "full_transcript": full_transcript}
-        else:
-            return {"status": "not found"}
+        return {"status": "not found"}
         
