@@ -5,20 +5,22 @@ from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
 import os
 from fastapi import FastAPI
-import datetime
+import datetime, logging
 
 app = FastAPI()    
+
+logging.basicConfig(level=logging.INFO)
 
 dotenv_path = os.path.join('config', '.env')
 load_dotenv(dotenv_path)
 
-error = []
 @app.post("/jobs")
 def transcribe(file_name: str, model_name: str = "turbo"):
     try:
         file_path = f"data/{file_name}.wav"
         model = whisper.load_model(model_name)
-        model = model.to("cuda:0")
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        model = model.to(device)
 
         pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", 
                                             use_auth_token=os.getenv("USE_AUTH_TOKEN"))
@@ -36,6 +38,7 @@ def transcribe(file_name: str, model_name: str = "turbo"):
             full_transcript += f"{start:.2f}s–{end:.2f}s  speaker_{speaker}: {utterance}\n"
 
         return {"transcript": full_transcript}
+    
     except Exception as e:
-        error.append(str(e))
-        return {"error": str(e)}, 500
+        logging.error(f"Error processing file {file_name}: {e}", exc_info=True)
+        return {"error": str(e)}
