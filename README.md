@@ -31,7 +31,13 @@ pip install .
 
 1.  Create a `.env` file in the `config` folder. Follow the example given in `.env.example`.
 
-2.  Change `USE_AUTH_TOKEN` and `AUDIO_FILE_NAME` to your HF token key and target audio file respectively.
+2.  Change `USE_AUTH_TOKEN` to your HF token key and target audio file respectively.
+
+## Installing FFmpeg using Chocolatey
+
+```powershell
+choco install ffmpeg
+```
 
 ## Running the script
 

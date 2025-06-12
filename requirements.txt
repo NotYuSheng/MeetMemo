@@ -1,7 +1,5 @@
 setuptools==59.5.0
 numpy==1.26.4
-torch
-torchvision
 openai-whisper
 pyannote.audio
 soundfile
