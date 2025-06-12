@@ -1,12 +1,13 @@
+from datetime import datetime, timezone, timedelta
+import logging
+import os
+
 import whisper
 from pyannote.audio import Pipeline
 from pyannote.audio import Audio
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
-import os
 from fastapi import FastAPI
-from datetime import datetime, timezone, timedelta, 
-import logging
 from numba import cuda
 
 app = FastAPI()    
@@ -27,6 +28,7 @@ def get_timestamp():
 @app.post("/jobs")
 def transcribe(file_name: str, model_name: str = "turbo"):
     try:
+        logging.info(f"Received transcription request for file: {file_name}.wav with model: {model_name}")
         file_path = f"data/{file_name}.wav"
         model = whisper.load_model(model_name)
         device = "cuda:0" if cuda.is_available() else "cpu"
@@ -50,7 +52,9 @@ def transcribe(file_name: str, model_name: str = "turbo"):
             full_transcript += f"{start:.2f}s–{end:.2f}s  speaker_{speaker}: {utterance}\n"
 
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Successfully processed file {file_name}.wav")
+        with open(f"transcripts/{file_name}.txt", "w", encoding="utf-8") as f:
+            f.write(full_transcript)
+        logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
         return {"transcript": full_transcript}
     
     except Exception as e:
@@ -69,8 +73,7 @@ def health_check():
     error_msg = ''
     try:
         logs = get_logs()
-        for i in logs['logs']:
-            error_msg = [i for i in logs['logs'] if "error" in i.lower()]
+        error_msg = [i for i in logs['logs'] if "error" in i.lower()]
         if error_msg:
             return {"status": "error", "message": error_msg}
         else:
@@ -79,3 +82,29 @@ def health_check():
         logging.error(f"Health check failed: {e}")
         return {"status": "error", "error": str(e)}
     
+@app.get("/jobstatus/{file_name}")
+def get_job_status(file_name: str):
+    logs = get_logs()
+    status = []
+    status += f"Job status for {file_name}:\n"
+    for i in logs['logs']:
+        if file_name in i:
+            status += i
+    return {"file_name": file_name, "status": status}
+
+@app.get("/files/{file_name}")
+def get_file_transcript(file_name: str):
+    file_path = f"transcripts/{file_name}.pdf"
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            full_transcript = f.read()
+        return {"status": "exists", "full_transcript": full_transcript}
+    else:
+        file_path = f"transcripts/{file_name}.txt"
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                full_transcript = f.read()
+            return {"status": "exists", "full_transcript": full_transcript}
+        else:
+            return {"status": "not found"}
+        
