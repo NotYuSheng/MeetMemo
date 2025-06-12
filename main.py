@@ -70,8 +70,7 @@ def health_check():
     try:
         logs = get_logs()
         for i in logs['logs']:
-            if "error" in i.lower():
-                error_msg += i
+            error_msg = [i for i in logs['logs'] if "error" in i.lower()]
         if error_msg:
             return {"status": "error", "message": error_msg}
         else:
