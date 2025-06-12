@@ -1,0 +1,15 @@
+.text-interface {
+  padding: 1rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+}
+
+.message-bubble {
+  background-color: #e0e0e0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  width: fit-content;
+  max-width: 80%;
+}

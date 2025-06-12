@@ -1,0 +1,10 @@
+setuptools==59.5.0
+numpy==1.26.4
+openai-whisper
+pyannote.audio
+soundfile
+speechbrain==0.5.16 
+dotenv
+fastapi
+torch
+uvicorn
