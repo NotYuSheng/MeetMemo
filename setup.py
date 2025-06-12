@@ -1,5 +1,4 @@
 import os
-
 import pkg_resources
 from setuptools import setup, find_packages
 
@@ -10,7 +9,6 @@ setup(
     description="Speech Recognition plus diarization",
     readme="README.md",
     python_requires=">=3.7",
-    author="Ruiqing",
     url="https://github.com/yinruiqing/pyannote-whisper",
     license="MIT",
     packages=find_packages(exclude=["tests*"]),

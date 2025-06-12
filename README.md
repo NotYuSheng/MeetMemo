@@ -33,6 +33,12 @@ pip install .
 
 2.  Change `USE_AUTH_TOKEN` and `AUDIO_FILE_NAME` to your HF token key and target audio file respectively.
 
+## Installing FFmpeg using Chocolatey
+
+```powershell
+choco install ffmpeg
+```
+
 ## Running the script
 
 After all of the above steps are completed, proceed to run the `main.py` in terminal.
