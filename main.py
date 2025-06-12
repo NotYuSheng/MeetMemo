@@ -17,7 +17,6 @@ pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization",
 file_name = "testing_ccs"
 file_path = f"data/{file_name}.wav"
 model = whisper.load_model("large-v3")
-model = model.to("cuda:0")
 
 asr = model.transcribe(file_path, language="en")
 diarization = pipeline(file_path)
