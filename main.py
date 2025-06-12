@@ -11,7 +11,7 @@ from numba import cuda
 
 app = FastAPI()    
 
-logging.basicConfig(level=logging.ERROR,
+logging.basicConfig(level=logging.INFO,
                     filename='logs/app.log',
                     filemode='a',
                     )
@@ -69,13 +69,13 @@ def health_check():
     error_msg = ''
     try:
         logs = get_logs()
-        if "error" not in logs['logs']:
-            return {"status": "ok"}
-        else:
-            for i in logs['logs']:
-                if "error" in i.lower():
-                    error_msg += i
+        for i in logs['logs']:
+            if "error" in i.lower():
+                error_msg += i
+        if error_msg:
             return {"status": "error", "message": error_msg}
+        else:
+            return {"status": "ok"}
     except Exception as e:
         logging.error(f"Health check failed: {e}")
         return {"status": "error", "error": str(e)}
