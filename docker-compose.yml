@@ -19,7 +19,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     volumes:
-      - audiofiles:/usr/share/nginx/html/audiofiles  # Optional access in React if needed
+      - audiofiles:/app/audiofiles
     ports:
       - "3000:80"
 

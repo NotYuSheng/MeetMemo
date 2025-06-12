@@ -18,7 +18,7 @@ load_dotenv(dotenv_path)
 @app.post("/jobs")
 def transcribe(file_name: str, model_name: str = "turbo"):
     try:
-        file_path = f"data/{file_name}.wav"
+        file_path = f"audiofiles/{file_name}.wav"
         model = whisper.load_model(model_name)
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
