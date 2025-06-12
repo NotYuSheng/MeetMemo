@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./meet-memo-backend
+      dockerfile: Dockerfile
+    container_name: backend
+    volumes:
+      - audiofiles:/app/audiofiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      - frontend
+
+  frontend:
+    build:
+      context: ./meet-memo-frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    volumes:
+      - audiofiles:/usr/share/nginx/html/audiofiles  # Optional access in React if needed
+    ports:
+      - "3000:80"
+
+volumes:
+  audiofiles:
