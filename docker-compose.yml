@@ -6,8 +6,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: backend
+    environment:
+      - USE_AUTH_TOKEN=${USE_AUTH_TOKEN}
     volumes:
       - audiofiles:/app/audiofiles
+      - logs:/app/logs
     ports:
       - "8000:8000"
     depends_on:
@@ -20,17 +23,10 @@ services:
     container_name: frontend
     volumes:
       - audiofiles:/app/audiofiles
+      - logs:/app/logs
+    environment:
     ports:
-      - "3000:3000" # React
-    depends_on:
-      - uploadserver
-
-  uploadserver:
-    build: ./upload
-    ports:
-      - "4000:4000"
-    volumes:
-      - audiofiles:/app/audiofiles
-
+      - "3000:80"
 volumes:
   audiofiles:
+  logs:

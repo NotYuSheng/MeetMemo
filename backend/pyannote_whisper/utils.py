@@ -1,4 +1,4 @@
-from pyannote.core import Segment, Annotation, Timeline
+from pyannote.core import Segment
 
 
 def get_text_with_timestamp(transcribe_res):

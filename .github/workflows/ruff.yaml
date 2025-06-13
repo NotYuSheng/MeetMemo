@@ -1,0 +1,30 @@
+name: Lint with Ruff
+
+on:
+  push:
+    paths:
+      - '**.py'
+  pull_request:
+    paths:
+      - '**.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.3'
+
+      - name: Run Ruff
+        uses: astral-sh/ruff-action@v3.2.2
+        with:
+          args: check .

@@ -9,3 +9,5 @@ fastapi
 torch
 uvicorn
 pydantic
+numba
+uvicorn
