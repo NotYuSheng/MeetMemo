@@ -1,84 +1,92 @@
 from datetime import datetime, timezone, timedelta
 import logging
 import os
-
 import whisper
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from numba import cuda
+import json
 
+# Start up the app
 app = FastAPI()    
 
+# Store logs inside the volume
 logging.basicConfig(level=logging.INFO,
                     filename='logs/app.log',
                     filemode='a',
                     )
 
+# Environment variables for HuggingFace tokens
 load_dotenv('.env')
 
-def get_timestamp():
+##################################### Functions #####################################
+def get_timestamp() -> str:
+    '''
+    Gets the current date & time in the `YYYY-MM-DD H:MM:SS` format.
+    '''
     tz_gmt8 = timezone(timedelta(hours=8))
     return datetime.now(tz_gmt8).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def format_result(diarized: list) -> list[dict]:
+    """
+    Formats the diarized results into an array of speaker-utterance pairs.
+    """
+    full_transcript = []
+
+    for _, speaker, utterance in diarized:
+        segment = {speaker: utterance}
+        full_transcript.append(segment)
+
+    return full_transcript
+
+
+##################################### Main routes for back-end #####################################
 @app.post("/jobs")
-def transcribe(file_name: str, model_name: str = "turbo"):
+def transcribe(file_name: str, model_name: str = "turbo") -> list[dict]:
+    '''
+    Gets the audio file from the front-end form data, & transcribes it using the Whisper turbo model.
+
+    Returns an array of speaker-utterance pairs to be displayed on the front-end.
+    '''
     try:
         logging.info(f"Received transcription request for file: {file_name}.wav with model: {model_name}")
         file_path = f"audiofiles/{file_name}.wav"
         model = whisper.load_model(model_name)
-        device = "cuda:0" if cuda.is_available() else "cpu"
+        device = "cpu"
         model = model.to(device)
 
+        # Log time & activity
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Processing file {file_name}.wav with model {model_name}")
-        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", 
-                                            use_auth_token=os.getenv("USE_AUTH_TOKEN"))
 
+        # Transcription & diarization of text
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization", 
+            use_auth_token=os.getenv("USE_AUTH_TOKEN")
+        )
         asr = model.transcribe(file_path, language="en")
         diarization = pipeline(file_path)
 
+        # Format the transcribed + diarized results as array of speaker-utterance pairs
         diarized = diarize_text(asr, diarization)
+        full_transcript = format_result(diarized=diarized)
 
-        full_transcript = ""
-
-        for segment, speaker, utterance in diarized:
-            start = segment.start
-            end   = segment.end
-            full_transcript += f"{start:.2f}s–{end:.2f}s  speaker_{speaker}: {utterance}\n"
-
+        # Save results & log activity process
         timestamp = get_timestamp()
-        with open(os.path.join("transcripts", f"{file_name}.txt"), "w", encoding="utf-8") as f:
-            f.write(full_transcript)
+        with open(os.path.join("transcripts", f"{file_name}.json"), "w", encoding="utf-8") as f:
+            json.dump(full_transcript, f, indent=4)
+            
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
-        return {"transcript": full_transcript}
+        return full_transcript
     
+    # Catch any errors when trying to transcribe & diarize recording
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
         return {"error": str(e)}
-
-@app.get("/logs")
-def get_logs():
-    with open("logs/app.log", "r") as f:
-        logs = f.readlines()
-    return {"logs": logs}
-
-@app.get("/health")
-def health_check():
-    error_msg = ''
-    try:
-        logs = get_logs()
-        error_msg = [i for i in logs['logs'] if "error" in i.lower()]
-        if error_msg:
-            return {"status": "error", "message": error_msg}
-        else:
-            return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Health check failed: {e}")
-        return {"status": "error", "error": str(e)}
     
 @app.get("/jobstatus/{file_name}")
 def get_job_status(file_name: str):
@@ -99,4 +107,26 @@ def get_file_transcript(file_name: str):
         return {"status": "exists", "full_transcript": full_transcript}
     else:
         return {"status": "not found"}
-        
+
+
+##################################### Functionality check #####################################
+@app.get("/logs")
+def get_logs() -> dict:
+    with open("logs/app.log", "r") as f:
+        logs = f.readlines()
+    return {"logs": logs}
+
+
+@app.get("/health")
+def health_check():
+    error_msg = ''
+    try:
+        logs = get_logs()
+        error_msg = [i for i in logs['logs'] if "error" in i.lower()]
+        if error_msg:
+            return {"status": "error", "message": error_msg}
+        else:
+            return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Health check failed: {e}")
+        return {"status": "error", "error": str(e)}
