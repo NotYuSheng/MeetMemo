@@ -24,7 +24,6 @@ services:
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
-    environment:
     ports:
       - "3000:80"
 volumes:
