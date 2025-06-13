@@ -5,55 +5,29 @@ export default function TextInterface() {
   const [messages, setMessages] = useState([]);
   const [audioFile, setAudioFile] = useState(null);
 
-  const handleAudioUpload = async () => {
-    console.log("Upload button clicked"); // DEBUG LINE
-    if (!audioFile) {
-      alert("Please select a .wav file first.");
-      return;
-  }
+  async function handleAudioUpload() {
+    try {
+      const formData = new FormData();
+      formData.append('file', audioFile);
+      const response = await fetch('http://localhost:8000/jobs', {
+        method: 'POST',
+        body: formData, // multipart/form-data with the audio file
+      });
 
-  const formData = new FormData();
-  formData.append('file', audioFile);
+      if (!response.ok) {
+        throw new Error('Job processing failed');
+      }
 
-  try {
-    // Routes resultant WAV file for download
-    const uploadResponse = await fetch('http://uploadserver:4000/upload', {
-      method: 'POST',
-      body: formData,
-    });
+      const resultData = await response.json(); // Should contain the transcription
+      console.log('Jobs response:', resultData);
 
-    if (!uploadResponse.ok) {
-      throw new Error('Upload failed');
+      // Assuming resultData is like: { transcript: "full text" }
+      setMessages(resultData.transcript); // or however you display messages
+
+    } catch (error) {
+      console.error('Error during transcription job:', error);
     }
-
-    console.log("File is successfully uploaded")
-
-    const uploadData = await uploadResponse.json(); // Expects { path: "/path/to/file" }
-
-    // Then: Trigger /jobs with uploaded file info
-    const jobsResponse = await fetch('http://backend:8000/jobs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ file_path: uploadData.path })  // match new field
-    });
-
-    console.log('Upload path:', uploadData.path);
-
-    if (!jobsResponse.ok) {
-      throw new Error('Job processing failed');
-    }
-
-    const resultData = await jobsResponse.json(); // Should be [{ speaker, text }]
-    setMessages(resultData);
-    
-    console.log('Jobs response:', resultData);
-
-  } catch (error) {
-    console.error('Error uploading or processing audio:', error);
   }
-};
 
   return (
     <div className="text-interface">

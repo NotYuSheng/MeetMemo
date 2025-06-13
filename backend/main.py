@@ -5,8 +5,7 @@ import whisper
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
-from fastapi import FastAPI
-from numba import cuda
+from fastapi import FastAPI, UploadFile, File
 import json
 
 # Start up the app
@@ -20,6 +19,8 @@ logging.basicConfig(level=logging.INFO,
 
 # Environment variables for HuggingFace tokens
 load_dotenv('.env')
+UPLOAD_DIR = "audiofiles"
+DEVICE = "cpu"
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -43,19 +44,36 @@ def format_result(diarized: list) -> list[dict]:
     return full_transcript
 
 
+def upload_audio(file: UploadFile = File(...)) -> str:
+    """
+    Uploads the audio file to the desired directory,
+    & returns the resultant file name in string form.
+    """
+    timestamp = get_timestamp()
+    filename = f"{timestamp}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    # Save the file to disk
+    with open(file_path, "wb") as buffer:
+        buffer.write(file.file.read())
+
+    return filename
+
+
 ##################################### Main routes for back-end #####################################
 @app.post("/jobs")
-def transcribe(file_name: str, model_name: str = "turbo") -> list[dict]:
+def transcribe(file: UploadFile = File(...), model_name: str = "turbo") -> list[dict]:
     '''
     Gets the audio file from the front-end form data, & transcribes it using the Whisper turbo model.
 
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
     try:
+        file_name = upload_audio(file=file)    # Uploads audio file to target folder, & returns the file name
         logging.info(f"Received transcription request for file: {file_name}.wav with model: {model_name}")
-        file_path = f"audiofiles/{file_name}.wav"
+        file_path = os.path.join("audiofiles", file_name)
         model = whisper.load_model(model_name)
-        device = "cpu"
+        device = DEVICE
         model = model.to(device)
 
         # Log time & activity
@@ -86,8 +104,9 @@ def transcribe(file_name: str, model_name: str = "turbo") -> list[dict]:
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
-        return {"error": str(e)}
+        return [{"error": str(e)}]
     
+
 @app.get("/jobstatus/{file_name}")
 def get_job_status(file_name: str):
     logs = get_logs()
@@ -97,6 +116,7 @@ def get_job_status(file_name: str):
         if file_name in i:
             status.append(i)
     return {"file_name": file_name, "status": status}
+
 
 @app.get("/files/{file_name}")
 def get_file_transcript(file_name: str):
