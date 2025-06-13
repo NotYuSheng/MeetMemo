@@ -21,7 +21,8 @@ services:
     volumes:
       - audiofiles:/app/audiofiles
     ports:
-      - "3000:80"
+      - "3000:3000" # React
+      - "4000:4000" # Upload server
 
 volumes:
   audiofiles:

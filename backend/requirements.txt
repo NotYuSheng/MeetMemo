@@ -8,3 +8,4 @@ dotenv
 fastapi
 torch
 uvicorn
+pydantic

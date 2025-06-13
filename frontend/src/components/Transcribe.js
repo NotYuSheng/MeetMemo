@@ -5,27 +5,48 @@ export default function TextInterface() {
   const [messages, setMessages] = useState([]);
   const [audioFile, setAudioFile] = useState(null);
 
-  const handleAudioUpload = async () => {
-    if (!audioFile) {
-      alert("Please select a .wav file first.");
-      return;
+const handleAudioUpload = async () => {
+  if (!audioFile) {
+    alert("Please select a .wav file first.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', audioFile);
+
+  try {
+    // Routes resultant WAV file for download
+    const uploadResponse = await fetch('http://localhost:4000/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Upload failed');
     }
 
-    const formData = new FormData();
-    formData.append('file', audioFile);
+    const uploadData = await uploadResponse.json(); // Expects { path: "/path/to/file" }
 
-    try {
-      const response = await fetch('http://localhost:8000/jobs', {
-        method: 'POST',
-        body: formData,
-      });
+    // Then: Trigger /jobs with uploaded file info
+    const jobsResponse = await fetch('http://localhost:8000/jobs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file_path: uploadData.path })  // match new field
+    });
 
-      const data = await response.json(); // Expecting array of { speaker, text }
-      setMessages(data);
-    } catch (error) {
-      console.error('Error uploading audio:', error);
+
+    if (!jobsResponse.ok) {
+      throw new Error('Job processing failed');
     }
-  };
+
+    const resultData = await jobsResponse.json(); // Should be [{ speaker, text }]
+    setMessages(resultData);
+  } catch (error) {
+    console.error('Error uploading or processing audio:', error);
+  }
+};
 
   return (
     <div className="text-interface">

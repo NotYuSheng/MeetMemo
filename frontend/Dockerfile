@@ -1,20 +1,19 @@
-# Step 1: Build React app
-FROM node:18 AS build
+FROM node:18
 WORKDIR /app
+
 COPY package.json package-lock.json ./
 RUN npm install
+
 COPY . .
+
+# Build React app
 RUN npm run build
 
+# Optional: install express and multer for the upload server
 RUN npm install express multer
 
-COPY upload-server.js .
+EXPOSE 3000
+EXPOSE 4000
 
+# Start React dev server AND upload server
 CMD ["sh", "-c", "npm start & node upload-server.js"]
-
-
-# Step 2: Serve via nginx
-FROM nginx:alpine
-COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]

@@ -4,9 +4,15 @@ from pyannote.audio import Audio
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
 import os
-from fastapi import FastAPI
-import datetime, logging
+from fastapi import FastAPI, HTTPException
+import logging
 import torch
+
+from pydantic import BaseModel
+
+class TranscriptionRequest(BaseModel):
+    file_path: str
+    model_name: str = "turbo"
 
 app = FastAPI()    
 
@@ -16,9 +22,11 @@ dotenv_path = os.path.join('config', '.env')
 load_dotenv(dotenv_path)
 
 @app.post("/jobs")
-def transcribe(file_name: str, model_name: str = "turbo"):
+def transcribe(request: TranscriptionRequest):
     try:
-        file_path = f"audiofiles/{file_name}.wav"
+        file_path = request.file_path
+        model_name = request.model_name
+
         model = whisper.load_model(model_name)
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
@@ -40,5 +48,5 @@ def transcribe(file_name: str, model_name: str = "turbo"):
         return {"transcript": full_transcript}
     
     except Exception as e:
-        logging.error(f"Error processing file {file_name}: {e}", exc_info=True)
-        return {"error": str(e)}
+        logging.error(f"Error processing file {file_path}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -8,9 +8,16 @@ const port = 4000;
 const upload = multer({ dest: '/app/shared/' });
 
 app.post('/upload', upload.single('file'), (req, res) => {
-  res.json({ filename: req.file.filename, path: req.file.path });
-});
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
 
+  // Save path so /jobs can access it
+  const filepath = path.resolve(req.file.path);
+  console.log('Received file at:', filepath);
+
+  res.json({ path: filepath }); // Respond with file path
+});
 app.listen(port, () => {
   console.log(`Upload server running on port ${port}`);
 });
