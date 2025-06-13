@@ -2,15 +2,7 @@
 
 Run ASR and speaker diarization based on `whisper` and `pyannote.audio`.
 
-We are using Whisper's `large-v3` model for ASR.
-
-## Installation
-
-1. Installing the required tools via `setup.py`
-
-```python
-pip install .
-```
+We are using Whisper's `turbo` model as the default for ASR.
 
 ## Creating your personal HuggingFace token:
 
@@ -29,20 +21,15 @@ pip install .
 
 ## Setting up env file and target audio file
 
-1.  Create a `.env` file in the `config` folder. Follow the example given in `.env.example`.
+1.  Create a `.env`. Follow the example given in `.env.example`.
 
 2.  Change `USE_AUTH_TOKEN` to your HF token key and target audio file respectively.
 
-## Installing FFmpeg using Chocolatey
-
-```powershell
-choco install ffmpeg
-```
 
 ## Running the script
 
-After all of the above steps are completed, proceed to run the `main.py` in terminal.
+After all of the above steps are completed, proceed to run the docker compose file in terminal.
 
-```python
-python main.py
+```bash
+docker compose up
 ```

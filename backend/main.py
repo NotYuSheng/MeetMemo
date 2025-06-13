@@ -17,8 +17,7 @@ logging.basicConfig(level=logging.INFO,
                     filemode='a',
                     )
 
-dotenv_path = os.path.join('config', '.env')
-load_dotenv(dotenv_path)
+load_dotenv('.env')
 
 def get_timestamp():
     tz_gmt8 = timezone(timedelta(hours=8))
