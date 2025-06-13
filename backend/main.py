@@ -28,7 +28,7 @@ def get_timestamp():
 def transcribe(file_name: str, model_name: str = "turbo"):
     try:
         logging.info(f"Received transcription request for file: {file_name}.wav with model: {model_name}")
-        file_path = f"data/{file_name}.wav"
+        file_path = f"audiofiles/{file_name}.wav"
         model = whisper.load_model(model_name)
         device = "cuda:0" if cuda.is_available() else "cpu"
         model = model.to(device)

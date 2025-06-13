@@ -21,7 +21,7 @@ We are using Whisper's `turbo` model as the default for ASR.
 
 ## Setting up env file and target audio file
 
-1.  Create a `.env`. Follow the example given in `.env.example`.
+1.  Create a `.env` file. Follow the example given in `.env.example`.
 
 2.  Change `USE_AUTH_TOKEN` to your HF token key and target audio file respectively.
 
