@@ -4,7 +4,6 @@ import os
 
 import whisper
 from pyannote.audio import Pipeline
-from pyannote.audio import Audio
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
 from fastapi import FastAPI
