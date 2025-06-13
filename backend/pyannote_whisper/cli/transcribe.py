@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 import warnings
-from typing import Literal, cast
+from typing import Literal
 
 import numpy as np
 import torch
