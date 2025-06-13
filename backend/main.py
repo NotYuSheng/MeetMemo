@@ -40,12 +40,17 @@ def transcribe(request: TranscriptionRequest):
 
         full_transcript = ""
 
+        results = []
+
         for segment, speaker, utterance in diarized:
             start = segment.start
-            end   = segment.end
-            full_transcript += f"{start:.2f}s–{end:.2f}s  speaker_{speaker}: {utterance}\n"
+            end = segment.end
+            results.append({
+                "speaker": f"speaker_{speaker}",
+                "text": f"{start:.2f}s–{end:.2f}s {utterance}"
+            })
 
-        return {"transcript": full_transcript}
+        return results
     
     except Exception as e:
         logging.error(f"Error processing file {file_path}: {e}", exc_info=True)

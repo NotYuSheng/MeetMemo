@@ -3,7 +3,7 @@ version: "3.9"
 services:
   backend:
     build:
-      context: ./meet-memo-backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: backend
     volumes:
@@ -15,7 +15,7 @@ services:
 
   frontend:
     build:
-      context: ./meet-memo-frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
     volumes:
