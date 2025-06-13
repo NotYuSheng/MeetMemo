@@ -7,3 +7,4 @@ speechbrain==0.5.16
 dotenv
 fastapi
 numba
+uvicorn

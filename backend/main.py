@@ -4,7 +4,6 @@ import os
 
 import whisper
 from pyannote.audio import Pipeline
-from pyannote.audio import Audio
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -17,8 +16,7 @@ logging.basicConfig(level=logging.INFO,
                     filemode='a',
                     )
 
-dotenv_path = os.path.join('config', '.env')
-load_dotenv(dotenv_path)
+load_dotenv('.env')
 
 def get_timestamp():
     tz_gmt8 = timezone(timedelta(hours=8))
@@ -29,7 +27,7 @@ def get_timestamp():
 def transcribe(file_name: str, model_name: str = "turbo"):
     try:
         logging.info(f"Received transcription request for file: {file_name}.wav with model: {model_name}")
-        file_path = f"data/{file_name}.wav"
+        file_path = f"audiofiles/{file_name}.wav"
         model = whisper.load_model(model_name)
         device = "cuda:0" if cuda.is_available() else "cpu"
         model = model.to(device)
