@@ -16,4 +16,4 @@ COPY . .
 RUN npm run build
 
 # Start React dev server AND upload server
-CMD ["sh", "-c", "npm start & node upload-server.js"]
+CMD ["sh", "-c", "npm start"]

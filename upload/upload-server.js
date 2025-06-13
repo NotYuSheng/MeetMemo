@@ -4,11 +4,12 @@ const path = require('path');
 const app = express();
 const port = 4000;
 const fs = require('fs');
-
+const cors = require('cors');
 
 // Store uploaded files in the shared volume
 const upload = multer({ dest: '/app/audiofiles/' });
 
+app.use(cors());
 app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });

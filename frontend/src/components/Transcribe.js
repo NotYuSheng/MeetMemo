@@ -5,10 +5,11 @@ export default function TextInterface() {
   const [messages, setMessages] = useState([]);
   const [audioFile, setAudioFile] = useState(null);
 
-const handleAudioUpload = async () => {
-  if (!audioFile) {
-    alert("Please select a .wav file first.");
-    return;
+  const handleAudioUpload = async () => {
+    console.log("Upload button clicked"); // DEBUG LINE
+    if (!audioFile) {
+      alert("Please select a .wav file first.");
+      return;
   }
 
   const formData = new FormData();
@@ -16,7 +17,7 @@ const handleAudioUpload = async () => {
 
   try {
     // Routes resultant WAV file for download
-    const uploadResponse = await fetch('http://localhost:4000/upload', {
+    const uploadResponse = await fetch('http://uploadserver:4000/upload', {
       method: 'POST',
       body: formData,
     });
@@ -25,10 +26,12 @@ const handleAudioUpload = async () => {
       throw new Error('Upload failed');
     }
 
+    console.log("File is successfully uploaded")
+
     const uploadData = await uploadResponse.json(); // Expects { path: "/path/to/file" }
 
     // Then: Trigger /jobs with uploaded file info
-    const jobsResponse = await fetch('http://localhost:8000/jobs', {
+    const jobsResponse = await fetch('http://backend:8000/jobs', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,6 +39,7 @@ const handleAudioUpload = async () => {
       body: JSON.stringify({ file_path: uploadData.path })  // match new field
     });
 
+    console.log('Upload path:', uploadData.path);
 
     if (!jobsResponse.ok) {
       throw new Error('Job processing failed');
@@ -43,6 +47,9 @@ const handleAudioUpload = async () => {
 
     const resultData = await jobsResponse.json(); // Should be [{ speaker, text }]
     setMessages(resultData);
+    
+    console.log('Jobs response:', resultData);
+
   } catch (error) {
     console.error('Error uploading or processing audio:', error);
   }
@@ -56,7 +63,7 @@ const handleAudioUpload = async () => {
         accept=".wav"
         onChange={(e) => setAudioFile(e.target.files[0])}
       />
-      <button onClick={handleAudioUpload}>Send to /jobs</button>
+      <button type='button' onClick={handleAudioUpload}>Send to /jobs</button>
 
       <div className="transcripts">
         {messages.map((msg, index) => (

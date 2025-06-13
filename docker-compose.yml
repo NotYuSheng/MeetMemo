@@ -22,7 +22,15 @@ services:
       - audiofiles:/app/audiofiles
     ports:
       - "3000:3000" # React
-      - "4000:4000" # Upload server
+    depends_on:
+      - uploadserver
+
+  uploadserver:
+    build: ./upload
+    ports:
+      - "4000:4000"
+    volumes:
+      - audiofiles:/app/audiofiles
 
 volumes:
   audiofiles:

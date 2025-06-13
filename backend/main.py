@@ -38,8 +38,6 @@ def transcribe(request: TranscriptionRequest):
         diarization = pipeline(file_path)
         diarized = diarize_text(asr, diarization)
 
-        full_transcript = ""
-
         results = []
 
         for segment, speaker, utterance in diarized:
