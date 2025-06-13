@@ -6,10 +6,24 @@ from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import json
 
 # Start up the app
 app = FastAPI()    
+
+origins = [
+    "http://localhost:3000",  # React dev server
+    "http://127.0.0.1:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,            # or ["*"] to allow all
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Store logs inside the volume
 logging.basicConfig(level=logging.INFO,
