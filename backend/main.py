@@ -117,7 +117,7 @@ def transcribe(file: UploadFile = File(...), model_name: str = "turbo") -> list[
     # Catch any errors when trying to transcribe & diarize recording
     except Exception as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
+        logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True) # type: ignore
         return [{"error": str(e)}]
     
 
