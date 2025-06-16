@@ -1,21 +1,19 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
 }
 
+.Padded-text {
+  padding: 15px;
+  background-color: lightgray;
+}
+
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  text-align: center;
+  background-image: url("resources/image.jpg");
+  background-color: transparent;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -35,4 +33,8 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+body {
+  background-color: grey;
 }
