@@ -1,12 +1,16 @@
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
+    height: 15vh;
   }
+}
+
+body {
+  background-color: grey;
 }
 
 .Padded-text {
   padding: 15px;
-  background-color: lightgray;
 }
 
 .App-header {
@@ -35,6 +39,89 @@
   }
 }
 
-body {
-  background-color: grey;
+.file-button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.file-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  text-align: left;
+  width: fit-content;
+  transition: background 0.2s ease;
+}
+
+.light-grey {
+  background-color: #b0b0b0;
+}
+
+.dark-grey {
+  background-color: #515050;
+}
+
+.file-button:hover {
+  background-color: #a0a0a0;
+  color: white;
+}
+
+.main-content {
+  display: flex;
+  padding: 20px;
+  gap: 40px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.left-panel, .right-panel {
+  flex: 1;
+  max-width: 45%;
+}
+
+.file-button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.file-button {
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+.light-grey {
+  background-color: #e0e0e0;
+}
+
+.dark-grey {
+  background-color: #c0c0c0;
+}
+
+.message-bubble {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 10px;
+  background-color: #f0f0f0;
+}
+
+.speaker-1 {
+  background-color: #ede8d0;
+  align-self: flex-start;
+}
+
+.speaker-2 {
+  background-color: #ffffff;
+  align-self: flex-end;
+}
+
+.upload-section {
+  margin-top: 20px;
 }
