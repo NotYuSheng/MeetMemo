@@ -5,25 +5,27 @@
   }
 }
 
-body {
-  background-color: grey;
-}
-
 .Padded-text {
   padding: 15px;
+}
+
+body {
+  background-color: rgb(20, 20, 20);
 }
 
 .App-header {
   text-align: center;
   background-image: url("resources/image.jpg");
   background-color: transparent;
-  min-height: 100px;
+  width: 100vw;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+  z-index: 1000;
+  position: fixed;
 }
 
 .App-link {
@@ -39,70 +41,23 @@ body {
   }
 }
 
-.file-button-container {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.file-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 16px;
-  cursor: pointer;
-  text-align: left;
-  width: fit-content;
-  transition: background 0.2s ease;
-}
-
-.light-grey {
-  background-color: #b0b0b0;
-}
-
-.dark-grey {
-  background-color: #515050;
-}
-
-.file-button:hover {
-  background-color: #a0a0a0;
-  color: white;
-}
-
 .main-content {
   display: flex;
   padding: 20px;
   gap: 40px;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
+  max-width: 100vw;
+  box-sizing: border-box;
+  margin-left: 25vw; /* <-- This shifts the content to the right */
 }
 
-.left-panel, .right-panel {
-  flex: 1;
-  max-width: 45%;
-}
 
 .file-button-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.file-button {
-  padding: 10px;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  border-radius: 6px;
-}
-
-.light-grey {
-  background-color: #e0e0e0;
-}
-
-.dark-grey {
-  background-color: #c0c0c0;
+  gap: 0;
+  width: 23vw;
 }
 
 .message-bubble {
@@ -113,15 +68,58 @@ body {
 }
 
 .speaker-1 {
-  background-color: #ede8d0;
+  background-color: #928f82;
   align-self: flex-start;
 }
 
 .speaker-2 {
-  background-color: #ffffff;
+  background-color: #737373;
   align-self: flex-end;
 }
 
 .upload-section {
   margin-top: 20px;
+}
+
+.left-panel {
+  color: white;
+  width: 25vw;
+  min-height: 100vh;
+  background-color: #000000;
+  border-right: 1px solid #ccc;
+  box-sizing: border-box;
+  position: fixed;
+  left: 0;
+  padding-left: 1vw;
+}
+
+.right-panel h3, h4 {
+  color: white;
+}
+
+.left-panel, .right-panel {
+  padding-top: 125px;
+}
+
+.file-button {
+  border: none;
+  text-align: left;
+  padding: 10px 15px;
+  font-size: 1rem;
+  border-radius: 8px;
+  color: #ffffff;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: transparent;
+}
+
+.file-button:hover {
+  background-color: #363636;
+}
+
+.file-button.selected {
+  background-color: rgb(34, 34, 34);
+  font-weight: bold;
 }

@@ -41,7 +41,7 @@ function App() {
           <h3>Past transcriptions:</h3>
           <div className="file-button-container">
             {fileNames.map((filename, idx) => (
-              <button key={idx} className={`file-button ${idx % 2 === 0 ? 'light-grey' : 'dark-grey'}`}>
+              <button key={idx} className={`file-button`}>
                 {filename}
               </button>
             ))}
