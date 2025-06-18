@@ -40,7 +40,7 @@ load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
 csv_lock = Lock()
 csv_file = "audiofiles/audiofiles.csv"
-DEVICE = "cuda:0" if whisper.is_cuda_available() else "cpu"
+DEVICE = "cpu"
 
 
 ##################################### Functions #####################################
@@ -306,3 +306,5 @@ def health_check():
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e)}
+    
+print("Ready to rock & ro-o-oll")
