@@ -1,12 +1,32 @@
 from fastapi import FastAPI, UploadFile, File
+import time
 
 app = FastAPI()
+
+@app.get("/name/{uuid}")
+async def get_file_name(uuid: str) -> dict[str, str]:
+    """
+    Returns the filename associated with a given UUID.
+    """
+    csv_list = {
+        "1": "file_1",
+        "2": "file_2",
+        "3": "file_3",
+        "4": "file_4",
+        "5": "file_5"
+    }
+
+    if uuid in csv_list:
+        return {"name": csv_list[uuid]}
+    return {"error": "UUID not found"}
+
 
 @app.post("/jobs")
 async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[str, str]]]:
     """
     Dummy function to transcribe input audio file.
     """
+    time.sleep(10)
     dummy_transcription = [
         {"Customer": "Hi, I'm having trouble connecting to the internet."},
         {"Support Agent": "I'm sorry to hear that. Can you tell me if any of the router lights are blinking red?"},
@@ -42,15 +62,7 @@ async def check_files() -> dict[str, dict[str, str]]:
         }
     }
 
-
-@app.delete("/jobs/{uuid}")
-async def delete_item(uuid: int) -> dict[str, str]:
-    """
-    Performs deletion of a dummy item.
-    """
-    return {"status": "success", "message": f"Item {uuid} deleted"}
-
-@app.get("/file/{uuid}")
+@app.get("/jobs/{uuid}/transcript")
 async def get_file_transcript(uuid: str) -> dict[str, list[dict[str, str]]]:
     """
     Gets the transcription contents from the file.
@@ -88,11 +100,13 @@ async def get_file_transcript(uuid: str) -> dict[str, list[dict[str, str]]]:
 
     return {"result": dummy_transcripts[uuid]}
 
-
-# # Serve index.html at root or for unknown paths (for React Router support)
-# @app.get("/{full_path:path}")
-# async def serve_react_app(full_path: str):
-#     index_path = "../frontend/build/index.html"
-#     if os.path.exists(index_path):
-#         return FileResponse(index_path)
-#     return {"error": "Frontend not built yet"}
+@app.delete("/jobs/{uuid}")
+async def delete_item(uuid: int) -> dict[str, str]:
+    uuid_files = {
+        1: "file_1",
+        2: "file_2",
+        3: "file_3",
+        4: "file_4",
+        5: "file_5"
+    }
+    return {"status": "success", "message": f"Job with UUID {uuid} and file {uuid_files[uuid]} deleted successfully."}

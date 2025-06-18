@@ -6,6 +6,7 @@ function Home() {
   const [fileNames, setFileNames] = useState([]);
   const [transcription, setTranscription] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetch("/jobs")
@@ -21,8 +22,29 @@ function Home() {
       .catch(err => console.error("Failed to fetch file names:", err));
   }, []);
 
+  const deleteFile = (uuid) => {
+    if (!window.confirm("Are you sure you want to delete this transcription?")) return;
+
+    fetch(`/jobs/${uuid}`, {
+      method: "DELETE",
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Deleted:", data);
+        // Remove from UI
+        setFileNames(prev => {
+          const updated = { ...prev };
+          delete updated[uuid];
+          return updated;
+        });
+      })
+      .catch(err => console.error("Failed to delete file:", err));
+  };
+
   const uploadFile = () => {
     if (!selectedFile) return;
+
+    setLoading(true);
 
     const formData = new FormData();
     formData.append("file", selectedFile);
@@ -32,9 +54,16 @@ function Home() {
       body: formData,
     })
       .then(res => res.json())
-      .then(data => setTranscription(Array.isArray(data.transcript) ? data.transcript : []))
-      .catch(err => console.error("Failed to fetch transcription:", err));
+      .then(data => {
+        setTranscription(Array.isArray(data.transcript) ? data.transcript : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch transcription:", err);
+        setLoading(false);
+      });
   };
+
 
   return (
     <div className="App">
@@ -48,13 +77,21 @@ function Home() {
           <h3>Past transcriptions:</h3>
           <div className="file-button-container">
             {Object.entries(fileNames).map(([uuid, filename], idx) => (
-            <button
-                key={idx}
-                className="file-button"
-                onClick={() => window.location.href = `/file/${uuid}`}
-            >
-                {filename}
-            </button>
+              <div key={idx} className="file-entry">
+                <button
+                  className="file-button"
+                  onClick={() => window.location.href = `/file/${uuid}`}
+                >
+                  {filename}
+                </button>
+                <button
+                  className="delete-button"
+                  onClick={() => deleteFile(uuid)}
+                  title="Delete this file"
+                >
+                  🗑️
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -62,6 +99,7 @@ function Home() {
         {/* Right Section: Current Transcription */}
         <div className="right-panel">
             <h3>Current transcription</h3>
+            {loading && <div className="loading-indicator">Transcribing... Please wait.</div>}
             <div className="transcription-container">
                 {transcription.map((entry, idx) => {
                 const [speaker, utterance] = Object.entries(entry)[0];

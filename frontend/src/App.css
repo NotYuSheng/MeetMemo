@@ -1,12 +1,21 @@
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+    animation: App-logo-spin infinite 5s linear;
     height: 15vh;
   }
 }
 
 .Padded-text {
   padding: 15px;
+}
+
+.loading-indicator {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-style: italic;
+  color: #333;
 }
 
 body {
@@ -184,4 +193,20 @@ body {
 .upload-button.active:hover {
   background-color: #0056b3;
 }
+
+.file-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.delete-button {
+  background: transparent;
+  border: none;
+  color: red;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
 
