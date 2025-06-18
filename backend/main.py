@@ -40,7 +40,7 @@ load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
 csv_lock = Lock()
 csv_file = "audiofiles/audiofiles.csv"
-DEVICE = "cpu"
+DEVICE = "cuda:0" if whisper.is_cuda_available() else "cpu"
 
 
 ##################################### Functions #####################################
