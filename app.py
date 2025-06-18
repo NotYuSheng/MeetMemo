@@ -1,10 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
-from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
-
-# Mount the static directory (React build)
-app.mount("/static", StaticFiles(directory="../frontend/build/static"), name="static")
 
 @app.post("/jobs")
 async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[str, str]]]:
