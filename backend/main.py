@@ -287,8 +287,12 @@ def get_file_transcript(uuid: str) -> dict:
     file_name = get_file_name(uuid)["file_name"]
     file_path = f"transcripts/{file_name}.txt"
     if os.path.exists(file_path):
+        full_transcript = []
         with open(file_path, "r", encoding="utf-8") as f:
-            full_transcript = f.read()
+            for line in f:
+                full_transcript.append(line.rstrip('\n'))
+                
+        full_transcript = format_result(full_transcript)
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
         return {"status": "exists", "full_transcript": full_transcript}
