@@ -5,6 +5,7 @@ import whisper
 import csv
 from threading import Lock
 import re
+import requests
 from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
@@ -40,7 +41,7 @@ load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
 csv_lock = Lock()
 csv_file = "audiofiles/audiofiles.csv"
-DEVICE = "cuda:0" if whisper.is_cuda_available() else "cpu"
+DEVICE = "cuda:0"
 
 
 ##################################### Functions #####################################
@@ -109,22 +110,57 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
+def summarise_transcript(transcript: str) -> str:
+    """
+    Summarises the transcript using a defined LLM.
+    """
+
+    url = str(os.getenv("LLM_API_URL"))
+    model_name = str(os.getenv("LLM_MODEL_NAME"))
+
+    payload = {
+        "model": model_name,
+        "temperature": 0.3,
+        "max_tokens": 750,
+        "messages": [
+            {"role": "system",
+             "content": "You are a helpful assistant that summarizes meeting transcripts."},
+            {"role": "user",
+             "content": (
+                 "Please provide a concise summary of the following meeting transcript, "
+                 "highlighting the key points, decisions made, and any action items:\n\n"
+                 + transcript
+             )},
+        ],
+    }
+
+    resp = requests.post(url, json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+    summary = data["choices"][0]["message"]["content"].strip()
+
+    return summary
+
 ##################################### Main routes for back-end #####################################
 @app.get("/jobs")
 def get_jobs() -> dict:
     """
     Returns a list of all audio files in the UPLOAD_DIR.
     """
-    if not os.path.exists(csv_file):
-        with open(csv_file, "w", newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(["uuid", "file_name"])
-    else:
+    try:
+        if not os.path.exists(csv_file):
+            with open(csv_file, "w", newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["uuid", "file_name"])
         with open(csv_file, "r") as f:
             reader = csv.reader(f)
             list_of_files = {i[0]: i[1] for i in reader}
-
-    return {"csv_list": list_of_files}
+        if len(list_of_files) == 0:
+            return {"csv_list": "No audio files found."}
+        else:
+            return {"csv_list": list_of_files}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.post("/jobs")
 def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
@@ -148,7 +184,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
                 break
 
         file_name = upload_audio(uuid, file)
-        logging.info(f"Received transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
+        logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -181,6 +217,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     # Catch any errors when trying to transcribe & diarize recording
     except Exception as e:
         timestamp = get_timestamp()
+        file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
         return {"error": str(e)}
 
@@ -243,7 +280,7 @@ def get_job_status(uuid: str):
 
 
 @app.get("/jobs/{uuid}/transcript")
-def get_file_transcript(uuid: str):
+def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
     """
@@ -275,6 +312,30 @@ def get_job_result(uuid: str) -> dict:
     logging.info(f"{timestamp}: Retrieved diarised transcript for UUID: {uuid}, file name: {file_name}")
     return {"status": "exists", "result": full_result}
 
+@app.post("/jobs/{uuid}/summarise")
+def summarise_job(uuid: str) -> dict:
+    """
+    Summarises the transcript for the given UUID using a defined LLM.
+    """
+    try:
+        file_name = get_file_name(uuid)["file_name"]
+        get_full_transcript_response = get_file_transcript(uuid)
+        if get_full_transcript_response["status"] == "not found":
+            return {"error": f"Transcript not found for the given UUID: {uuid}."}
+        else:
+            full_transcript = get_full_transcript_response["full_transcript"]
+
+        summary = summarise_transcript(full_transcript)
+        
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
+        return {"status": "success", "summary": summary}
+    
+    except Exception as e:
+        timestamp = get_timestamp()
+        file_name = get_file_name(uuid)["file_name"]
+        logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+        return {"error": str(e)}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
