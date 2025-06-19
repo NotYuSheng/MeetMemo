@@ -7,6 +7,30 @@ function Home() {
   const [transcription, setTranscription] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  const summarizeTranscript = async (uuid) => {
+    if (!uuid) return;
+
+    setIsSummarizing(true);
+    setSummary("");
+
+    try {
+      const res = await fetch(`/jobs/${uuid}/summarise`, { method: "POST" });
+      const data = await res.json();
+      if (data.summary) {
+        setSummary(data.summary);
+      } else {
+        setSummary("No summary available.");
+      }
+    } catch (err) {
+      console.error("Failed to summarize transcript:", err);
+      setSummary("An error occurred while summarizing.");
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   useEffect(() => {
     fetch("/jobs")
@@ -55,15 +79,16 @@ function Home() {
     })
       .then(res => res.json())
       .then(data => {
-        setTranscription(Array.isArray(data.transcript) ? data.transcript : []);
-        setLoading(false);
-      })
+      setTranscription(Array.isArray(data.transcript) ? data.transcript : []);
+      setLoading(false);
+      if (data.uuid) summarizeTranscript(data.uuid);
+    })
+
       .catch(err => {
         console.error("Failed to fetch transcription:", err);
         setLoading(false);
       });
   };
-
 
   return (
     <div className="App">
@@ -110,6 +135,16 @@ function Home() {
                 );
                 })}
             </div>
+            {isSummarizing && (
+              <div className="loading-indicator">Summarizing... Please wait.</div>
+            )}
+
+            {summary && !isSummarizing && (
+              <div className="summary-output">
+                <h4>Meeting Summary:</h4>
+                <p>{summary}</p>
+              </div>
+            )}
 
             <div className="upload-section">
                 <h4 className="upload-title">Upload new WAV file</h4>
