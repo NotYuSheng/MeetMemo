@@ -41,7 +41,7 @@ load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
 csv_lock = Lock()
 csv_file = "audiofiles/audiofiles.csv"
-DEVICE = "cuda:0"
+DEVICE = "cpu"
 
 
 ##################################### Functions #####################################
@@ -176,14 +176,15 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
     try:
+        used = set()
         with open(csv_file, "r") as f:
             reader = csv.reader(f)
-        used = set()
-        for row in reader:
-            try:
-                used.add(int(row[0]))
-            except ValueError:
-                continue
+            for row in reader:
+                try:
+                    used.add(int(row[0]))
+                except ValueError:
+                    continue
+
         for i in range(10000):
             if i not in used:
                 uuid = f"{i:04d}"
@@ -377,3 +378,5 @@ def health_check():
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e)}
+    
+print("Ready to rock & ro-o-oll")
