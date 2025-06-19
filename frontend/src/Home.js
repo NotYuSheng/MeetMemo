@@ -9,6 +9,61 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordedChunks, setRecordedChunks] = useState([]);
+
+  const startRecording = async () => {
+    setSummary("");
+    setTranscription([]);
+    setLoading(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      setMediaRecorder(recorder);
+      setRecordedChunks([]);
+
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          setRecordedChunks(prev => [...prev, event.data]);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("file", blob, "recorded_audio.wav");
+
+        fetch("/jobs", {
+          method: "POST",
+          body: formData,
+        })
+          .then(res => res.json())
+          .then(data => {
+            setTranscription(Array.isArray(data.transcript) ? data.transcript : []);
+            setLoading(false);
+            if (data.uuid) summarizeTranscript(data.uuid);
+          })
+          .catch(err => {
+            console.error("Failed to transcribe recorded audio:", err);
+            setLoading(false);
+          });
+      };
+
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Failed to start recording:", err);
+      setLoading(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  };
 
   const summarizeTranscript = async (uuid) => {
     if (!uuid) return;
@@ -164,6 +219,22 @@ function Home() {
                         Upload & Transcribe
                     </button>
                 </div>
+
+              <div className="record-section">
+                <h4 className="upload-title">Or record directly</h4>
+                <div className="record-controls">
+                  {!isRecording ? (
+                    <button onClick={startRecording} className="record-button">
+                      🎤 Start Recording
+                    </button>
+                  ) : (
+                    <button onClick={stopRecording} className="stop-button">
+                      ⏹️ Stop Recording
+                    </button>
+                  )}
+                </div>
+              </div>
+
             </div>
         </div>
       </div>

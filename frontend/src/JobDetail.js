@@ -92,7 +92,7 @@ function JobDetail() {
         )}
       </div>
 
-      <a href='/'>Back to home</a>
+      <a href="/" className="button-link">Back to home</a>
     </div>
   );
 }
