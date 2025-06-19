@@ -1,40 +1,27 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
-    animation: App-logo-spin infinite 5s linear;
-    height: 15vh;
+    animation: App-logo-spin infinite 20s linear;
   }
 }
 
-.Padded-text {
-  padding: 15px;
-}
-
-.loading-indicator {
-  margin: 1rem 0;
-  padding: 0.5rem;
-  background-color: #f0f0f0;
-  border-radius: 4px;
-  font-style: italic;
-  color: #333;
-}
-
-body {
-  background-color: rgb(20, 20, 20);
-}
-
 .App-header {
-  text-align: center;
-  background-image: url("resources/image.jpg");
-  background-color: transparent;
-  width: 100vw;
+  background-color: #282c34;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
-  z-index: 1000;
-  position: fixed;
 }
 
 .App-link {
@@ -48,203 +35,4 @@ body {
   to {
     transform: rotate(360deg);
   }
-}
-
-.main-content {
-  display: flex;
-  padding: 20px;
-  gap: 40px;
-  justify-content: flex-start;
-  align-items: flex-start;
-  max-width: 100vw;
-  box-sizing: border-box;
-  margin-left: 25vw; /* <-- This shifts the content to the right */
-}
-
-
-.file-button-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  width: 23vw;
-}
-
-.message-bubble {
-  padding: 10px;
-  margin: 5px 10px 10px;
-  border-radius: 10px;
-  background-color: #f0f0f0;
-  width: 70vw;
-}
-
-.speaker-1 {
-  background-color: #928f82;
-  align-self: flex-start;
-}
-
-.speaker-2 {
-  background-color: #737373;
-  align-self: flex-end;
-}
-
-.upload-section {
-  margin-top: 20px;
-}
-
-.left-panel {
-  color: white;
-  width: 25vw;
-  min-height: 100vh;
-  background-color: #000000;
-  box-sizing: border-box;
-  position: fixed;
-  left: 0;
-  padding-left: 1vw;
-}
-
-.right-panel h3, h4 {
-  color: white;
-}
-
-.left-panel, .right-panel {
-  padding-top: 125px;
-  padding-right: 1vw;
-}
-
-.file-button {
-  border: none;
-  text-align: left;
-  padding: 10px 15px;
-  font-size: 1rem;
-  border-radius: 8px;
-  color: #ffffff;
-  transition: background-color 0.2s;
-  cursor: pointer;
-  width: 100%;
-  box-sizing: border-box;
-  background-color: transparent;
-}
-
-.file-button:hover {
-  background-color: #363636;
-}
-
-.file-button.selected {
-  background-color: rgb(34, 34, 34);
-  font-weight: bold;
-}
-
-.upload-section {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  border-radius: 16px;
-  background-color: #575757;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: center;
-}
-
-.upload-title {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #ffffff;
-  margin: 0;
-}
-
-.upload-form {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 100%;
-  max-width: 800px;
-  gap: 1rem;
-  background-color: transparent;
-  padding: 1rem;
-  border-radius: 12px;
-}
-
-.file-input {
-  flex: 1;
-  padding: 0.6rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #a08f5c;
-  color: #ffffff;
-  cursor: pointer;
-}
-
-.upload-button {
-  padding: 0.6rem 1.2rem;
-  background-color: #ccc;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  white-space: nowrap;
-  cursor: not-allowed;
-  transition: background-color 0.3s ease;
-}
-
-.upload-button.active {
-  background-color: #007bff;
-  cursor: pointer;
-}
-
-.upload-button.active:hover {
-  background-color: #0056b3;
-}
-
-.file-entry {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.delete-button {
-  background: transparent;
-  border: none;
-  color: red;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.summary-output h4 {
-  color: black;
-}
-
-.summary-output {
-  margin-top: 1rem;
-  padding: 1rem;
-  background-color: #f3f3f3;
-  border-left: 4px solid #4a90e2;
-  border-radius: 8px;
-  font-style: italic;
-  color: black;
-}
-
-.loading-indicator {
-  margin-top: 1rem;
-  font-weight: bold;
-  color: #444;
-}
-
-.record-section {
-  margin-top: 1rem;
-}
-
-.record-button, .stop-button {
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 10px;
-  background-color: #6c63ff;
-  color: white;
-  cursor: pointer;
-  margin-right: 1rem;
-}
-
-.stop-button {
-  background-color: #ff5252;
 }
