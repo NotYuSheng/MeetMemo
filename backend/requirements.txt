@@ -11,3 +11,4 @@ uvicorn==0.29.0
 pydantic==2.7.1
 numba==0.59.1
 python-multipart==0.0.9
+requests
