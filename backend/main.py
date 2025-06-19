@@ -176,14 +176,15 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
     try:
+        used = set()
         with open(csv_file, "r") as f:
             reader = csv.reader(f)
-        used = set()
-        for row in reader:
-            try:
-                used.add(int(row[0]))
-            except ValueError:
-                continue
+            for row in reader:
+                try:
+                    used.add(int(row[0]))
+                except ValueError:
+                    continue
+
         for i in range(10000):
             if i not in used:
                 uuid = f"{i:04d}"

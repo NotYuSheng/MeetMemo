@@ -3,7 +3,7 @@ import time
 
 app = FastAPI()
 
-@app.get("/name/{uuid}")
+@app.get("/jobs/{uuid}/filename")
 async def get_file_name(uuid: str) -> dict[str, str]:
     """
     Returns the filename associated with a given UUID.
@@ -21,12 +21,29 @@ async def get_file_name(uuid: str) -> dict[str, str]:
     return {"error": "UUID not found"}
 
 
+@app.get("/jobs")
+async def check_files() -> dict[str, dict[str, str]]:
+    """
+    Dummy route to return a JSON response including a list of strings.
+    """
+    return {
+        "csv_list":
+        {
+            "1": "file_1",
+            "2": "file_2",
+            "3": "file_3",
+            "4": "file_4",
+            "5": "file_5"
+        }
+    }
+
+
 @app.post("/jobs")
 async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[str, str]]]:
     """
     Dummy function to transcribe input audio file.
     """
-    time.sleep(10)
+    time.sleep(3)
     dummy_transcription = [
         {"Customer": "Hi, I'm having trouble connecting to the internet."},
         {"Support Agent": "I'm sorry to hear that. Can you tell me if any of the router lights are blinking red?"},
@@ -46,21 +63,18 @@ async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[
         "transcript": dummy_transcription
     }
 
-@app.get("/jobs")
-async def check_files() -> dict[str, dict[str, str]]:
-    """
-    Dummy route to return a JSON response including a list of strings.
-    """
-    return {
-        "csv_list":
-        {
-            "1": "file_1",
-            "2": "file_2",
-            "3": "file_3",
-            "4": "file_4",
-            "5": "file_5"
-        }
+
+@app.delete("/jobs/{uuid}")
+async def delete_item(uuid: int) -> dict[str, str]:
+    uuid_files = {
+        1: "file_1",
+        2: "file_2",
+        3: "file_3",
+        4: "file_4",
+        5: "file_5"
     }
+    return {"status": "success", "message": f"Job with UUID {uuid} and file {uuid_files[uuid]} deleted successfully."}
+
 
 @app.get("/jobs/{uuid}/transcript")
 async def get_file_transcript(uuid: str) -> dict[str, list[dict[str, str]]]:
@@ -100,13 +114,15 @@ async def get_file_transcript(uuid: str) -> dict[str, list[dict[str, str]]]:
 
     return {"result": dummy_transcripts[uuid]}
 
-@app.delete("/jobs/{uuid}")
-async def delete_item(uuid: int) -> dict[str, str]:
-    uuid_files = {
-        1: "file_1",
-        2: "file_2",
-        3: "file_3",
-        4: "file_4",
-        5: "file_5"
+@app.post("/jobs/{uuid}/summarise")
+def summarise_job(uuid: str) -> dict:
+    """
+    Dummy function to summarise transcription result
+    with the help of an LLM.
+    """
+    time.sleep(3)
+
+    return {
+        "status": "success",
+        "summary": "The quick brown fox jumps over the lazy dog."
     }
-    return {"status": "success", "message": f"Job with UUID {uuid} and file {uuid_files[uuid]} deleted successfully."}
