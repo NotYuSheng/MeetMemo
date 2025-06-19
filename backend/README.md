@@ -27,9 +27,4 @@ We are using Whisper's `turbo` model by defualt.
 
 
 ## Running the script
-
-After all of the above steps are completed, proceed to run the docker compose file in terminal.
-
-```bash
-docker compose up
-```
+To directly run the app on a server, use: `uvicorn main:app --reload --host 0.0.0.0 --port 8000`
