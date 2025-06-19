@@ -133,14 +133,15 @@ def summarise_transcript(transcript: str) -> str:
              )},
         ],
     }
-
-    resp = requests.post(url, json=payload)
-    resp.raise_for_status()
-    data = resp.json()
-    summary = data["choices"][0]["message"]["content"].strip()
-
-    return summary
-
+    try:
+        resp = requests.post(url, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        summary = data["choices"][0]["message"]["content"].strip()
+        return summary
+    except requests.RequestException as e:
+        return f"Error summarising transcript: {str(e)}"
+    
 ##################################### Main routes for back-end #####################################
 @app.get("/jobs")
 def get_jobs() -> dict:
@@ -152,9 +153,14 @@ def get_jobs() -> dict:
             with open(csv_file, "w", newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(["uuid", "file_name"])
-        with open(csv_file, "r") as f:
+        list_of_files = {}
+        with open(csv_file, "r", newline='') as f:
             reader = csv.reader(f)
-            list_of_files = {i[0]: i[1] for i in reader}
+            header = next(reader, None) 
+            if header:
+                for row in reader:
+                    if row and len(row) >= 2: 
+                        list_of_files[row[0]] = row[1]
         if len(list_of_files) == 0:
             return {"csv_list": "No audio files found."}
         else:
@@ -270,8 +276,11 @@ def get_job_status(uuid: str):
     """
     logs = get_logs()
     status = []
-    get_file_name_response = get_file_name(uuid)
-    file_name = get_file_name_response["file_name"]
+    file_name_response = get_file_name(uuid)
+    if "error" in file_name_response:
+        logging.error(f"Failed to get file name for UUID {uuid} in summarise job: {file_name_response['error']}")
+        return {"error": f"Failed to retrieve file details for UUID {uuid} to start summarisation."}
+    file_name = file_name_response["file_name"]
     status.append(f"Job status for UUID: {uuid}:\n, File name: {file_name}\n")
     for i in logs['logs']:
         if uuid in i:
@@ -284,15 +293,12 @@ def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
     """
-    file_name = get_file_name(uuid)["file_name"]
+    file_name = get_file_name(uuid).get("file_name", "unknown")
     file_path = f"transcripts/{file_name}.txt"
     if os.path.exists(file_path):
         full_transcript = []
         with open(file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                full_transcript.append(line.rstrip('\n'))
-                
-        full_transcript = format_result(full_transcript)
+            full_transcript = f.read()
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
         return {"status": "exists", "full_transcript": full_transcript}
