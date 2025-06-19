@@ -1,23 +1,14 @@
 import './App.css';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route
-} from 'react-router-dom';
-
-import Home from './Home';
-import JobDetail from './JobDetail';
+import TextInterface from "./components/Transcribe";
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/file/:uuid" element={<JobDetail />} />
-        </Routes>
-      </div>
-    </Router>
+    <div className="App">
+      <header className="App-header">
+          Meet Memo
+      </header>
+      <TextInterface/>
+    </div>
   );
 }
 
