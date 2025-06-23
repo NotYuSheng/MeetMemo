@@ -20,7 +20,8 @@
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "lint:css": "stylelint '**/*.css'"
+    "lint:css": "stylelint '**/*.css'",
+    "lint:css:fix": "stylelint '**/*.css' --fix"
   },
   "eslintConfig": {
     "extends": [
