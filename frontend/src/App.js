@@ -3,11 +3,11 @@ import TextInterface from "./components/Transcribe";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-          Meet Memo
+    <div className="app">
+      <header className="app-header">
+        Meet Memo
       </header>
-      <TextInterface/>
+      <TextInterface />
     </div>
   );
 }
