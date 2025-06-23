@@ -1,12 +1,10 @@
-import './App.css';
+import "./App.css";
 import TextInterface from "./components/Transcribe";
 
 function App() {
   return (
     <div className="app">
-      <header className="app-header">
-        Meet Memo
-      </header>
+      <header className="app-header">Meet Memo</header>
       <TextInterface />
     </div>
   );
