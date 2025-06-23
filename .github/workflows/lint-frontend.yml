@@ -11,6 +11,9 @@ on:
     paths:
       - 'frontend/**'
 
+permissions:
+  contents: write
+
 jobs:
   lint:
     name: Run ESLint, Prettier, Stylelint (Auto-Fix + Push)
