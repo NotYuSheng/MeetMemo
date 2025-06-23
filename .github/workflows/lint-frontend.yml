@@ -12,7 +12,7 @@ on:
 
 jobs:
   lint:
-    name: Run ESLint, Prettier, Stylelint
+    name: Run ESLint, Prettier, Stylelint (Auto-Fix + Push)
     runs-on: ubuntu-latest
 
     defaults:
@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node
         uses: actions/setup-node@v3
@@ -31,11 +33,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npx eslint src/**/*.js
+      - name: Auto-fix ESLint issues
+        run: npx eslint src --fix
 
-      - name: Run Prettier
-        run: npx prettier --check .
+      - name: Auto-fix Prettier issues
+        run: npx prettier --write .
 
-      - name: Run Stylelint
-        run: npx stylelint "**/*.css"
+      - name: Auto-fix Stylelint issues
+        run: npx stylelint "**/*.css" --fix
+
+      - name: Commit and push changes (if any)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "ci: auto-fix frontend linting issues"
+          git push
