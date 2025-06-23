@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build:
@@ -26,6 +24,7 @@ services:
       - logs:/app/logs
     ports:
       - "3000:3000"
+
 volumes:
   audiofiles:
   logs:
