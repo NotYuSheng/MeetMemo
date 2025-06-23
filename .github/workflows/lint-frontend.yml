@@ -1,0 +1,41 @@
+name: Lint Frontend
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+
+jobs:
+  lint:
+    name: Run ESLint, Prettier, Stylelint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint src/**/*.js
+
+      - name: Run Prettier
+        run: npx prettier --check .
+
+      - name: Run Stylelint
+        run: npx stylelint "**/*.css"
