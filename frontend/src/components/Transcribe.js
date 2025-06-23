@@ -1,5 +1,5 @@
-import '../styles.css';
-import { useState } from 'react';
+import "../styles.css";
+import { useState } from "react";
 
 export default function TextInterface() {
   const [messages, setMessages] = useState([]);
@@ -8,24 +8,23 @@ export default function TextInterface() {
   async function handleAudioUpload() {
     try {
       const formData = new FormData();
-      formData.append('file', audioFile);
-      const response = await fetch('http://localhost:8000/jobs', {
-        method: 'POST',
+      formData.append("file", audioFile);
+      const response = await fetch("http://localhost:8000/jobs", {
+        method: "POST",
         body: formData, // multipart/form-data with the audio file
       });
 
       if (!response.ok) {
-        throw new Error('Job processing failed');
+        throw new Error("Job processing failed");
       }
 
       const resultData = await response.json(); // Should contain the transcription
-      console.log('Jobs response:', resultData);
+      console.log("Jobs response:", resultData);
 
       // Assuming resultData is like: { transcript: "full text" }
       setMessages(resultData.transcript); // or however you display messages
-
     } catch (error) {
-      console.error('Error during transcription job:', error);
+      console.error("Error during transcription job:", error);
     }
   }
 
@@ -37,7 +36,9 @@ export default function TextInterface() {
         accept=".wav"
         onChange={(e) => setAudioFile(e.target.files[0])}
       />
-      <button type='button' onClick={handleAudioUpload}>Send to /jobs</button>
+      <button type="button" onClick={handleAudioUpload}>
+        Send to /jobs
+      </button>
 
       <div className="transcripts">
         {messages.map((msg, index) => (
