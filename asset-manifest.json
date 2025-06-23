@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/MeetMemo/static/css/main.ece6d09b.css",
+    "main.js": "/MeetMemo/static/js/main.df13bb52.js",
+    "static/js/453.267da66e.chunk.js": "/MeetMemo/static/js/453.267da66e.chunk.js",
+    "index.html": "/MeetMemo/index.html",
+    "main.ece6d09b.css.map": "/MeetMemo/static/css/main.ece6d09b.css.map",
+    "main.df13bb52.js.map": "/MeetMemo/static/js/main.df13bb52.js.map",
+    "453.267da66e.chunk.js.map": "/MeetMemo/static/js/453.267da66e.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ece6d09b.css",
+    "static/js/main.df13bb52.js"
+  ]
+}
