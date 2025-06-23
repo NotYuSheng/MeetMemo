@@ -175,20 +175,26 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
+    uuid=""
+    with open(csv_file, "r") as f:
+        reader = csv.reader(f)
+    used = set()
+    for row in reader:
+        try:
+            used.add(int(row[0]))
+        except ValueError:
+            continue
+    for i in range(10000):
+        if i not in used:
+            uuid = f"{i:04d}"
+            break
+    if uuid == "":
+        timestamp = get_timestamp()
+        file_name = file.filename
+        logging.error(f"{timestamp}: Error generating UUID for transcription request for file: {file_name}.wav")
+        return {"error": "No available UUIDs.", "file_name": file_name}
+    
     try:
-        with open(csv_file, "r") as f:
-            reader = csv.reader(f)
-        used = set()
-        for row in reader:
-            try:
-                used.add(int(row[0]))
-            except ValueError:
-                continue
-        for i in range(10000):
-            if i not in used:
-                uuid = f"{i:04d}"
-                break
-
         file_name = upload_audio(uuid, file)
         logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
         status_codes[uuid] = "202"  
