@@ -53,6 +53,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+          git fetch origin $BRANCH_NAME
+          git checkout -B $BRANCH_NAME origin/$BRANCH_NAME
+
           git add .
           git diff --cached --quiet || git commit -m "ci: auto-fix frontend linting issues"
           git push origin HEAD:refs/heads/$BRANCH_NAME
