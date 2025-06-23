@@ -21,9 +21,19 @@ We are using Whisper's `turbo` model by defualt.
 
 ## Setting up env file and target audio file
 
-1.  Create a `.env` file. Follow the example given in `.env.example`.
+1. Create a `.env` file in the root directory by copying the example:
 
-2.  Change `USE_AUTH_TOKEN` to your HF token key and target audio file respectively.
+   ```bash
+   cp example.env .env
+   ```
+
+2. Open the `.env` file and update the `USE_AUTH_TOKEN` variable with your Hugging Face token:
+
+   ```env
+   USE_AUTH_TOKEN=your_huggingface_token_here
+   ```
+
+3. This `.env` file will be automatically loaded by Docker via `docker-compose.yml`, so **no code changes are required**.
 
 
 ## Running the script
@@ -31,5 +41,5 @@ We are using Whisper's `turbo` model by defualt.
 After all of the above steps are completed, proceed to run the docker compose file in terminal.
 
 ```bash
-docker compose up
+docker compose up -d
 ```
