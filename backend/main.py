@@ -359,13 +359,13 @@ def summarise_job(uuid: str) -> dict:
         
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        return {"status": "success", "summary": summary}
+        return {"status": "success", "summary": summary, "status_code": "200", "file_name": file_name}
     
     except Exception as e:
         timestamp = get_timestamp()
         file_name = get_file_name(uuid)["file_name"]
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"error": str(e)}
+        return {"error": str(e), "status_code": "500", "file_name": file_name}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
