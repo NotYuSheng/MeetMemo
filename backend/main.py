@@ -42,7 +42,7 @@ UPLOAD_DIR = "audiofiles"
 csv_lock = Lock()
 csv_file = "audiofiles/audiofiles.csv"
 DEVICE = "cuda:0"
-
+status_codes = {}
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -191,6 +191,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
         file_name = upload_audio(uuid, file)
         logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
+        status_codes[uuid] = "202"  
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -218,6 +219,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
+        status_codes[uuid] = "200" 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     
     # Catch any errors when trying to transcribe & diarize recording
@@ -225,6 +227,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         timestamp = get_timestamp()
         file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
+        status_codes[uuid] = "500" 
         return {"error": str(e)}
 
 @app.delete("/jobs/{uuid}")
@@ -255,6 +258,7 @@ def delete_job(uuid: str) -> dict:
     timestamp = get_timestamp()
 
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
+    status_codes['uuid'] = "204" 
     return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully."}
 
 @app.get("/jobs/{uuid}/filename")
@@ -274,18 +278,28 @@ def get_job_status(uuid: str):
     """
     Gets ALL the statuses of the job with the given UUID.
     """
-    logs = get_logs()
-    status = []
-    file_name_response = get_file_name(uuid)
-    if "error" in file_name_response:
-        logging.error(f"Failed to get file name for UUID {uuid} in summarise job: {file_name_response['error']}")
-        return {"error": f"Failed to retrieve file details for UUID {uuid} to start summarisation."}
-    file_name = file_name_response["file_name"]
-    status.append(f"Job status for UUID: {uuid}:\n, File name: {file_name}\n")
-    for i in logs['logs']:
-        if uuid in i:
-            status.append(i)
-    return {"uuid": uuid, "file_name": file_name, "status": status}
+    log_msg = ''
+    status_code = status_codes.get(uuid, "404")
+    file_name = get_file_name(uuid).get("file_name", "unknown")
+    if status_code == "200":
+        status = "completed"
+    elif status_code == "202":
+        status = "processing"
+    elif status_code == "204":
+        status = "deleted"
+    elif status_code == "404":
+        status = "does not exist"
+    elif status_code == "500":
+        status = "error"
+    else:
+        logs = get_logs()
+        log_text = logs['logs']
+        for log in log_text:
+            if uuid in log:
+                log_msg += log
+        status = log_msg
+
+    return {"uuid": uuid, "file_name": file_name, "status": status, "status_code": status_code}
 
 
 @app.get("/jobs/{uuid}/transcript")
