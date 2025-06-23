@@ -41,7 +41,7 @@ jobs:
         run: npx prettier --write .
 
       - name: Auto-fix Stylelint issues
-        run: npx stylelint "**/*.css" --fix
+        run: npm run lint:css:fix
 
       - name: Commit and push changes (if any)
         run: |
