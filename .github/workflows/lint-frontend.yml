@@ -47,9 +47,12 @@ jobs:
         run: npm run lint:css:fix
 
       - name: Commit and push changes (if any)
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git add .
           git diff --cached --quiet || git commit -m "ci: auto-fix frontend linting issues"
-          git push origin HEAD:${GITHUB_REF##*/}
+          git push origin HEAD:refs/heads/$BRANCH_NAME
