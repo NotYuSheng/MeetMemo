@@ -44,7 +44,6 @@ CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0"
-status_codes = {}
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -241,7 +240,6 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         file_name = upload_audio(uuid, file)
         logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
         add_job(uuid, file_name,"202")
-        status_codes[uuid] = "202"  
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -269,7 +267,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
-        status_codes[uuid] = "200" 
+        update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     
     # Catch any errors when trying to transcribe & diarize recording
@@ -277,7 +275,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         timestamp = get_timestamp()
         file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
-        status_codes[uuid] = "500" 
+        update_status(uuid, "500")
         return {"error": str(e)}
 
 @app.delete("/jobs/{uuid}")
@@ -308,7 +306,7 @@ def delete_job(uuid: str) -> dict:
     timestamp = get_timestamp()
 
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
-    status_codes['uuid'] = "204" 
+    update_status(uuid, "204")
     return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully."}
 
 @app.get("/jobs/{uuid}/filename")
@@ -326,31 +324,39 @@ def get_file_name(uuid: str) -> dict:
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
     """
-    Gets ALL the statuses of the job with the given UUID.
+    Returns the file_name and status for the given uuid,
+    reading from jobs.csv (uuid, file_name, status_code).
     """
-    log_msg = ''
-    status_code = status_codes.get(uuid, "404")
-    file_name = get_file_name(uuid).get("file_name", "unknown")
-    if status_code == "200":
-        status = "completed"
-    elif status_code == "202":
-        status = "processing"
-    elif status_code == "204":
-        status = "deleted"
-    elif status_code == "404":
-        status = "does not exist"
-    elif status_code == "500":
-        status = "error"
+    file_name = "unknown"
+    status_code = "404"
+
+    with open(CSV_FILE, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("uuid") == uuid:
+                file_name = row.get("file_name", "unknown")
+                status_code = row.get("status_code", "")
+                break
+
+    status_map = {
+        "200": "completed",
+        "202": "processing",
+        "204": "deleted",
+        "404": "does not exist",
+        "500": "error"
+    }
+
+    if status_code in status_map:
+        status = status_map[status_code]
     else:
-        logs = get_logs()
-        log_text = logs['logs']
-        for log in log_text:
-            if uuid in log:
-                log_msg += log
-        status = log_msg
+        log_msg = ""
+        logs = get_logs().get("logs", [])
+        for entry in logs:
+            if uuid in entry:
+                log_msg += entry + "\n"
+        status = log_msg or "unknown"
 
-    return {"uuid": uuid, "file_name": file_name, "status": status, "status_code": status_code}
-
+    return {"uuid": uuid, "file_name": file_name, "status_code": status_code, "status": status}
 
 @app.get("/jobs/{uuid}/transcript")
 def get_file_transcript(uuid: str) -> dict:
