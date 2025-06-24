@@ -71,9 +71,10 @@ body {
 
 .message-bubble {
   padding: 10px;
-  margin: 5px 0;
+  margin: 5px 10px 10px;
   border-radius: 10px;
   background-color: #f0f0f0;
+  width: 70vw;
 }
 
 .speaker-1 {
@@ -209,4 +210,41 @@ body {
   cursor: pointer;
 }
 
+.summary-output h4 {
+  color: black;
+}
 
+.summary-output {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f3f3f3;
+  border-left: 4px solid #4a90e2;
+  border-radius: 8px;
+  font-style: italic;
+  color: black;
+}
+
+.loading-indicator {
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #444;
+}
+
+.record-section {
+  margin-top: 1rem;
+}
+
+.record-button, .stop-button {
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 10px;
+  background-color: #6c63ff;
+  color: white;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
+.stop-button {
+  background-color: #ff5252;
+}

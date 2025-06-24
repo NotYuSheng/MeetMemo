@@ -7,6 +7,28 @@ function JobDetail() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState("");
+  const [summary, setSummary] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  const fetchSummary = () => {
+    setIsSummarizing(true);
+    fetch(`/jobs/${uuid}/summarise`, {
+      method: "POST",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.summary) {
+          setSummary(data.summary);
+        } else {
+          setSummary("Failed to summarize transcript.");
+        }
+        setIsSummarizing(false);
+      })
+      .catch((err) => {
+        setSummary("Error fetching summary.");
+        setIsSummarizing(false);
+      });
+  };
 
   useEffect(() => {
     fetch(`/jobs/${uuid}/transcript`)
@@ -19,7 +41,7 @@ function JobDetail() {
   }, [uuid]);
 
   useEffect(() => {
-    fetch(`/name/${uuid}`)
+    fetch(`/jobs/${uuid}/filename`)
       .then(res => res.json())
       .then(data => {
         if (data.name) {
@@ -34,7 +56,7 @@ function JobDetail() {
 
   return (
     <div className="job-detail">
-      <h2>Transcription for: {fileName || uuid}</h2>
+      <h2>Transcription for: {fileName}</h2>
       <div className="transcription-container">
         {Array.isArray(data.result) && data.result.map((entry, idx) => {
           const [speaker, utterance] = Object.entries(entry)[0];
@@ -45,7 +67,32 @@ function JobDetail() {
           );
         })}
       </div>
-      <a href='/'>Back to home</a>
+
+      <div className="summary-section">
+        <button 
+          onClick={fetchSummary} 
+          disabled={isSummarizing} 
+          className={`summary-button ${isSummarizing ? 'disabled' : ''}`}
+        >
+          {isSummarizing ? "Summarizing..." : "Summarize Transcript"}
+        </button>
+
+        {isSummarizing && (
+          <div className="loading-spinner">
+            <div className="spinner" />
+            <p>Working on your summary... This may take a few moments.</p>
+          </div>
+        )}
+
+        {summary && !isSummarizing && (
+          <div className="summary-output">
+            <h3>Meeting Summary:</h3>
+            <p>{summary}</p>
+          </div>
+        )}
+      </div>
+
+      <a href="/" className="button-link">Back to home</a>
     </div>
   );
 }
