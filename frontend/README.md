@@ -9,3 +9,7 @@ Runs the app in the development mode. Open http://localhost:3000 to view it in y
 ### `npm install`
 
 Installs required packages in the desired sub-folder.
+
+### `npm install lucide-react`
+
+Installs the `lucide-react` icon library.

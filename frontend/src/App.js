@@ -5,7 +5,7 @@ import {
   Route
 } from 'react-router-dom';
 
-import Home from './Home';
+import MeetingTranscriptionApp from './MeetingTranscriptionApp';
 import JobDetail from './JobDetail';
 
 function App() {
@@ -13,7 +13,7 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<MeetingTranscriptionApp />} />
           <Route path="/file/:uuid" element={<JobDetail />} />
         </Routes>
       </div>
