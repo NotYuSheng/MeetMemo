@@ -6,6 +6,7 @@ import csv
 from threading import Lock
 import re
 import requests
+import tempfile
 from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
@@ -39,8 +40,9 @@ logging.basicConfig(level=logging.INFO,
 # Variables 
 load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
-csv_lock = Lock()
-csv_file = "audiofiles/audiofiles.csv"
+CSV_LOCK = Lock()
+CSV_FILE = "audiofiles/audiofiles.csv"
+FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0"
 status_codes = {}
 
@@ -80,6 +82,42 @@ def upload_audio(uuid: str, file: UploadFile) -> str:
         buffer.write(file.file.read())
 
     return filename
+
+def add_job(uuid: str, file_name: str, status_code: str) -> None:
+    """
+    Appends a new job to the CSV.
+    """
+    FIELDNAMES = ["uuid", "file_name", "status_code"]
+    with open(CSV_FILE, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        writer.writerow({
+            "uuid": uuid,
+            "file_name": file_name,
+            "status_code": status_code
+        })
+
+def update_status(uuid: str, new_status: str) -> None:
+    """
+    Read the existing CSV, update the status_code for the matching uuid,
+    and write out to a temporary file which then replaces the original.
+    """
+    FIELDNAMES = ["uuid", "file_name", "status_code"]
+    dir_name = os.path.dirname(CSV_FILE) or "."
+    fd, temp_path = tempfile.mkstemp(dir=dir_name, text=True)
+    try:
+        with os.fdopen(fd, "w", newline="") as tmpf, open(CSV_FILE, "r", newline="") as csvf:
+            reader = csv.DictReader(csvf)
+            writer = csv.DictWriter(tmpf, fieldnames=FIELDNAMES)
+            writer.writeheader()
+
+            for row in reader:
+                if row["uuid"] == uuid:
+                    row["status_code"] = new_status
+                writer.writerow(row)
+        os.replace(temp_path, CSV_FILE)
+    except Exception:
+        os.remove(temp_path)
+        raise        
 
 def parse_transcript_with_times(text: str) -> dict:
     """
@@ -146,25 +184,30 @@ def summarise_transcript(transcript: str) -> str:
 @app.get("/jobs")
 def get_jobs() -> dict:
     """
-    Returns a list of all audio files in the UPLOAD_DIR.
+    Returns a dict of all jobs in the CSV, keyed by uuid,
+    each mapping to its file_name and status_code.
     """
     try:
-        if not os.path.exists(csv_file):
-            with open(csv_file, "w", newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(["uuid", "file_name"])
-        list_of_files = {}
-        with open(csv_file, "r", newline='') as f:
-            reader = csv.reader(f)
-            header = next(reader, None) 
-            if header:
-                for row in reader:
-                    if row and len(row) >= 2: 
-                        list_of_files[row[0]] = row[1]
-        if len(list_of_files) == 0:
+        if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+        jobs = {}
+        with open(CSV_FILE, "r", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if not row.get("uuid") or not row.get("file_name"):
+                    continue
+                jobs[row["uuid"]] = {
+                    "file_name": row["file_name"],
+                    "status_code": row.get("status_code", "")
+                }
+
+        if not jobs:
             return {"csv_list": "No audio files found."}
-        else:
-            return {"csv_list": list_of_files}
+        return {"csv_list": jobs}
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -176,7 +219,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
     uuid=""
-    with open(csv_file, "r") as f:
+    with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
     used = set()
     for row in reader:
@@ -197,6 +240,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     try:
         file_name = upload_audio(uuid, file)
         logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
+        add_job(uuid, file_name,"202")
         status_codes[uuid] = "202"  
         model = whisper.load_model(model_name)
         device = DEVICE
@@ -243,8 +287,8 @@ def delete_job(uuid: str) -> dict:
     """
     # Delete the audio file
     file_name = None
-    with csv_lock:
-        with open(csv_file, "r") as f:
+    with CSV_LOCK:
+        with open(CSV_FILE, "r") as f:
             reader = csv.reader(f)
             rows = list(reader)
         for row in rows:
@@ -255,7 +299,7 @@ def delete_job(uuid: str) -> dict:
         else:
             return {"error": "UUID not found"}
 
-        with open(csv_file, "w", newline='') as f:
+        with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerows(rows)
 
@@ -272,7 +316,7 @@ def get_file_name(uuid: str) -> dict:
     """
     Returns the file name associated with the given UUID.
     """
-    with open(csv_file, "r") as f:
+    with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if row[0] == uuid:
