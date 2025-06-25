@@ -43,7 +43,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cuda:0"
+DEVICE = "cpu" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -84,16 +84,31 @@ def upload_audio(uuid: str, file: UploadFile) -> str:
 
 def add_job(uuid: str, file_name: str, status_code: str) -> None:
     """
-    Appends a new job to the CSV.
+    Inserts a new job in the CSV.  
+    Reads all rows, adds the new one, sorts by numeric uuid,  
+    then rewrites the entire file.
     """
     with CSV_LOCK:
-        with open(CSV_FILE, "a", newline="") as f:
+        rows = []
+        if os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rows.append(row)
+
+        rows.append({
+            "uuid":        uuid,
+            "file_name":   file_name,
+            "status_code": status_code
+        })
+
+        rows.sort(key=lambda r: int(r["uuid"]))
+
+        with open(CSV_FILE, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-            writer.writerow({
-                "uuid": uuid,
-                "file_name": file_name,
-                "status_code": status_code
-            })
+            writer.writeheader()
+            writer.writerows(rows)
+
 
 def update_status(uuid: str, new_status: str) -> None:
     """
@@ -161,11 +176,12 @@ def summarise_transcript(transcript: str) -> str:
         "max_tokens": 750,
         "messages": [
             {"role": "system",
-             "content": "You are a helpful assistant that summarizes meeting transcripts."},
+             "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
             {"role": "user",
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
-                 "highlighting the key points, decisions made, and any action items:\n\n"
+                 "highlighting the key points, decisions made, and any action items."
+                 "You are to give the final summary in markdown format for easier visualisation:\n\n"
                  + transcript
              )},
         ],
@@ -210,6 +226,7 @@ def get_jobs() -> dict:
     except Exception as e:
         return {"error": str(e)}
 
+
 @app.post("/jobs")
 def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     '''
@@ -219,6 +236,12 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     '''
     uuid=""
     used = set()
+
+    if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
     with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
         for row in reader:
@@ -264,8 +287,11 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
         # Save results & log activity process
         timestamp = get_timestamp()
-        with open(os.path.join("transcripts", f"{file_name}.json"), "w", encoding="utf-8") as f:
-            json.dump(full_transcript, f, indent=4)
+        os.makedirs("transcripts", exist_ok=True)
+        json_path = os.path.join("transcripts", f"{file_name}.json")
+        if not os.path.exists(json_path):
+            with open(os.path.join("transcripts", f"{file_name}.json"), "w", encoding="utf-8") as f:
+                json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
         update_status(uuid, "200") 
@@ -277,7 +303,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
         update_status(uuid, "500")
-        return {"error": str(e)}
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
 
 @app.delete("/jobs/{uuid}")
 def delete_job(uuid: str) -> dict:
@@ -286,6 +312,13 @@ def delete_job(uuid: str) -> dict:
     """
     # Delete the audio file
     file_name = None
+    uuid = uuid.zfill(4)  
+
+    if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
     with CSV_LOCK:
         with open(CSV_FILE, "r") as f:
             reader = csv.reader(f)
@@ -301,25 +334,37 @@ def delete_job(uuid: str) -> dict:
         with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerows(rows)
-
-    os.remove(os.path.join(UPLOAD_DIR, file_name))
-    os.remove(os.path.join("transcripts", f"{file_name}.json"))
+    try:
+        os.remove(os.path.join(UPLOAD_DIR, file_name))
+    except FileNotFoundError:
+        logging.warning(f"File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
+    try:  
+        os.remove(os.path.join("transcripts", f"{file_name}.json"))
+    except FileNotFoundError:
+        logging.warning(f"Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
     timestamp = get_timestamp()
 
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
-    return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
+    return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
 @app.get("/jobs/{uuid}/filename")
 def get_file_name(uuid: str) -> dict:
     """
     Returns the file name associated with the given UUID.
     """
+    uuid = uuid.zfill(4)
+
+    if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
     with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if row[0] == uuid:
                 return {"uuid": uuid, "file_name": row[1]}
-    return {"error": "UUID not found"}
+    return {"error": f"UUID: {uuid} not found"}
 
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
@@ -327,8 +372,14 @@ def get_job_status(uuid: str):
     Returns the file_name and status for the given uuid,
     reading from jobs.csv (uuid, file_name, status_code).
     """
+    uuid = uuid.zfill(4)
     file_name = "unknown"
     status_code = "404"
+
+    if not os.path.isfile(CSV_FILE):
+        with open(CSV_FILE, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
 
     with open(CSV_FILE, newline="") as f:
         reader = csv.DictReader(f)
@@ -363,23 +414,25 @@ def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
     """
+    uuid = uuid.zfill(4)
     file_name = get_file_name(uuid).get("file_name", "unknown")
-    file_path = f"transcripts/{file_name}.txt"
+    file_path = f"transcripts/{file_name}.json"
     if os.path.exists(file_path):
         full_transcript = []
         with open(file_path, "r", encoding="utf-8") as f:
             full_transcript = f.read()
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-        return {"status": "exists", "full_transcript": full_transcript}
+        return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript}
     else:
-        return {"status": "not found"}
+        return {"uuid": uuid, "status": "not found"}
 
 @app.get("/jobs/{uuid}/result")
 def get_job_result(uuid: str) -> dict:
     """
     Returns the  transcript with timestamps for the given UUID, separated by speakers.
     """
+    uuid = uuid.zfill(4)
     raw_transcript = get_file_transcript(uuid)["full_transcript"]
     result = parse_transcript_with_times(raw_transcript)
     full_result = ""
@@ -390,15 +443,16 @@ def get_job_result(uuid: str) -> dict:
     timestamp = get_timestamp()
     file_name = get_file_name(uuid)["file_name"]
     logging.info(f"{timestamp}: Retrieved diarised transcript for UUID: {uuid}, file name: {file_name}")
-    return {"status": "exists", "result": full_result}
+    return {"uuid": uuid, "status": "exists", "result": full_result}
 
 @app.post("/jobs/{uuid}/summarise")
 def summarise_job(uuid: str) -> dict:
     """
     Summarises the transcript for the given UUID using a defined LLM.
     """
+    uuid = uuid.zfill(4)
+    file_name = get_file_name(uuid)["file_name"]
     try:
-        file_name = get_file_name(uuid)["file_name"]
         get_full_transcript_response = get_file_transcript(uuid)
         if get_full_transcript_response["status"] == "not found":
             return {"error": f"Transcript not found for the given UUID: {uuid}."}
@@ -409,13 +463,12 @@ def summarise_job(uuid: str) -> dict:
         
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        return {"status": "success", "summary": summary, "status_code": "200", "file_name": file_name}
+        return {"uuid": uuid, "file_name": file_name, "status": "success", "summary": summary, "status_code": "200"}
     
     except Exception as e:
         timestamp = get_timestamp()
-        file_name = get_file_name(uuid)["file_name"]
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"error": str(e), "status_code": "500", "file_name": file_name}
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
