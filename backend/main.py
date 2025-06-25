@@ -6,6 +6,7 @@ import csv
 from threading import Lock
 import re
 import requests
+import tempfile
 from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
@@ -39,10 +40,10 @@ logging.basicConfig(level=logging.INFO,
 # Variables 
 load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
-csv_lock = Lock()
-csv_file = "audiofiles/audiofiles.csv"
+CSV_LOCK = Lock()
+CSV_FILE = "audiofiles/audiofiles.csv"
+FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0"
-
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -80,6 +81,42 @@ def upload_audio(uuid: str, file: UploadFile) -> str:
         buffer.write(file.file.read())
 
     return filename
+
+def add_job(uuid: str, file_name: str, status_code: str) -> None:
+    """
+    Appends a new job to the CSV.
+    """
+    with CSV_LOCK:
+        with open(CSV_FILE, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writerow({
+                "uuid": uuid,
+                "file_name": file_name,
+                "status_code": status_code
+            })
+
+def update_status(uuid: str, new_status: str) -> None:
+    """
+    Read the existing CSV, update the status_code for the matching uuid,
+    and write out to a temporary file which then replaces the original.
+    """
+    with CSV_LOCK:
+        dir_name = os.path.dirname(CSV_FILE) or "."
+        fd, temp_path = tempfile.mkstemp(dir=dir_name, text=True)
+        try:
+            with os.fdopen(fd, "w", newline="") as tmpf, open(CSV_FILE, "r", newline="") as csvf:
+                reader = csv.DictReader(csvf)
+                writer = csv.DictWriter(tmpf, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+                for row in reader:
+                    if row["uuid"] == uuid:
+                        row["status_code"] = new_status
+                    writer.writerow(row)
+            os.replace(temp_path, CSV_FILE)
+        except Exception:
+            os.remove(temp_path)
+            raise        
 
 def parse_transcript_with_times(text: str) -> dict:
     """
@@ -146,25 +183,30 @@ def summarise_transcript(transcript: str) -> str:
 @app.get("/jobs")
 def get_jobs() -> dict:
     """
-    Returns a list of all audio files in the UPLOAD_DIR.
+    Returns a dict of all jobs in the CSV, keyed by uuid,
+    each mapping to its file_name and status_code.
     """
     try:
-        if not os.path.exists(csv_file):
-            with open(csv_file, "w", newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(["uuid", "file_name"])
-        list_of_files = {}
-        with open(csv_file, "r", newline='') as f:
-            reader = csv.reader(f)
-            header = next(reader, None) 
-            if header:
-                for row in reader:
-                    if row and len(row) >= 2: 
-                        list_of_files[row[0]] = row[1]
-        if len(list_of_files) == 0:
+        if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+        jobs = {}
+        with open(CSV_FILE, "r", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if not row.get("uuid") or not row.get("file_name"):
+                    continue
+                jobs[row["uuid"]] = {
+                    "file_name": row["file_name"],
+                    "status_code": row.get("status_code", "")
+                }
+
+        if not jobs:
             return {"csv_list": "No audio files found."}
-        else:
-            return {"csv_list": list_of_files}
+        return {"csv_list": jobs}
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -175,22 +217,30 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
-    try:
-        with open(csv_file, "r") as f:
-            reader = csv.reader(f)
-        used = set()
+    uuid=""
+    used = set()
+    with open(CSV_FILE, "r") as f:
+        reader = csv.reader(f)
         for row in reader:
             try:
-                used.add(int(row[0]))
-            except ValueError:
+                if row:
+                    used.add(int(row[0]))
+            except (ValueError,IndexError):
                 continue
-        for i in range(10000):
-            if i not in used:
-                uuid = f"{i:04d}"
-                break
-
+    for i in range(10000):
+        if i not in used:
+            uuid = f"{i:04d}"
+            break
+    if uuid == "":
+        timestamp = get_timestamp()
+        file_name = file.filename
+        logging.error(f"{timestamp}: Error generating UUID for transcription request for file: {file_name}.wav")
+        return {"error": "No available UUIDs.", "file_name": file_name}
+    
+    try:
         file_name = upload_audio(uuid, file)
         logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
+        add_job(uuid, file_name,"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -218,6 +268,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
+        update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     
     # Catch any errors when trying to transcribe & diarize recording
@@ -225,6 +276,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         timestamp = get_timestamp()
         file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
+        update_status(uuid, "500")
         return {"error": str(e)}
 
 @app.delete("/jobs/{uuid}")
@@ -234,8 +286,8 @@ def delete_job(uuid: str) -> dict:
     """
     # Delete the audio file
     file_name = None
-    with csv_lock:
-        with open(csv_file, "r") as f:
+    with CSV_LOCK:
+        with open(CSV_FILE, "r") as f:
             reader = csv.reader(f)
             rows = list(reader)
         for row in rows:
@@ -246,7 +298,7 @@ def delete_job(uuid: str) -> dict:
         else:
             return {"error": "UUID not found"}
 
-        with open(csv_file, "w", newline='') as f:
+        with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerows(rows)
 
@@ -255,14 +307,14 @@ def delete_job(uuid: str) -> dict:
     timestamp = get_timestamp()
 
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
-    return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully."}
+    return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
 @app.get("/jobs/{uuid}/filename")
 def get_file_name(uuid: str) -> dict:
     """
     Returns the file name associated with the given UUID.
     """
-    with open(csv_file, "r") as f:
+    with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if row[0] == uuid:
@@ -272,21 +324,39 @@ def get_file_name(uuid: str) -> dict:
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
     """
-    Gets ALL the statuses of the job with the given UUID.
+    Returns the file_name and status for the given uuid,
+    reading from jobs.csv (uuid, file_name, status_code).
     """
-    logs = get_logs()
-    status = []
-    file_name_response = get_file_name(uuid)
-    if "error" in file_name_response:
-        logging.error(f"Failed to get file name for UUID {uuid} in summarise job: {file_name_response['error']}")
-        return {"error": f"Failed to retrieve file details for UUID {uuid} to start summarisation."}
-    file_name = file_name_response["file_name"]
-    status.append(f"Job status for UUID: {uuid}:\n, File name: {file_name}\n")
-    for i in logs['logs']:
-        if uuid in i:
-            status.append(i)
-    return {"uuid": uuid, "file_name": file_name, "status": status}
+    file_name = "unknown"
+    status_code = "404"
 
+    with open(CSV_FILE, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("uuid") == uuid:
+                file_name = row.get("file_name", "unknown")
+                status_code = row.get("status_code", "")
+                break
+
+    status_map = {
+        "200": "completed",
+        "202": "processing",
+        "204": "deleted",
+        "404": "does not exist",
+        "500": "error"
+    }
+
+    if status_code in status_map:
+        status = status_map[status_code]
+    else:
+        log_msg = ""
+        logs = get_logs().get("logs", [])
+        for entry in logs:
+            if uuid in entry:
+                log_msg += entry + "\n"
+        status = log_msg or "unknown"
+
+    return {"uuid": uuid, "file_name": file_name, "status_code": status_code, "status": status}
 
 @app.get("/jobs/{uuid}/transcript")
 def get_file_transcript(uuid: str) -> dict:
@@ -339,13 +409,13 @@ def summarise_job(uuid: str) -> dict:
         
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        return {"status": "success", "summary": summary}
+        return {"status": "success", "summary": summary, "status_code": "200", "file_name": file_name}
     
     except Exception as e:
         timestamp = get_timestamp()
         file_name = get_file_name(uuid)["file_name"]
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"error": str(e)}
+        return {"error": str(e), "status_code": "500", "file_name": file_name}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
@@ -369,11 +439,11 @@ def health_check():
         timestamp = get_timestamp()
         if error_msg:
             logging.error(f"{timestamp}: Health check found errors: {error_msg}")
-            return {"status": "error", "message": error_msg}
+            return {"status": "error", "message": error_msg, "status_code": "500"}
         else:
             logging.info(f"{timestamp}: Health check passed successfully.")
-            return {"status": "ok"}
+            return {"status": "ok", "status_code": "200"}
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": str(e), "status_code": "500"}
