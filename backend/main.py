@@ -439,11 +439,11 @@ def health_check():
         timestamp = get_timestamp()
         if error_msg:
             logging.error(f"{timestamp}: Health check found errors: {error_msg}")
-            return {"status": "error", "message": error_msg}
+            return {"status": "error", "message": error_msg, "status_code": "500"}
         else:
             logging.info(f"{timestamp}: Health check passed successfully.")
-            return {"status": "ok"}
+            return {"status": "ok", "status_code": "200"}
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": str(e), "status_code": "500"}
