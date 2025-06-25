@@ -45,16 +45,16 @@ async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[
     """
     time.sleep(3)
     dummy_transcription = [
-        {"Customer": "Hi, I'm having trouble connecting to the internet."},
-        {"Support Agent": "I'm sorry to hear that. Can you tell me if any of the router lights are blinking red?"},
-        {"Customer": "Yes, the one labeled 'WAN' is flashing red."},
-        {"Support Agent": "Alright. That usually means the router isn't detecting a signal. Let's try restarting it first."},
-        {"Customer": "Okay, I've unplugged it and plugged it back in."},
-        {"Support Agent": "Great. Let's give it a minute... Are the lights back to normal now?"},
-        {"Customer": "Yes, they're all green now!"},
-        {"Support Agent": "Perfect. You should be back online. Is everything working on your end?"},
-        {"Customer": "Yes, thank you so much for your help!"},
-        {"Support Agent": "You're very welcome. Have a great day!"}
+        {"id": 1, "speaker": "SPEAKER_1", "text": "Hi, I'm having trouble connecting to the internet."},
+        {"id": 2, "speaker": "SPEAKER_2", "text": "I'm sorry to hear that. Can you tell me if any of the router lights are blinking red?"},
+        {"id": 3, "speaker": "SPEAKER_1", "text": "Yes, the one labeled 'WAN' is flashing red."},
+        {"id": 4, "speaker": "SPEAKER_2", "text": "Alright. That usually means the router isn't detecting a signal. Let's try restarting it first."},
+        {"id": 5, "speaker": "SPEAKER_1", "text": "Okay, I've unplugged it and plugged it back in."},
+        {"id": 6, "speaker": "SPEAKER_2", "text": "Great. Let's give it a minute... Are the lights back to normal now?"},
+        {"id": 7, "speaker": "SPEAKER_1", "text": "Yes, they're all green now!"},
+        {"id": 8, "speaker": "SPEAKER_2", "text": "Perfect. You should be back online. Is everything working on your end?"},
+        {"id": 9, "speaker": "SPEAKER_1", "text": "Yes, thank you so much for your help!"},
+        {"id": 10, "speaker": "SPEAKER_2", "text": "You're very welcome. Have a great day!"}
     ]
 
     return {
