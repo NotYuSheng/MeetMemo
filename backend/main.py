@@ -86,37 +86,37 @@ def add_job(uuid: str, file_name: str, status_code: str) -> None:
     """
     Appends a new job to the CSV.
     """
-    FIELDNAMES = ["uuid", "file_name", "status_code"]
-    with open(CSV_FILE, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        writer.writerow({
-            "uuid": uuid,
-            "file_name": file_name,
-            "status_code": status_code
-        })
+    with CSV_LOCK:
+        with open(CSV_FILE, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writerow({
+                "uuid": uuid,
+                "file_name": file_name,
+                "status_code": status_code
+            })
 
 def update_status(uuid: str, new_status: str) -> None:
     """
     Read the existing CSV, update the status_code for the matching uuid,
     and write out to a temporary file which then replaces the original.
     """
-    FIELDNAMES = ["uuid", "file_name", "status_code"]
-    dir_name = os.path.dirname(CSV_FILE) or "."
-    fd, temp_path = tempfile.mkstemp(dir=dir_name, text=True)
-    try:
-        with os.fdopen(fd, "w", newline="") as tmpf, open(CSV_FILE, "r", newline="") as csvf:
-            reader = csv.DictReader(csvf)
-            writer = csv.DictWriter(tmpf, fieldnames=FIELDNAMES)
-            writer.writeheader()
+    with CSV_LOCK:
+        dir_name = os.path.dirname(CSV_FILE) or "."
+        fd, temp_path = tempfile.mkstemp(dir=dir_name, text=True)
+        try:
+            with os.fdopen(fd, "w", newline="") as tmpf, open(CSV_FILE, "r", newline="") as csvf:
+                reader = csv.DictReader(csvf)
+                writer = csv.DictWriter(tmpf, fieldnames=FIELDNAMES)
+                writer.writeheader()
 
-            for row in reader:
-                if row["uuid"] == uuid:
-                    row["status_code"] = new_status
-                writer.writerow(row)
-        os.replace(temp_path, CSV_FILE)
-    except Exception:
-        os.remove(temp_path)
-        raise        
+                for row in reader:
+                    if row["uuid"] == uuid:
+                        row["status_code"] = new_status
+                    writer.writerow(row)
+            os.replace(temp_path, CSV_FILE)
+        except Exception:
+            os.remove(temp_path)
+            raise        
 
 def parse_transcript_with_times(text: str) -> dict:
     """
@@ -218,14 +218,15 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
     uuid=""
+    used = set()
     with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
-    used = set()
-    for row in reader:
-        try:
-            used.add(int(row[0]))
-        except ValueError:
-            continue
+        for row in reader:
+            try:
+                if row:
+                    used.add(int(row[0]))
+            except (ValueError,IndexError):
+                continue
     for i in range(10000):
         if i not in used:
             uuid = f"{i:04d}"
@@ -306,8 +307,7 @@ def delete_job(uuid: str) -> dict:
     timestamp = get_timestamp()
 
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
-    update_status(uuid, "204")
-    return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully."}
+    return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
 @app.get("/jobs/{uuid}/filename")
 def get_file_name(uuid: str) -> dict:
