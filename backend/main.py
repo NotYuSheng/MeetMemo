@@ -329,7 +329,7 @@ def delete_job(uuid: str) -> dict:
                 rows.remove(row)
                 break
         else:
-            return {"error": "UUID not found"}
+            return {"error": "UUID not found", "status_code": "404"}
 
         with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
@@ -364,7 +364,8 @@ def get_file_name(uuid: str) -> dict:
         for row in reader:
             if row[0] == uuid:
                 return {"uuid": uuid, "file_name": row[1]}
-    return {"error": f"UUID: {uuid} not found"}
+            
+    return {"error": f"UUID: {uuid} not found", "status_code": "404"}
 
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
