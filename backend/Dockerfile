@@ -15,14 +15,13 @@ RUN pip install --index-url https://download.pytorch.org/whl/cu118 torch torchvi
 
 RUN pip install -r requirements.txt
 
-COPY . /app
-
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   ffmpeg \
   libsndfile1  \
   && rm -rf /var/lib/apt/lists/*
 
+COPY . /app
 # Expose the port FastAPI will run on
 EXPOSE 8000
 
