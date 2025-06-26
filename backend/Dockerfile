@@ -8,21 +8,20 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY requirements.txt /app/requirements.txt
 
-RUN pip install --index-url https://download.pytorch.org/whl/cu118 \
-  torch torchvision torchaudio
+# Install dependencies
+RUN pip install --index-url https://download.pytorch.org/whl/cu118 torch torchvision torchaudio 
+
+RUN pip install -r requirements.txt
+
+COPY . /app
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   ffmpeg \
   libsndfile1  \
   && rm -rf /var/lib/apt/lists/*
-
-# Copy application code
-COPY . .
 
 # Expose the port FastAPI will run on
 EXPOSE 8000

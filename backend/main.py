@@ -43,7 +43,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cpu" 
+DEVICE = "cuda:0" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -274,9 +274,10 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         logging.info(f"{timestamp}: Processing file {file_name}.wav with model {model_name}")
 
         # Transcription & diarization of text
+        hf_token = os.getenv("USE_AUTH_TOKEN")
         pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization", 
-            use_auth_token=os.getenv("USE_AUTH_TOKEN")
+            use_auth_token=hf_token
         )
         asr = model.transcribe(file_path, language="en")
         diarization = pipeline(file_path)
@@ -310,7 +311,6 @@ def delete_job(uuid: str) -> dict:
     """
     Deletes the job with the given UUID, including the audio file and its transcript.
     """
-    # Delete the audio file
     file_name = None
     uuid = uuid.zfill(4)  
 
