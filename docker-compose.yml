@@ -4,27 +4,41 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: backend
+    env_file:
+      - .env
     environment:
       - USE_AUTH_TOKEN=${USE_AUTH_TOKEN}
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
+      - transcripts:/app/transcripts
     ports:
       - "8000:8000"
     depends_on:
       - frontend
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
+    env_file:
+      - .env
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
+      - transcripts:/app/transcripts
     ports:
       - "3000:3000"
 
 volumes:
   audiofiles:
   logs:
+  transcripts:
