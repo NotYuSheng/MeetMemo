@@ -31,6 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if not os.path.exists("logs/app.log"):
+    os.makedirs("logs", exist_ok=True)
+    with open("logs/app.log", "w") as f:
+        f.write("")  # Create an empty log file if it doesn't exist
+
 # Store logs inside the volume
 logging.basicConfig(level=logging.INFO,
                     filename='logs/app.log',
@@ -43,7 +48,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cuda:0" 
+DEVICE = "cpu" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -134,30 +139,22 @@ def update_status(uuid: str, new_status: str) -> None:
             raise        
 
 def parse_transcript_with_times(text: str) -> dict:
-    """
-    Parses a transcript and returns a dict mapping each speaker to a list of {start, end, text} entries.
-    """
-
+    # allow lowercase, optional colon, flexible whitespace
     pattern = re.compile(
-        r'(?P<start>\d+\.\d+)\s+'           # start time
-        r'(?P<end>\d+\.\d+)\s+'             # end time
-        r'(?P<speaker>SPEAKER_\d+)\s+'      # speaker label
-        r'(?P<utterance>.*?)'               # what they said
-        r'(?=(?:\d+\.\d+\s+\d+\.\d+\s+SPEAKER_\d+)|\Z)',  # lookahead for next block or end
-        re.DOTALL
+        r'(?P<start>\d+\.\d+)\s+'                   # start time
+        r'(?P<end>\d+\.\d+)\s+'                     # end time
+        r'(?P<speaker>speaker_\d+):?\s+'            # speaker label (case-insensitive, optional colon)
+        r'(?P<utterance>.*?)'                       # the spoken text
+        r'(?=(?:\d+\.\d+\s+\d+\.\d+\s+speaker_\d+)|\Z)',  
+        re.DOTALL | re.IGNORECASE                   # match across lines, ignore case
     )
 
     speakers = defaultdict(list)
     for m in pattern.finditer(text):
-        start = float(m.group('start'))
-        end   = float(m.group('end'))
-        spkr  = m.group('speaker')
-        utt   = m.group('utterance').strip()
-
-        speakers[spkr].append({
-            'start': start,
-            'end': end,
-            'text': utt
+        speakers[m.group('speaker').lower()].append({
+            'start': float(m.group('start')),
+            'end':   float(m.group('end')),
+            'text':  m.group('utterance').strip()
         })
 
     return dict(speakers)

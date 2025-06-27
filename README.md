@@ -26,6 +26,10 @@ We are using Whisper's `turbo` model by defualt.
 
 1. Create a `.env` file in the root directory by copying the example
 
+    ```bash
+    cp example.env .env
+    ```
+
 2. Open the `.env` file and update the `USE_AUTH_TOKEN` variable with your Hugging Face token:
 
    ```env
