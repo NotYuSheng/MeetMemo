@@ -1,16 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Upload, Download, Play, Pause, Square, FileText, Users, Clock, Hash } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, Upload, Download, FileText, Users, Clock, Hash } from 'lucide-react';
 import './MeetingTranscriptionApp.css';
 
 const MeetingTranscriptionApp = () => {
     /////////////////////////// All constants ///////////////////////////
     // Constants for transcription function
     const [isRecording, setIsRecording] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [transcript, setTranscript] = useState([]);
     const [summary, setSummary] = useState(null);
-    const [audioFile, setAudioFile] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -18,17 +16,60 @@ const MeetingTranscriptionApp = () => {
     const audioChunksRef = useRef([]);
     const fileInputRef = useRef(null);
     const timerRef = useRef(null);
-    const [jobUUID, setJobUUID] = useState(null);
+    const [meetingList, setMeetingList] = useState([]);
+    const [selectedMeetingId, setSelectedMeetingId] = useState(null);
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // Transcript should include:
-    //      id [int]
-    //      speaker[str]
-    //      text[str]
+    const toggleDarkMode = () => {
+        setIsDarkMode(prev => !prev);
+        document.documentElement.setAttribute('data-theme', !isDarkMode ? 'dark' : 'light');
+    };
 
-    // Transcript summary should include:
-    //      meetingTitle[str]
-    //      duration[str]
-    //      participants, keyPoints, actionItems, nextSteps[List[str]]
+    useEffect(() => {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setIsDarkMode(prefersDark);
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    }, []);
+
+    useEffect(() => {
+        fetch("/jobs")
+            .then(res => res.json())
+            .then(data => {
+                const list = Object.entries(data.csv_list).map(([uuid, name]) => ({ uuid, name }));
+                setMeetingList(list);
+            })
+            .catch(err => console.error("Failed to fetch meeting list", err));
+    }, []);
+
+    const loadPastMeeting = (uuid) => {
+        getSpeakerColor.speakerMap = {};
+        fetch(`/jobs/${uuid}/transcript`)
+            .then(res => res.json())
+            .then(data => {
+                setTranscript(
+                    (data.result || []).map((entry, idx) => {
+                        const speaker = Object.keys(entry)[0];
+                        const text = entry[speaker];
+                        return { id: idx, speaker, text };
+                    })
+                );
+                return fetch(`/jobs/${uuid}/summarise`, { method: "POST" });
+            })
+            .then(res => res.json())
+            .then(data => {
+                setSummary({
+                    meetingTitle: `Meeting UUID ${uuid}`,
+                    duration: "N/A",
+                    participants: data.participants,
+                    keyPoints: data.keyPoints,
+                    actionItems: data.actionItems,
+                    nextSteps: data.nextSteps
+                });
+                setSelectedMeetingId(uuid);
+            })
+            .catch(err => console.error("Failed to load past meeting", err));
+    };
 
     useEffect(() => {
         if (isRecording) {
@@ -54,13 +95,12 @@ const MeetingTranscriptionApp = () => {
 
             mediaRecorderRef.current.onstop = () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                setAudioFile(audioBlob);
                 processAudio(audioBlob);
             };
 
             mediaRecorderRef.current.start();
-            setIsRecording(true);
             setRecordingTime(0);
+            setIsRecording(true);
         } catch (error) {
             console.error('Error starting recording:', error);
         }
@@ -77,7 +117,7 @@ const MeetingTranscriptionApp = () => {
     // Uploads file to the back-end via the /jobs post method
     const uploadFile = () => {
         if (!selectedFile) return;
-
+        getSpeakerColor.speakerMap = {}; // Reset color cache
         setLoading(true);
         const formData = new FormData();
         formData.append("file", selectedFile);
@@ -88,8 +128,15 @@ const MeetingTranscriptionApp = () => {
         })
         .then(result => result.json())
         .then(data => {
-            setTranscript(Array.isArray(data.transcript) ? data.transcript : []);
-            setJobUUID(data.uuid);
+            setTranscript(
+                Array.isArray(data.transcript)
+                    ? data.transcript.map((entry, idx) => {
+                        const speaker = Object.keys(entry)[0];
+                        const text = entry[speaker];
+                        return { id: idx, speaker, text };
+                    })
+                    : []
+                );
             fetchSummary(data.uuid);
             setLoading(false);
         })
@@ -110,8 +157,15 @@ const MeetingTranscriptionApp = () => {
         })
         .then(result => result.json())
         .then(data => {
-            setTranscript(Array.isArray(data.transcript) ? data.transcript : []);
-            setJobUUID(data.uuid);
+            setTranscript(
+                Array.isArray(data.transcript)
+                    ? data.transcript.map((entry, idx) => {
+                        const speaker = Object.keys(entry)[0];
+                        const text = entry[speaker];
+                        return { id: idx, speaker, text };
+                    })
+                    : []
+                );
             fetchSummary(data.uuid);
             setIsProcessing(false);
         })
@@ -122,22 +176,23 @@ const MeetingTranscriptionApp = () => {
     };
 
     const fetchSummary = (uuid) => {
+        setSummaryLoading(true);
         fetch(`/jobs/${uuid}/summarise`, { method: "POST" })
             .then(res => res.json())
             .then(data => {
-                if (data && data.summary) {
-                    const participants = [...new Set(transcript.map(t => t.speaker))];
+                if (data) {
                     setSummary({
-                    meetingTitle: `Meeting UUID ${uuid}`,
-                    duration: formatTime(recordingTime),
-                    participants,
-                    keyPoints: [data.summary],
-                    actionItems: [],
-                    nextSteps: []
+                        meetingTitle: `Meeting UUID ${uuid}`,
+                        duration: formatTime(recordingTime),
+                        participants: data.participants,
+                        keyPoints: data.keyPoints,
+                        actionItems: data.actionItems,
+                        nextSteps: data.nextSteps
                     });
                 }
             })
-        .catch(err => console.error("Failed to fetch summary", err));
+            .catch(err => console.error("Failed to fetch summary", err))
+            .finally(() => setSummaryLoading(false));
     };
 
     const exportToPDF = () => {
@@ -152,221 +207,270 @@ const MeetingTranscriptionApp = () => {
         document.body.removeChild(element);
     };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
-  const getSpeakerColor = (speaker) => {
-    const colors = ['speaker-blue', 'speaker-green', 'speaker-purple', 'speaker-orange'];
-    const index = summary?.participants.indexOf(speaker) || 0;
-    return colors[index % colors.length];
-  };
+    const getSpeakerColor = (speaker) => {
+        const colors = ['speaker-blue', 'speaker-green', 'speaker-purple', 'speaker-orange'];
+        
+        // Cache for consistent color per speaker
+        if (!getSpeakerColor.speakerMap) getSpeakerColor.speakerMap = {};
+        const map = getSpeakerColor.speakerMap;
 
-  return (
-    <div className="app-container">
-        <div className="max-width-container">
-            {/* Header */}
-            <div className="header-card">
-            <h1 className="header-title">🧠 MeetMemo</h1>
-            <p className="header-subtitle">Record, transcribe, and summarize your meetings with AI-powered insights</p>
-            </div>
+        if (!(speaker in map)) {
+            map[speaker] = colors[Object.keys(map).length % colors.length];
+        }
 
-            <div className="main-grid">
-            {/* Left Column - Recording Controls and Transcript */}
-            <div className="left-column">
-                {/* Recording Controls */}
-                <div className="card">
-                <h2 className="section-title">
-                    <Mic className="section-icon" />
-                    Audio Input
-                </h2>
-                
-                <div className="controls-container">
-                    <div className="button-group">
-                    <button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`btn ${isRecording ? 'btn-danger' : 'btn-primary'}`}
-                    >
-                        {isRecording ? <MicOff className="btn-icon" /> : <Mic className="btn-icon" />}
-                        {isRecording ? 'Stop Recording' : 'Start Recording'}
-                    </button>
-                    
-                    <button
-                        onClick={uploadFile}
-                        disabled={!selectedFile || loading}
-                        className="btn btn-secondary"
-                    >
-                        <Upload className="btn-icon" />
-                        Upload Audio
-                    </button>
-                    </div>
+        return map[speaker];
+    };
 
-                    {isRecording && (
-                    <div className="recording-indicator">
-                        <div className="recording-dot"></div>
-                        <span className="recording-time">{formatTime(recordingTime)}</span>
-                    </div>
-                    )}
+    return (
+        <div className="app-container">
+            <div className="max-width-container">
+                {/* Header */}
+                <div className="header-card">
+                <h1 className="header-title">🧠 MeetMemo</h1>
+                <button
+                className="btn btn-small"
+                onClick={toggleDarkMode}
+                style={{ float: "right" }}
+                >
+                    {isDarkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
+                </button>
+                <p className="header-subtitle">Record, transcribe, and summarize your meetings with AI-powered insights</p>
                 </div>
 
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                    className="file-input"
-                />
-
-                {/* Uploading progress indicator */}
-                {loading && (
-                    <div className="progress-container">
-                    <div className="progress-bar">
-                        <div 
-                        className="progress-fill"
-                        ></div>
-                    </div>
-                    <p className="progress-text">Uploading...</p>
-                    </div>
-                )}
-
-                {isProcessing && (
-                    <div className="processing-indicator">
-                    <div className="spinner"></div>
-                    <span>Processing audio with AI...</span>
-                    </div>
-                )}
-                </div>
-
-                {/* Transcript Section */}
-                <div className="card">
-                <h2 className="section-title">
-                    <FileText className="section-icon" />
-                    Live Transcript
-                </h2>
-                
-                <div className="transcript-container">
-                    {transcript.length > 0 ? (
-                    transcript.map((entry) => (
-                        <div key={entry.id} className="transcript-entry">
-                        <div className="transcript-header">
-                            <span className={`speaker-badge ${getSpeakerColor(entry.speaker)}`}>
-                            {entry.speaker}
-                            </span>
-                        </div>
-                        <p className="transcript-text">{entry.text}</p>
-                        </div>
-                    ))
-                    ) : (
-                    <div className="empty-state">
-                        <Mic className="empty-icon" />
-                        <p className="empty-title">No transcript available</p>
-                        <p className="empty-subtitle">Start recording or upload an audio file to begin</p>
-                    </div>
-                    )}
-                </div>
-                </div>
-            </div>
-
-            {/* Right Column - AI Summary */}
-            <div className="right-column">
-                <div className="card">
-                <div className="summary-header">
+                <div className="main-grid">
+                {/* Left Column - Recording Controls and Transcript */}
+                <div className="left-column">
+                    {/* Recording Controls */}
+                    <div className="card">
                     <h2 className="section-title">
-                    <Hash className="section-icon" />
-                    AI Summary
+                        <Mic className="section-icon" />
+                        Audio Input
                     </h2>
-                    <button
-                    onClick={exportToPDF}
-                    className="btn btn-success btn-small"
-                    >
-                    <Download className="btn-icon" />
-                    Export PDF
-                    </button>
+                    
+                    <div className="controls-container">
+                        <div className="button-group">
+                            <button
+                                onClick={isRecording ? stopRecording : startRecording}
+                                className={`btn ${isRecording ? 'btn-danger' : 'btn-primary'}`}
+                            >
+                                {isRecording ? <MicOff className="btn-icon" /> : <Mic className="btn-icon" />}
+                                {isRecording ? 'Stop Recording' : 'Start Recording'}
+                            </button>
+
+                            <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="btn btn-secondary"
+                            >
+                                <Upload className="btn-icon" />
+                                {selectedFile ? "Change Audio File" : "Choose Audio File"}
+                            </button>
+                            
+                            <button
+                            onClick={uploadFile}
+                            disabled={!selectedFile || loading}
+                            className={`btn ${selectedFile ? 'btn-primary' : 'btn-disabled'}`}
+                            >
+                                <Upload className="btn-icon" />
+                                {loading ? "Uploading..." : selectedFile ? "Upload Selected File" : "Upload Audio"}
+                            </button>
+                        </div>
+
+                        {isRecording && (
+                        <div className="recording-indicator">
+                            <div className="recording-dot"></div>
+                            <span className="recording-time">{formatTime(recordingTime)}</span>
+                        </div>
+                        )}
+                    </div>
+
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={(e) => setSelectedFile(e.target.files[0])}
+                        className="file-input"
+                    />
+
+                    {/* Uploading progress indicator */}
+                    {loading && (
+                        <div className="progress-container">
+                        <div className="progress-bar">
+                            <div 
+                            className="progress-fill"
+                            ></div>
+                        </div>
+                        <p className="progress-text">Uploading...</p>
+                        </div>
+                    )}
+
+                    {isProcessing && (
+                        <div className="processing-indicator">
+                        <div className="spinner"></div>
+                        <span>Processing audio with AI...</span>
+                        </div>
+                    )}
+                    </div>
+
+                    {/* Transcript Section */}
+                    <div className="card">
+                    <h2 className="section-title">
+                        <FileText className="section-icon" />
+                        Live Transcript
+                    </h2>
+                    
+                    <div className="transcript-container">
+                        {transcript.length > 0 ? (
+                        transcript.map((entry) => (
+                            <div key={entry.id} className="transcript-entry">
+                            <div className="transcript-header">
+                                <span className={`speaker-badge ${getSpeakerColor(entry.speaker)}`}>
+                                    {entry.speaker}
+                                </span>
+                            </div>
+                            <p className="transcript-text">{entry.text}</p>
+                            </div>
+                        ))
+                        ) : (
+                        <div className="empty-state">
+                            <Mic className="empty-icon" />
+                            <p className="empty-title">No transcript available</p>
+                            <p className="empty-subtitle">Start recording or upload an audio file to begin</p>
+                        </div>
+                        )}
+                    </div>
+                    </div>
+                </div>
+                
+                {/* Past Meetings */}
+                <div className="card">
+                    <h2 className="section-title">
+                        <FileText className="section-icon" />
+                        Past Meetings
+                    </h2>
+                    {meetingList.map((meeting, index) => {
+                        const colorClass = `btn-past-${(index % 4) + 1}`;
+                        return (
+                            <button
+                                key={meeting.uuid}
+                                className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? 'btn-active' : ''}`}
+                                onClick={() => loadPastMeeting(meeting.uuid)}
+                            >
+                                {meeting.name}
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {summary ? (
-                    <div className="summary-content">
-                    {/* Meeting Info */}
-                    <div className="meeting-info">
-                        <h3 className="meeting-title">{summary.meetingTitle}</h3>
-                        <div className="meeting-meta">
-                        <div className="meta-item">
-                            <Clock className="meta-icon" />
-                            {summary.duration}
-                        </div>
-                        <div className="meta-item">
-                            <Users className="meta-icon" />
-                            {summary.participants.length} participants
-                        </div>
-                        </div>
+
+                {/* Right Column - AI Summary */}
+                <div className="right-column">
+                    <div className="card">
+                    <div className="summary-header">
+                        <h2 className="section-title">
+                        <Hash className="section-icon" />
+                        AI Summary
+                        </h2>
+                        <button
+                        onClick={exportToPDF}
+                        className="btn btn-success btn-small"
+                        >
+                        <Download className="btn-icon" />
+                        Export PDF
+                        </button>
                     </div>
 
-                    {/* Participants */}
-                    <div className="summary-section">
-                        <h4 className="summary-section-title">Participants</h4>
-                        <div className="participants-list">
-                        {summary.participants.map((participant, index) => (
-                            <span key={index} className={`speaker-badge ${getSpeakerColor(participant)}`}>
-                            {participant}
-                            </span>
-                        ))}
+                    {summaryLoading ? (
+                        <div className="processing-indicator">
+                            <div className="spinner"></div>
+                            <span>Generating summary with AI...</span>
                         </div>
-                    </div>
+                        ) : summary ? (
+                        <div className="summary-content">
+                            {/* Meeting Info */}
+                        <div className="meeting-info">
+                            <h3 className="meeting-title">{summary.meetingTitle}</h3>
+                            <div className="meeting-meta">
+                            <div className="meta-item">
+                                <Clock className="meta-icon" />
+                                {summary.duration}
+                            </div>
+                            <div className="meta-item">
+                                <Users className="meta-icon" />
+                                {summary.participants.length} participants
+                            </div>
+                            </div>
+                        </div>
 
-                    {/* Key Points */}
-                    <div className="summary-section">
-                        <h4 className="summary-section-title">Key Discussion Points</h4>
-                        <ul className="summary-list">
-                        {summary.keyPoints.map((point, index) => (
-                            <li key={index} className="summary-item">
-                            <div className="bullet bullet-blue"></div>
-                            <span className="summary-text">{point}</span>
-                            </li>
-                        ))}
-                        </ul>
-                    </div>
+                        {/* Participants */}
+                        <div className="summary-section">
+                            <h4 className="summary-section-title">Participants</h4>
+                            <div className="participants-list">
+                            {summary.participants.map((participant, index) => (
+                                <span key={index} className={`speaker-badge ${getSpeakerColor(participant)}`}>
+                                {participant}
+                                </span>
+                            ))}
+                            </div>
+                        </div>
 
-                    {/* Action Items */}
-                    <div className="summary-section">
-                        <h4 className="summary-section-title">Action Items</h4>
-                        <ul className="summary-list">
-                        {summary.actionItems.map((item, index) => (
-                            <li key={index} className="summary-item">
-                            <div className="bullet bullet-orange"></div>
-                            <span className="summary-text">{item}</span>
-                            </li>
-                        ))}
-                        </ul>
-                    </div>
+                        {/* Key Points */}
+                        <div className="summary-section">
+                            <h4 className="summary-section-title">Key Discussion Points</h4>
+                            <ul className="summary-list">
+                            {summary.keyPoints.map((point, index) => (
+                                <li key={index} className="summary-item">
+                                <div className="bullet bullet-blue"></div>
+                                <span className="summary-text">{point}</span>
+                                </li>
+                            ))}
+                            </ul>
+                        </div>
 
-                    {/* Next Steps */}
-                    <div className="summary-section">
-                        <h4 className="summary-section-title">Next Steps</h4>
-                        <ul className="summary-list">
-                        {summary.nextSteps.map((step, index) => (
-                            <li key={index} className="summary-item">
-                            <div className="bullet bullet-green"></div>
-                            <span className="summary-text">{step}</span>
-                            </li>
-                        ))}
-                        </ul>
+                        {/* Action Items */}
+                        <div className="summary-section">
+                            <h4 className="summary-section-title">Action Items</h4>
+                            <ul className="summary-list">
+                            {summary.actionItems.map((item, index) => (
+                                <li key={index} className="summary-item">
+                                <div className="bullet bullet-orange"></div>
+                                <span className="summary-text">{item}</span>
+                                </li>
+                            ))}
+                            </ul>
+                        </div>
+
+                        {/* Next Steps */}
+                        <div className="summary-section">
+                            <h4 className="summary-section-title">Next Steps</h4>
+                            <ul className="summary-list">
+                            {summary.nextSteps.map((step, index) => (
+                                <li key={index} className="summary-item">
+                                <div className="bullet bullet-green"></div>
+                                <span className="summary-text">{step}</span>
+                                </li>
+                            ))}
+                            </ul>
+                        </div>
+                        </div>
+                        ) : (
+                        <div className="empty-state">
+                            <Hash className="empty-icon" />
+                            <p className="empty-title">No summary available</p>
+                            <p className="empty-subtitle">Summary will appear after processing audio</p>
+                        </div>
+                    )}
                     </div>
-                    </div>
-                ) : (
-                    <div className="empty-state">
-                    <Hash className="empty-icon" />
-                    <p className="empty-title">No summary available</p>
-                    <p className="empty-subtitle">Summary will appear after processing audio</p>
-                    </div>
-                )}
                 </div>
-            </div>
+                </div>
             </div>
         </div>
-    </div>
-  );
-};
+    );
+    };
 
 export default MeetingTranscriptionApp;

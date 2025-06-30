@@ -17,29 +17,29 @@ async def get_file_name(uuid: str) -> dict[str, str]:
     }
 
     if uuid in csv_list:
-        return {"name": csv_list[uuid]}
+        return {"file_name": csv_list[uuid]}
     return {"error": "UUID not found"}
 
 
 @app.get("/jobs")
-async def check_files() -> dict[str, dict[str, str]]:
+async def check_files() -> dict[str, dict[str, dict[str, str]]]:
     """
     Dummy route to return a JSON response including a list of strings.
     """
     return {
         "csv_list":
         {
-            "1": "file_1",
-            "2": "file_2",
-            "3": "file_3",
-            "4": "file_4",
-            "5": "file_5"
+            "1": {"file_name": "file_1", "status_code": "200"},
+            "2": {"file_name": "file_2", "status_code": "200"},
+            "3": {"file_name": "file_3", "status_code": "200"},
+            "4": {"file_name": "file_4", "status_code": "200"},
+            "5": {"file_name": "file_5", "status_code": "200"}
         }
     }
 
 
 @app.post("/jobs")
-async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[str, str]]]:
+async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[str, int | str]]]:
     """
     Dummy function to transcribe input audio file.
     """
@@ -60,7 +60,7 @@ async def transcribe(file: UploadFile = File(...)) -> dict[str, str | list[dict[
     return {
         "uuid": "1",
         "file_name": "new_file",
-        "transcript": dummy_transcription
+        "transcript": [{entry["speaker"]: entry["text"]} for entry in dummy_transcription]
     }
 
 
@@ -83,39 +83,39 @@ async def get_file_transcript(uuid: str) -> dict[str, list[dict[str, str]]]:
     """
     dummy_transcripts = {
         "1": [
-            {"Speaker 1": "Good morning, everyone. Let's begin with the project updates."},
-            {"Speaker 2": "Sure. We've completed the initial design phase and are moving into development."},
-            {"Speaker 1": "Excellent. Any blockers or concerns we should address now?"},
-            {"Speaker 3": "Not at the moment, but we'll need additional resources by next sprint."}
+            {"id": 1, "speaker": "SPEAKER_1", "text": "Good morning, everyone. Let's begin with the project updates."},
+            {"id": 2, "speaker": "SPEAKER_2", "text": "Sure. We've completed the initial design phase and are moving into development."},
+            {"id": 3, "speaker": "SPEAKER_1", "text": "Excellent. Any blockers or concerns we should address now?"},
+            {"id": 4, "speaker": "SPEAKER_3", "text": "Not at the moment, but we'll need additional resources by next sprint."}
         ],
         "2": [
-            {"Interviewer": "Can you tell me about a time you handled a challenging situation at work?"},
-            {"Candidate": "Yes, there was a time we had to deliver a project in half the usual time. I reorganized our workflow and prioritized key features."},
-            {"Interviewer": "Impressive. What was the result?"},
-            {"Candidate": "We launched on time and received positive feedback from the client."}
+            {"id": 5, "speaker": "INTERVIEWER", "text": "Can you tell me about a time you handled a challenging situation at work?"},
+            {"id": 6, "speaker": "CANDIDATE", "text": "Yes, there was a time we had to deliver a project in half the usual time. I reorganized our workflow and prioritized key features."},
+            {"id": 7, "speaker": "INTERVIEWER", "text": "Impressive. What was the result?"},
+            {"id": 8, "speaker": "CANDIDATE", "text": "We launched on time and received positive feedback from the client."}
         ],
         "3": [
-            {"Professor": "Today, we're going to explore the principles of quantum mechanics."},
-            {"Student": "Is this related to what we covered in thermodynamics?"},
-            {"Professor": "That's a great question. There are connections, but the foundational principles are quite different."}
+            {"id": 9, "speaker": "PROFESSOR", "text": "Today, we're going to explore the principles of quantum mechanics."},
+            {"id": 10, "speaker": "STUDENT", "text": "Is this related to what we covered in thermodynamics?"},
+            {"id": 11, "speaker": "PROFESSOR", "text": "That's a great question. There are connections, but the foundational principles are quite different."}
         ],
         "4": [
-            {"Host": "Welcome back to TechTalk Weekly. I'm your host, Jamie."},
-            {"Guest": "Thanks for having me, Jamie. Excited to dive into today's topic."},
-            {"Host": "Let's start with AI and privacy concerns. What's your take?"},
-            {"Guest": "It's a big issue. Transparency and data control need to be built into systems by default."}
+            {"id": 12, "speaker": "HOST", "text": "Welcome back to TechTalk Weekly. I'm your host, Jamie."},
+            {"id": 13, "speaker": "GUEST", "text": "Thanks for having me, Jamie. Excited to dive into today's topic."},
+            {"id": 14, "speaker": "HOST", "text": "Let's start with AI and privacy concerns. What's your take?"},
+            {"id": 15, "speaker": "GUEST", "text": "It's a big issue. Transparency and data control need to be built into systems by default."}
         ],
         "5": [
-            {"Alex": "Hey, did you watch the match last night?"},
-            {"Jordan": "Yeah! It was intense. That last-minute goal was wild."},
-            {"Alex": "I know, right? Totally unexpected turn."}
+            {"id": 16, "speaker": "ALEX", "text": "Hey, did you watch the match last night?"},
+            {"id": 17, "speaker": "JORDAN", "text": "Yeah! It was intense. That last-minute goal was wild."},
+            {"id": 18, "speaker": "ALEX", "text": "I know, right? Totally unexpected turn."}
         ]
     }
 
-    return {"result": dummy_transcripts[uuid]}
+    return {"result": [{entry["speaker"]: entry["text"]} for entry in dummy_transcripts[uuid]]}
 
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> dict:
+def summarise_job(uuid: str) -> dict[str, str | int | list[str]]:
     """
     Dummy function to summarise transcription result
     with the help of an LLM.
@@ -124,5 +124,8 @@ def summarise_job(uuid: str) -> dict:
 
     return {
         "status": "success",
-        "summary": "The quick brown fox jumps over the lazy dog."
+        "participants": ["speaker_1", "speaker_2"],
+        "keyPoints": ["The quick brown fox jumps over the lazy dog."],
+        "actionItems": ["Carry out task 1.", "Carry out task 2."],
+        "nextSteps": ["Carry out sub-task 1."]
     }
