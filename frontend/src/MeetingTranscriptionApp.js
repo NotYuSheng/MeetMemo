@@ -372,30 +372,29 @@ const MeetingTranscriptionApp = () => {
                     </div>
                     </div>
                 </div>
-                
-                {/* Past Meetings */}
-                <div className="card">
-                    <h2 className="section-title">
-                        <FileText className="section-icon" />
-                        Past Meetings
-                    </h2>
-                    {meetingList.map((meeting, index) => {
-                        const colorClass = `btn-past-${(index % 4) + 1}`;
-                        return (
-                            <button
-                                key={meeting.uuid}
-                                className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? 'btn-active' : ''}`}
-                                onClick={() => loadPastMeeting(meeting.uuid)}
-                            >
-                                {meeting.name}
-                            </button>
-                        );
-                    })}
-                </div>
 
 
                 {/* Right Column - AI Summary */}
                 <div className="right-column">
+                    {/* Past Meetings */}
+                    <div className="card">
+                        <h2 className="section-title">
+                            <FileText className="section-icon" />
+                            Past Meetings
+                        </h2>
+                        {meetingList.map((meeting, index) => {
+                            const colorClass = `btn-past-${(index % 4) + 1}`;
+                            return (
+                                <button
+                                    key={meeting.uuid}
+                                    className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? 'btn-active' : ''}`}
+                                    onClick={() => loadPastMeeting(meeting.uuid)}
+                                >
+                                    {meeting.name}
+                                </button>
+                            );
+                        })}
+                    </div>
                     <div className="card">
                     <div className="summary-header">
                         <h2 className="section-title">
