@@ -36,7 +36,10 @@ const MeetingTranscriptionApp = () => {
         fetch("/jobs")
             .then(res => res.json())
             .then(data => {
-                const list = Object.entries(data.csv_list).map(([uuid, name]) => ({ uuid, name }));
+                const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
+                    uuid,
+                    name: info.file_name
+                }));
                 setMeetingList(list);
             })
             .catch(err => console.error("Failed to fetch meeting list", err));
@@ -47,8 +50,9 @@ const MeetingTranscriptionApp = () => {
         fetch(`/jobs/${uuid}/transcript`)
             .then(res => res.json())
             .then(data => {
+                const parsed = JSON.parse(data.full_transcript || "[]");
                 setTranscript(
-                    (data.result || []).map((entry, idx) => {
+                    parsed.map((entry, idx) => {
                         const speaker = Object.keys(entry)[0];
                         const text = entry[speaker];
                         return { id: idx, speaker, text };
@@ -59,7 +63,7 @@ const MeetingTranscriptionApp = () => {
             .then(res => res.json())
             .then(data => {
                 setSummary({
-                    meetingTitle: `Meeting UUID ${uuid}`,
+                    meetingTitle: data.fileName,
                     duration: "N/A",
                     participants: data.participants,
                     keyPoints: data.keyPoints,
@@ -182,7 +186,7 @@ const MeetingTranscriptionApp = () => {
             .then(data => {
                 if (data) {
                     setSummary({
-                        meetingTitle: `Meeting UUID ${uuid}`,
+                        meetingTitle: data.filename,
                         duration: formatTime(recordingTime),
                         participants: data.participants,
                         keyPoints: data.keyPoints,
