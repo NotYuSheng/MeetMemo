@@ -6,6 +6,7 @@ import csv
 from threading import Lock
 import re
 import requests
+import tempfile
 from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
@@ -30,6 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if not os.path.exists("logs/app.log"):
+    os.makedirs("logs", exist_ok=True)
+    with open("logs/app.log", "w") as f:
+        f.write("")  # Create an empty log file if it doesn't exist
+
 # Store logs inside the volume
 logging.basicConfig(level=logging.INFO,
                     filename='logs/app.log',
@@ -39,10 +45,10 @@ logging.basicConfig(level=logging.INFO,
 # Variables 
 load_dotenv('.env')
 UPLOAD_DIR = "audiofiles"
-csv_lock = Lock()
-csv_file = "audiofiles/audiofiles.csv"
-DEVICE = "cpu"
-
+CSV_LOCK = Lock()
+CSV_FILE = "audiofiles/audiofiles.csv"
+FIELDNAMES = ["uuid", "file_name", "status_code"]
+DEVICE = "cpu" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -81,31 +87,74 @@ def upload_audio(uuid: str, file: UploadFile) -> str:
 
     return filename
 
-def parse_transcript_with_times(text: str) -> dict:
+def add_job(uuid: str, file_name: str, status_code: str) -> None:
     """
-    Parses a transcript and returns a dict mapping each speaker to a list of {start, end, text} entries.
+    Inserts a new job in the CSV.  
+    Reads all rows, adds the new one, sorts by numeric uuid,  
+    then rewrites the entire file.
     """
+    with CSV_LOCK:
+        rows = []
+        if os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rows.append(row)
 
+        rows.append({
+            "uuid":        uuid,
+            "file_name":   file_name,
+            "status_code": status_code
+        })
+
+        rows.sort(key=lambda r: int(r["uuid"]))
+
+        with open(CSV_FILE, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+            writer.writerows(rows)
+
+
+def update_status(uuid: str, new_status: str) -> None:
+    """
+    Read the existing CSV, update the status_code for the matching uuid,
+    and write out to a temporary file which then replaces the original.
+    """
+    with CSV_LOCK:
+        dir_name = os.path.dirname(CSV_FILE) or "."
+        fd, temp_path = tempfile.mkstemp(dir=dir_name, text=True)
+        try:
+            with os.fdopen(fd, "w", newline="") as tmpf, open(CSV_FILE, "r", newline="") as csvf:
+                reader = csv.DictReader(csvf)
+                writer = csv.DictWriter(tmpf, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+                for row in reader:
+                    if row["uuid"] == uuid:
+                        row["status_code"] = new_status
+                    writer.writerow(row)
+            os.replace(temp_path, CSV_FILE)
+        except Exception:
+            os.remove(temp_path)
+            raise        
+
+def parse_transcript_with_times(text: str) -> dict:
+    # allow lowercase, optional colon, flexible whitespace
     pattern = re.compile(
-        r'(?P<start>\d+\.\d+)\s+'           # start time
-        r'(?P<end>\d+\.\d+)\s+'             # end time
-        r'(?P<speaker>SPEAKER_\d+)\s+'      # speaker label
-        r'(?P<utterance>.*?)'               # what they said
-        r'(?=(?:\d+\.\d+\s+\d+\.\d+\s+SPEAKER_\d+)|\Z)',  # lookahead for next block or end
-        re.DOTALL
+        r'(?P<start>\d+\.\d+)\s+'                   # start time
+        r'(?P<end>\d+\.\d+)\s+'                     # end time
+        r'(?P<speaker>speaker_\d+):?\s+'            # speaker label (case-insensitive, optional colon)
+        r'(?P<utterance>.*?)'                       # the spoken text
+        r'(?=(?:\d+\.\d+\s+\d+\.\d+\s+speaker_\d+)|\Z)',  
+        re.DOTALL | re.IGNORECASE                   # match across lines, ignore case
     )
 
     speakers = defaultdict(list)
     for m in pattern.finditer(text):
-        start = float(m.group('start'))
-        end   = float(m.group('end'))
-        spkr  = m.group('speaker')
-        utt   = m.group('utterance').strip()
-
-        speakers[spkr].append({
-            'start': start,
-            'end': end,
-            'text': utt
+        speakers[m.group('speaker').lower()].append({
+            'start': float(m.group('start')),
+            'end':   float(m.group('end')),
+            'text':  m.group('utterance').strip()
         })
 
     return dict(speakers)
@@ -124,11 +173,12 @@ def summarise_transcript(transcript: str) -> str:
         "max_tokens": 750,
         "messages": [
             {"role": "system",
-             "content": "You are a helpful assistant that summarizes meeting transcripts."},
+             "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
             {"role": "user",
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
-                 "highlighting the key points, decisions made, and any action items:\n\n"
+                 "highlighting the key points, decisions made, and any action items."
+                 "You are to give the final summary in markdown format for easier visualisation:\n\n"
                  + transcript
              )},
         ],
@@ -146,27 +196,33 @@ def summarise_transcript(transcript: str) -> str:
 @app.get("/jobs")
 def get_jobs() -> dict:
     """
-    Returns a list of all audio files in the UPLOAD_DIR.
+    Returns a dict of all jobs in the CSV, keyed by uuid,
+    each mapping to its file_name and status_code.
     """
     try:
-        if not os.path.exists(csv_file):
-            with open(csv_file, "w", newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(["uuid", "file_name"])
-        list_of_files = {}
-        with open(csv_file, "r", newline='') as f:
-            reader = csv.reader(f)
-            header = next(reader, None) 
-            if header:
-                for row in reader:
-                    if row and len(row) >= 2: 
-                        list_of_files[row[0]] = row[1]
-        if len(list_of_files) == 0:
+        if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+        jobs = {}
+        with open(CSV_FILE, "r", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if not row.get("uuid") or not row.get("file_name"):
+                    continue
+                jobs[row["uuid"]] = {
+                    "file_name": row["file_name"],
+                    "status_code": row.get("status_code", "")
+                }
+
+        if not jobs:
             return {"csv_list": "No audio files found."}
-        else:
-            return {"csv_list": list_of_files}
+        return {"csv_list": jobs}
+
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.post("/jobs")
 def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
@@ -175,23 +231,36 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
-    try:
-        used = set()
-        with open(csv_file, "r") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                try:
+    uuid=""
+    used = set()
+
+    if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+    with open(CSV_FILE, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            try:
+                if row:
                     used.add(int(row[0]))
-                except ValueError:
-                    continue
-
-        for i in range(10000):
-            if i not in used:
-                uuid = f"{i:04d}"
-                break
-
+            except (ValueError,IndexError):
+                continue
+    for i in range(10000):
+        if i not in used:
+            uuid = f"{i:04d}"
+            break
+    if uuid == "":
+        timestamp = get_timestamp()
+        file_name = file.filename
+        logging.error(f"{timestamp}: Error generating UUID for transcription request for file: {file_name}.wav")
+        return {"error": "No available UUIDs.", "file_name": file_name}
+    
+    try:
         file_name = upload_audio(uuid, file)
         logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
+        add_job(uuid, file_name,"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -202,9 +271,10 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         logging.info(f"{timestamp}: Processing file {file_name}.wav with model {model_name}")
 
         # Transcription & diarization of text
+        hf_token = os.getenv("USE_AUTH_TOKEN")
         pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization", 
-            use_auth_token=os.getenv("USE_AUTH_TOKEN")
+            use_auth_token=hf_token
         )
         asr = model.transcribe(file_path, language="en")
         diarization = pipeline(file_path)
@@ -215,10 +285,14 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
         # Save results & log activity process
         timestamp = get_timestamp()
-        with open(os.path.join("transcripts", f"{file_name}.json"), "w", encoding="utf-8") as f:
-            json.dump(full_transcript, f, indent=4)
+        os.makedirs("transcripts", exist_ok=True)
+        json_path = os.path.join("transcripts", f"{file_name}.json")
+        if not os.path.exists(json_path):
+            with open(os.path.join("transcripts", f"{file_name}.json"), "w", encoding="utf-8") as f:
+                json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
+        update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     
     # Catch any errors when trying to transcribe & diarize recording
@@ -226,17 +300,24 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         timestamp = get_timestamp()
         file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
-        return {"error": str(e)}
+        update_status(uuid, "500")
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
 
 @app.delete("/jobs/{uuid}")
 def delete_job(uuid: str) -> dict:
     """
     Deletes the job with the given UUID, including the audio file and its transcript.
     """
-    # Delete the audio file
     file_name = None
-    with csv_lock:
-        with open(csv_file, "r") as f:
+    uuid = uuid.zfill(4)  
+
+    if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+    with CSV_LOCK:
+        with open(CSV_FILE, "r") as f:
             reader = csv.reader(f)
             rows = list(reader)
         for row in rows:
@@ -245,72 +326,111 @@ def delete_job(uuid: str) -> dict:
                 rows.remove(row)
                 break
         else:
-            return {"error": "UUID not found"}
+            return {"error": "UUID not found", "status_code": "404"}
 
-        with open(csv_file, "w", newline='') as f:
+        with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerows(rows)
-
-    os.remove(os.path.join(UPLOAD_DIR, file_name))
-    os.remove(os.path.join("transcripts", f"{file_name}.json"))
+    try:
+        os.remove(os.path.join(UPLOAD_DIR, file_name))
+    except FileNotFoundError:
+        logging.warning(f"File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
+    try:  
+        os.remove(os.path.join("transcripts", f"{file_name}.json"))
+    except FileNotFoundError:
+        logging.warning(f"Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
     timestamp = get_timestamp()
 
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
-    return {"status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully."}
+    return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
 @app.get("/jobs/{uuid}/filename")
 def get_file_name(uuid: str) -> dict:
     """
     Returns the file name associated with the given UUID.
     """
-    with open(csv_file, "r") as f:
+    uuid = uuid.zfill(4)
+
+    if not os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+
+    with open(CSV_FILE, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if row[0] == uuid:
                 return {"uuid": uuid, "file_name": row[1]}
-    return {"error": "UUID not found"}
+            
+    return {"error": f"UUID: {uuid} not found", "status_code": "404"}
 
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
     """
-    Gets ALL the statuses of the job with the given UUID.
+    Returns the file_name and status for the given uuid,
+    reading from jobs.csv (uuid, file_name, status_code).
     """
-    logs = get_logs()
-    status = []
-    file_name_response = get_file_name(uuid)
-    if "error" in file_name_response:
-        logging.error(f"Failed to get file name for UUID {uuid} in summarise job: {file_name_response['error']}")
-        return {"error": f"Failed to retrieve file details for UUID {uuid} to start summarisation."}
-    file_name = file_name_response["file_name"]
-    status.append(f"Job status for UUID: {uuid}:\n, File name: {file_name}\n")
-    for i in logs['logs']:
-        if uuid in i:
-            status.append(i)
-    return {"uuid": uuid, "file_name": file_name, "status": status}
+    uuid = uuid.zfill(4)
+    file_name = "unknown"
+    status_code = "404"
 
+    if not os.path.isfile(CSV_FILE):
+        with open(CSV_FILE, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+
+    with open(CSV_FILE, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("uuid") == uuid:
+                file_name = row.get("file_name", "unknown")
+                status_code = row.get("status_code", "")
+                break
+
+    status_map = {
+        "200": "completed",
+        "202": "processing",
+        "204": "deleted",
+        "404": "does not exist",
+        "500": "error"
+    }
+
+    if status_code in status_map:
+        status = status_map[status_code]
+    else:
+        log_msg = ""
+        logs = get_logs().get("logs", [])
+        for entry in logs:
+            if uuid in entry:
+                log_msg += entry + "\n"
+        status = log_msg or "unknown"
+
+    return {"uuid": uuid, "file_name": file_name, "status_code": status_code, "status": status}
 
 @app.get("/jobs/{uuid}/transcript")
 def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
     """
+    uuid = uuid.zfill(4)
     file_name = get_file_name(uuid).get("file_name", "unknown")
-    file_path = f"transcripts/{file_name}.txt"
+    file_path = f"transcripts/{file_name}.json"
     if os.path.exists(file_path):
         full_transcript = []
         with open(file_path, "r", encoding="utf-8") as f:
             full_transcript = f.read()
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-        return {"status": "exists", "full_transcript": full_transcript}
+        return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript}
     else:
-        return {"status": "not found"}
+        return {"uuid": uuid, "status": "not found"}
 
 @app.get("/jobs/{uuid}/result")
 def get_job_result(uuid: str) -> dict:
     """
     Returns the  transcript with timestamps for the given UUID, separated by speakers.
     """
+    uuid = uuid.zfill(4)
     raw_transcript = get_file_transcript(uuid)["full_transcript"]
     result = parse_transcript_with_times(raw_transcript)
     full_result = ""
@@ -321,15 +441,16 @@ def get_job_result(uuid: str) -> dict:
     timestamp = get_timestamp()
     file_name = get_file_name(uuid)["file_name"]
     logging.info(f"{timestamp}: Retrieved diarised transcript for UUID: {uuid}, file name: {file_name}")
-    return {"status": "exists", "result": full_result}
+    return {"uuid": uuid, "status": "exists", "result": full_result}
 
 @app.post("/jobs/{uuid}/summarise")
 def summarise_job(uuid: str) -> dict:
     """
     Summarises the transcript for the given UUID using a defined LLM.
     """
+    uuid = uuid.zfill(4)
+    file_name = get_file_name(uuid)["file_name"]
     try:
-        file_name = get_file_name(uuid)["file_name"]
         get_full_transcript_response = get_file_transcript(uuid)
         if get_full_transcript_response["status"] == "not found":
             return {"error": f"Transcript not found for the given UUID: {uuid}."}
@@ -340,13 +461,12 @@ def summarise_job(uuid: str) -> dict:
         
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        return {"status": "success", "summary": summary}
+        return {"uuid": uuid, "file_name": file_name, "status": "success", "summary": summary, "status_code": "200"}
     
     except Exception as e:
         timestamp = get_timestamp()
-        file_name = get_file_name(uuid)["file_name"]
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"error": str(e)}
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
@@ -370,13 +490,11 @@ def health_check():
         timestamp = get_timestamp()
         if error_msg:
             logging.error(f"{timestamp}: Health check found errors: {error_msg}")
-            return {"status": "error", "message": error_msg}
+            return {"status": "error", "message": error_msg, "status_code": "500"}
         else:
             logging.info(f"{timestamp}: Health check passed successfully.")
-            return {"status": "ok"}
+            return {"status": "ok", "status_code": "200"}
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
-        return {"status": "error", "error": str(e)}
-    
-print("Ready to rock & ro-o-oll")
+        return {"status": "error", "error": str(e), "status_code": "500"}

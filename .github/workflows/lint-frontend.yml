@@ -1,0 +1,62 @@
+name: Lint Frontend
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'frontend/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    name: Run ESLint, Prettier, Stylelint (Auto-Fix + Push)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Auto-fix ESLint issues
+        run: npx eslint src --fix
+
+      - name: Auto-fix Prettier issues
+        run: npx prettier --write .
+
+      - name: Auto-fix Stylelint issues
+        run: npm run lint:css:fix
+
+      - name: Commit and push changes (if any)
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+          git fetch origin $BRANCH_NAME
+          git checkout -B $BRANCH_NAME origin/$BRANCH_NAME
+
+          git add .
+          git diff --cached --quiet || git commit -m "ci: auto-fix frontend linting issues"
+          git push origin HEAD:refs/heads/$BRANCH_NAME
