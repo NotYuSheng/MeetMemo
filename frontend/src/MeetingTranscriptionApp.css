@@ -516,36 +516,16 @@ body {
   background-color: #e5e7eb;
 }
 
-.btn-past-1 {
-  background-color: #dbeafe; /* light blue */
-  color: #1e3a8a;
-}
-
 .btn-past-1:hover {
   background-color: #bfdbfe;
-}
-
-.btn-past-2 {
-  background-color: #dcfce7; /* light green */
-  color: #065f46;
 }
 
 .btn-past-2:hover {
   background-color: #bbf7d0;
 }
 
-.btn-past-3 {
-  background-color: #fef3c7; /* light yellow */
-  color: #92400e;
-}
-
 .btn-past-3:hover {
   background-color: #fde68a;
-}
-
-.btn-past-4 {
-  background-color: #fce7f3; /* light pink */
-  color: #9d174d;
 }
 
 .btn-past-4:hover {

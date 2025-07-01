@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Upload, Download, FileText, Users, Clock, Hash } from 'lucide-react';
 import './MeetingTranscriptionApp.css';
 import jsPDF from "jspdf";
+import { useCallback } from 'react';
 
 const MeetingTranscriptionApp = () => {
     /////////////////////////// All constants ///////////////////////////
@@ -241,19 +242,16 @@ const MeetingTranscriptionApp = () => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const getSpeakerColor = (speaker) => {
+    const speakerColorMap = useRef({});
+
+    const getSpeakerColor = useCallback((speaker) => {
         const colors = ['speaker-blue', 'speaker-green', 'speaker-purple', 'speaker-orange'];
-        
-        // Cache for consistent color per speaker
-        if (!getSpeakerColor.speakerMap) getSpeakerColor.speakerMap = {};
-        const map = getSpeakerColor.speakerMap;
-
-        if (!(speaker in map)) {
-            map[speaker] = colors[Object.keys(map).length % colors.length];
+        if (!(speaker in speakerColorMap.current)) {
+            const newColorIndex = Object.keys(speakerColorMap.current).length % colors.length;
+            speakerColorMap.current[speaker] = colors[newColorIndex];
         }
-
-        return map[speaker];
-    };
+        return speakerColorMap.current[speaker];
+    }, []);
 
     return (
         <div className="app-container">
