@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Upload, Download, FileText, Users, Clock, Hash } from 'lucide-react';
 import './MeetingTranscriptionApp.css';
+import jsPDF from "jspdf";
 
 const MeetingTranscriptionApp = () => {
     /////////////////////////// All constants ///////////////////////////
@@ -186,7 +187,7 @@ const MeetingTranscriptionApp = () => {
             .then(data => {
                 if (data) {
                     setSummary({
-                        meetingTitle: data.filename,
+                        meetingTitle: data.fileName,
                         duration: formatTime(recordingTime),
                         participants: data.participants,
                         keyPoints: data.keyPoints,
@@ -199,16 +200,39 @@ const MeetingTranscriptionApp = () => {
             .finally(() => setSummaryLoading(false));
     };
 
+
     const exportToPDF = () => {
-        // In real implementation, this would call your backend to generate PDF
-        const element = document.createElement('a');
-        const content = `Meeting Summary\n\nTitle: ${summary.meetingTitle}\nDuration: ${summary.duration}\nParticipants: ${summary.participants.join(', ')}\n\nKey Points:\n${summary.keyPoints.map(point => `• ${point}`).join('\n')}\n\nAction Items:\n${summary.actionItems.map(item => `• ${item}`).join('\n')}`;
-        const file = new Blob([content], { type: 'text/plain' });
-        element.href = URL.createObjectURL(file);
-        element.download = 'meeting-summary.txt';
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
+        if (!summary) return;
+        const doc = new jsPDF();
+        let y = 10;
+        const lineHeight = 8;
+        const pageHeight = doc.internal.pageSize.height;
+        const addLine = (text, indent = 10) => {
+            if (y + lineHeight > pageHeight - 10) {
+                doc.addPage();
+                y = 10;
+            }
+            doc.text(text, indent, y);
+            y += lineHeight;
+        };
+        doc.setFontSize(16);
+        addLine("Meeting Summary");
+        doc.setFontSize(12);
+        addLine(`Title: ${summary.meetingTitle || "N/A"}`);
+        addLine(`Duration: ${summary.duration || "N/A"}`);
+        addLine(`Participants: ${(summary.participants || []).join(', ') || "N/A"}`);
+        const addList = (title, items, bullet = "•") => {
+            if (!Array.isArray(items) || items.length === 0) return;
+            addLine("");
+            addLine(`${title}:`);
+            (items || []).forEach(item => {
+                addLine(`${bullet} ${item}`, 14);
+            });
+        };
+        addList("Key Discussion Points", summary.keyPoints);
+        addList("Action Items", summary.actionItems);
+        addList("Next Steps", summary.nextSteps);
+        doc.save("meeting-summary.pdf");
     };
 
     const formatTime = (seconds) => {

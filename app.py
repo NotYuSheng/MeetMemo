@@ -29,12 +29,34 @@ dummy_jobs = {
 
 dummy_transcripts = {
     "0001": [
-        {"speaker": "SPEAKER_1", "text": "Welcome to the meeting."},
-        {"speaker": "SPEAKER_2", "text": "Thanks! Let’s begin with updates."}
+        {"speaker": "speaker 1", "text": "Welcome to the meeting."},
+        {"speaker": "speaker 2", "text": "Thanks! Let's begin with updates."},
+        {"speaker": "speaker 3", "text": "Team Cicada has already liasoned with the production team to arrange for shipments. We'll be ready to go in about 2 weeks."},
+        {"speaker": "speaker 1", "text": "That's re-assuring to hear."}
     ],
     "0002": [
         {"speaker": "INTERVIEWER", "text": "Tell me about your background."},
-        {"speaker": "CANDIDATE", "text": "I’ve worked on multiple projects involving AI."}
+        {"speaker": "CANDIDATE", "text": "I've worked on multiple projects involving AI."},
+        {"speaker": "INTERVIEWER", "text": "That's great to hear! Can you elaborate a little more about them?"},
+        {"speaker": "CANDIDATE", 'text': "It's got to do with locally-hosted apps that help assist the team in their day-to-day activities. It helps us automate some of the more mundane tasks."},
+        {"speaker": "INTERVIEWER", "text": "Interesting."}
+    ],
+    "0003": [
+        {"speaker": "Candice", "text": "Hello guys! How's everyone doing?"},
+        {"speaker": "Markko", "text": "I'm doing pretty fine. Just went on a trip to Japan - saw snow over there for the first time!"},
+        {"speaker": "Charlie", "text": "That's so cool. I'm a little jealous, to be honest. Have never really been to Japan before."},
+        {"speaker": "Candice", "text": "Yeah, me too. I've only been to countries in Sountheast Asia in my past trips. Japan sounds like a nice place to go for my next vacation."}
+    ],
+    "0004": [
+        {"speaker": "Tom", "text": "Hello! Let's start discussing about our project that's due soon."},
+        {"speaker": "Sally", "text": "Sure, let's start by assigning roles to team members."},
+        {"speaker": "Tom", "text": "Cindy can help with the news sourcing, you can help prepare the slides while I continue working on the write-up."},
+        {"speaker": "Sally", "text": "Sure, sounds like a plan."}
+    ],
+    "0005": [
+        {"speaker": "speaker 1", "text": "How's the restaurant trip yesterday?"},
+        {"speaker": "speaker 2", "text": "It was pretty good. The food was affordable & the quality was suprisingly good."},
+        {"speaker": "speaker 1", "text": "Cool! Maybe I can bring my family along for a meal there this coming Friday."}
     ]
 }
 
@@ -85,7 +107,7 @@ async def transcribe(file: UploadFile = File(...)):
     dummy_transcripts[uuid] = [
         {"speaker": speaker, "text": text} for segment in transcript for speaker, text in segment.items()
     ]
-    return {"uuid": uuid, "file_name": file_name, "transcript": transcript}
+    return {"uuid": uuid, "fileName": file_name, "transcript": transcript}
 
 @app.delete("/jobs/{uuid}")
 async def delete_job(uuid: str):
