@@ -159,7 +159,7 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str) -> str:
+def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
     """
     Summarises the transcript using a defined LLM.
     """
@@ -170,14 +170,19 @@ def summarise_transcript(transcript: str) -> str:
     payload = {
         "model": model_name,
         "temperature": 0.3,
-        "max_tokens": 750,
+        "max_tokens": 150,
         "messages": [
             {"role": "system",
              "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
             {"role": "user",
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
-                 "highlighting the key points, decisions made, and any action items."
+                 "highlighting participants, key points, action items & next steps."
+                 "Format your response as such:"
+                 "<participants>\n---\n<keyPoints>\n---\n<actionItems>\n---\n<nextSteps>\n"
+                 "The summary should contain point forms phrased in consise English."
+                 "Here's an example for <keyPoints>:"
+                 "-<point 1>\n-<point 2>..."
                  "You are to give the final summary in markdown format for easier visualisation:\n\n"
                  + transcript
              )},
@@ -188,9 +193,16 @@ def summarise_transcript(transcript: str) -> str:
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
-        return summary
+        summary_chunks = summary.split("\n---\n")
+        summary_chunks_dict = {
+            "participants": summary_chunks[0],
+            "keyPoints": summary_chunks[1],
+            "actionItems": summary_chunks[2],
+            "nextSteps": summary_chunks[3]
+        }
+        return summary_chunks_dict
     except requests.RequestException as e:
-        return f"Error summarising transcript: {str(e)}"
+        return {"error": str(e)}
     
 ##################################### Main routes for back-end #####################################
 @app.get("/jobs")
@@ -461,7 +473,12 @@ def summarise_job(uuid: str) -> dict:
         
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        return {"uuid": uuid, "file_name": file_name, "status": "success", "summary": summary, "status_code": "200"}
+        return {
+            "uuid": uuid,
+            "fileName": file_name,
+            "status": "success",
+            "participants": summary["participants"],
+            "status_code": "200"}
     
     except Exception as e:
         timestamp = get_timestamp()
