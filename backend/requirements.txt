@@ -11,3 +11,4 @@ pydantic==2.7.1
 numba==0.59.1
 python-multipart==0.0.9
 requests==2.32.4
+pydub==0.25.1

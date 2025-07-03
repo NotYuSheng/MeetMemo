@@ -415,7 +415,8 @@ const MeetingTranscriptionApp = () => {
                             <div className="spinner"></div>
                             <span>Generating summary with AI...</span>
                         </div>
-                        ) : summary ? (
+                        ) : (
+                        summary?.participants && summary.participants.length > 0 ? (
                         <div className="summary-content">
                             {/* Meeting Info */}
                         <div className="meeting-info">
@@ -489,6 +490,7 @@ const MeetingTranscriptionApp = () => {
                             <p className="empty-title">No summary available</p>
                             <p className="empty-subtitle">Summary will appear after processing audio</p>
                         </div>
+                    )
                     )}
                     </div>
                 </div>
