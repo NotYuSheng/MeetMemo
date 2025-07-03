@@ -280,7 +280,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         file_name = upload_audio(uuid, file)
         file_path = os.path.join(UPLOAD_DIR, file_name)
 
-        # 🔁 Check and convert to WAV if needed
+        # Check and convert to WAV if needed
         if not file_name.lower().endswith(".wav"):
             wav_file_name = f"{os.path.splitext(file_name)[0]}.wav"
             wav_file_path = os.path.join(UPLOAD_DIR, wav_file_name)
@@ -290,7 +290,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             wav_file_name = file_name  # keep the original if already WAV
 
         logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
-        add_job(uuid, wav_file_name,"202")
+        add_job(uuid, os.path.splitext(file_name)[0],"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -443,8 +443,10 @@ def get_file_transcript(uuid: str) -> dict:
     Returns the raw full transcript for the given UUID.
     """
     uuid = uuid.zfill(4)
-    file_name = get_file_name(uuid).get("file_name", "unknown")
-    file_path = f"transcripts/{file_name}.json"
+    file_name = get_file_name(uuid)["file_name"]
+    file_path = f".\\transcripts\\{file_name}.json"
+    logging.info(file_path)
+    
     if os.path.exists(file_path):
         full_transcript = []
         with open(file_path, "r", encoding="utf-8") as f:
