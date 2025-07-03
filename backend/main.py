@@ -49,7 +49,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cpu" 
+DEVICE = "cuda:0" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -62,13 +62,20 @@ def get_timestamp() -> str:
 
 def format_result(diarized: list) -> list[dict]:
     """
-    Formats the diarized results into an array of speaker-utterance pairs.
+    Formats the diarized results into an array of
+    {speaker, start, end, text} entries.
+    
+    diarized: list of tuples (segment, speaker, utterance)
     """
     full_transcript = []
 
-    for _, speaker, utterance in diarized:
-        segment = {speaker: utterance}
-        full_transcript.append(segment)
+    for segment, speaker, utterance in diarized:
+        full_transcript.append({
+            "speaker": speaker,
+            "start":   round(segment.start,  2),
+            "end":     round(segment.end,    2),
+            "text":    utterance.strip()
+        })
 
     return full_transcript
 
@@ -190,7 +197,7 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
         ],
     }
     try:
-        resp = requests.post(url, json=payload)
+        resp = requests.post(url, headers={"Content-Type": "application/json"}, json=payload)
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
@@ -490,10 +497,14 @@ def summarise_job(uuid: str) -> dict:
             full_transcript = get_full_transcript_response["full_transcript"]
 
         summary = summarise_transcript(full_transcript)
-        
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        final = {
+
+        if "Error" in summary:
+            logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
+            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
+        else:
+            logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
+            final = {
             "uuid": uuid,
             "fileName": file_name,
             "status": "success",
