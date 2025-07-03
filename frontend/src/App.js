@@ -1,12 +1,21 @@
-import "./App.css";
-import TextInterface from "./components/Transcribe";
+import './App.css';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route
+} from 'react-router-dom';
+
+import MeetingTranscriptionApp from './MeetingTranscriptionApp';
 
 function App() {
   return (
-    <div className="app">
-      <header className="app-header">Meet Memo</header>
-      <TextInterface />
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/MeetMemo" element={<MeetingTranscriptionApp />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

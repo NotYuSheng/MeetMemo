@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import json
+from pydub import AudioSegment
 
 # Start up the app
 app = FastAPI()    
@@ -159,7 +160,7 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str) -> str:
+def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
     """
     Summarises the transcript using a defined LLM.
     """
@@ -170,14 +171,19 @@ def summarise_transcript(transcript: str) -> str:
     payload = {
         "model": model_name,
         "temperature": 0.3,
-        "max_tokens": 750,
+        "max_tokens": 150,
         "messages": [
             {"role": "system",
              "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
             {"role": "user",
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
-                 "highlighting the key points, decisions made, and any action items."
+                 "highlighting participants, key points, action items & next steps."
+                 "Format your response as such:"
+                 "<participants>\n---\n<keyPoints>\n---\n<actionItems>\n---\n<nextSteps>\n"
+                 "The summary should contain point forms phrased in consise English."
+                 "Here's an example for <keyPoints>:"
+                 "-<point 1>\n-<point 2>..."
                  "You are to give the final summary in markdown format for easier visualisation:\n\n"
                  + transcript
              )},
@@ -188,10 +194,23 @@ def summarise_transcript(transcript: str) -> str:
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
-        return summary
+        summary_chunks = summary.split("\n---\n")
+        summary_chunks_dict = {
+            "participants": summary_chunks[0],
+            "keyPoints": summary_chunks[1],
+            "actionItems": summary_chunks[2],
+            "nextSteps": summary_chunks[3]
+        }
+        return summary_chunks_dict
     except requests.RequestException as e:
-        return f"Error summarising transcript: {str(e)}"
-    
+        return {"error": str(e)}
+
+def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
+    audio = AudioSegment.from_file(input_path)
+    audio = audio.set_frame_rate(sample_rate).set_channels(1)  # 16kHz mono
+    audio.export(output_path, format="wav")
+
+
 ##################################### Main routes for back-end #####################################
 @app.get("/jobs")
 def get_jobs() -> dict:
@@ -259,16 +278,27 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     
     try:
         file_name = upload_audio(uuid, file)
-        logging.info(f"Created transcription request for file: {file_name}.wav and UUID: {uuid} with model: {model_name}")
-        add_job(uuid, file_name,"202")
+        file_path = os.path.join(UPLOAD_DIR, file_name)
+
+        # 🔁 Check and convert to WAV if needed
+        if not file_name.lower().endswith(".wav"):
+            wav_file_name = f"{os.path.splitext(file_name)[0]}.wav"
+            wav_file_path = os.path.join(UPLOAD_DIR, wav_file_name)
+            convert_to_wav(file_path, wav_file_path)
+            file_path = wav_file_path  # update path for Whisper/Pyannote
+        else:
+            wav_file_name = file_name  # keep the original if already WAV
+
+        logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
+        add_job(uuid, wav_file_name,"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
-        file_path = os.path.join(UPLOAD_DIR, file_name)
+        file_path = os.path.join(UPLOAD_DIR, wav_file_name)
 
         # Log time & activity
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Processing file {file_name}.wav with model {model_name}")
+        logging.info(f"{timestamp}: Processing file {wav_file_name} with model {model_name}")
 
         # Transcription & diarization of text
         hf_token = os.getenv("USE_AUTH_TOKEN")
@@ -288,7 +318,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         os.makedirs("transcripts", exist_ok=True)
         json_path = os.path.join("transcripts", f"{file_name}.json")
         if not os.path.exists(json_path):
-            with open(os.path.join("transcripts", f"{file_name}.json"), "w", encoding="utf-8") as f:
+            with open(os.path.join("transcripts", f"{file_name.split(".")[0]}.json"), "w", encoding="utf-8") as f:
                 json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
@@ -362,7 +392,7 @@ def get_file_name(uuid: str) -> dict:
             if row[0] == uuid:
                 return {"uuid": uuid, "file_name": row[1]}
             
-    return {"error": f"UUID: {uuid} not found", "status_code": "404"}
+    return {"error": f"UUID: {uuid} not found", "status_code": "404", "file_name": "404"}
 
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
@@ -461,7 +491,13 @@ def summarise_job(uuid: str) -> dict:
         
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        return {"uuid": uuid, "file_name": file_name, "status": "success", "summary": summary, "status_code": "200"}
+        final = {
+            "uuid": uuid,
+            "fileName": file_name,
+            "status": "success",
+            "status_code": "200"}
+        final.update(summary)
+        return final
     
     except Exception as e:
         timestamp = get_timestamp()
