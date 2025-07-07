@@ -202,6 +202,26 @@ const MeetingTranscriptionApp = () => {
     };
 
 
+    const handleDeleteMeeting = (uuid) => {
+        if (!window.confirm("Are you sure you want to delete this meeting?")) return;
+
+        fetch(`/jobs/${uuid}`, {
+            method: "DELETE",
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Failed to delete meeting");
+            // Update UI state
+            setMeetingList(prev => prev.filter(m => m.uuid !== uuid));
+            if (selectedMeetingId === uuid) {
+                setTranscript([]);
+                setSummary(null);
+                setSelectedMeetingId(null);
+            }
+        })
+        .catch(err => console.error("Delete failed:", err));
+    };
+
+
     const exportToPDF = () => {
         if (!summary) return;
         const doc = new jsPDF();
@@ -385,13 +405,21 @@ const MeetingTranscriptionApp = () => {
                         {meetingList.map((meeting, index) => {
                             const colorClass = `btn-past-${(index % 4) + 1}`;
                             return (
-                                <button
-                                    key={meeting.uuid}
-                                    className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? 'btn-active' : ''}`}
-                                    onClick={() => loadPastMeeting(meeting.uuid)}
-                                >
-                                    {meeting.name}
-                                </button>
+                                <div key={meeting.uuid} className="meeting-entry">
+                                    <button
+                                        className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? 'btn-active' : ''}`}
+                                        onClick={() => loadPastMeeting(meeting.uuid)}
+                                    >
+                                        {meeting.name}
+                                    </button>
+                                    <button
+                                        className="btn btn-danger btn-small"
+                                        onClick={() => handleDeleteMeeting(meeting.uuid)}
+                                        style={{ marginLeft: "0.5rem" }}
+                                    >
+                                        🗑
+                                    </button>
+                                </div>
                             );
                         })}
                     </div>

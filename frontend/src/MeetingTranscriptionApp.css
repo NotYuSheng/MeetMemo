@@ -585,3 +585,9 @@ body {
 * {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+.meeting-entry {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}

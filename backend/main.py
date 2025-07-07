@@ -49,7 +49,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cuda:0" 
+DEVICE = "cpu" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -63,7 +63,7 @@ def get_timestamp() -> str:
 def format_result(diarized: list) -> list[dict]:
     """
     Formats the diarized results into an array of
-    {speaker, start, end, text} entries.
+    {speaker: text} entries.
     
     diarized: list of tuples (segment, speaker, utterance)
     """
@@ -71,10 +71,7 @@ def format_result(diarized: list) -> list[dict]:
 
     for segment, speaker, utterance in diarized:
         full_transcript.append({
-            "speaker": speaker,
-            "start":   round(segment.start,  2),
-            "end":     round(segment.end,    2),
-            "text":    utterance.strip()
+            speaker: utterance.strip()
         })
 
     return full_transcript
