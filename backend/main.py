@@ -49,7 +49,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cpu" 
+DEVICE = "cuda:0" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -175,7 +175,7 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
     payload = {
         "model": model_name,
         "temperature": 0.3,
-        "max_tokens": 150,
+        "max_tokens": 5000,
         "messages": [
             {"role": "system",
              "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
@@ -183,11 +183,7 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
                  "highlighting participants, key points, action items & next steps."
-                 "Format your response as such:"
-                 "<participants>\n---\n<keyPoints>\n---\n<actionItems>\n---\n<nextSteps>\n"
                  "The summary should contain point forms phrased in consise English."
-                 "Here's an example for <keyPoints>:"
-                 "-<point 1>\n-<point 2>..."
                  "You are to give the final summary in markdown format for easier visualisation:\n\n"
                  + transcript
              )},
@@ -198,14 +194,7 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
-        summary_chunks = summary.split("\n---\n")
-        summary_chunks_dict = {
-            "participants": summary_chunks[0],
-            "keyPoints": summary_chunks[1],
-            "actionItems": summary_chunks[2],
-            "nextSteps": summary_chunks[3]
-        }
-        return summary_chunks_dict
+        return summary
     except requests.RequestException as e:
         return {"error": str(e)}
 
@@ -322,7 +311,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         os.makedirs("transcripts", exist_ok=True)
         json_path = os.path.join("transcripts", f"{file_name}.json")
         if not os.path.exists(json_path):
-            with open(os.path.join("transcripts", f"{file_name.split(".")[0]}.json"), "w", encoding="utf-8") as f:
+            with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.json"), "w", encoding="utf-8") as f:
                 json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
@@ -448,7 +437,7 @@ def get_file_transcript(uuid: str) -> dict:
     """
     uuid = uuid.zfill(4)
     file_name = get_file_name(uuid)["file_name"]
-    file_path = f".\\transcripts\\{file_name}.json"
+    file_path = f"transcripts/{file_name}.json"
     logging.info(file_path)
     
     if os.path.exists(file_path):
@@ -480,7 +469,7 @@ def get_job_result(uuid: str) -> dict:
     return {"uuid": uuid, "status": "exists", "result": full_result}
 
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> dict:
+def summarise_job(uuid: str) -> str:
     """
     Summarises the transcript for the given UUID using a defined LLM.
     """
@@ -506,8 +495,7 @@ def summarise_job(uuid: str) -> dict:
             "fileName": file_name,
             "status": "success",
             "status_code": "200"}
-        final.update(summary)
-        return final
+        return summary
     
     except Exception as e:
         timestamp = get_timestamp()
@@ -544,3 +532,26 @@ def health_check():
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e), "status_code": "500"}
+
+
+@app.post("/testingllm")
+def testingllm():
+    import requests, json
+
+    payload = {
+        "model": "Qwen2.5",
+        "messages": [
+            {"role": "system", "content": "You are a travel advisor."},
+            {"role": "user", "content": "What are the 3 Laws of Newton?"}
+        ],
+        "temperature": 0.8,
+        "max_tokens": 8000
+    }
+
+    r = requests.post(
+        "http://qwen2.5:8000/v1/chat/completions",
+        headers={"Content-Type": "application/json"},
+        json=payload, timeout=60
+    )
+    resp = r.json()
+    return(resp['choices'][0]['message']['content'])

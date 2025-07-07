@@ -23,6 +23,8 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    networks:
+      - llm_calling
 
   frontend:
     build:
@@ -37,8 +39,13 @@ services:
       - transcripts:/app/transcripts
     ports:
       - "3000:3000"
-
+    networks:
+      - llm_calling
 volumes:
   audiofiles:
   logs:
   transcripts:
+
+networks:
+  llm_calling:
+    external: true
