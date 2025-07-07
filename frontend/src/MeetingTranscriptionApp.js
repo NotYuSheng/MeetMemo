@@ -144,6 +144,7 @@ const MeetingTranscriptionApp = () => {
                     : []
                 );
             fetchSummary(data.uuid);
+            fetchMeetingList();
             setLoading(false);
         })
         .catch(err => {
@@ -173,6 +174,7 @@ const MeetingTranscriptionApp = () => {
                     : []
                 );
             fetchSummary(data.uuid);
+            fetchMeetingList();
             setIsProcessing(false);
         })
         .catch(err => {
@@ -180,6 +182,26 @@ const MeetingTranscriptionApp = () => {
             setIsProcessing(false);
         });
     };
+
+
+    const fetchMeetingList = useCallback(() => {
+        fetch("/jobs")
+            .then(res => res.json())
+            .then(data => {
+                const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
+                    uuid,
+                    name: info.file_name
+                }));
+                setMeetingList(list);
+            })
+            .catch(err => console.error("Failed to fetch meeting list", err));
+    }, []);
+
+
+    useEffect(() => {
+        fetchMeetingList();
+    }, [fetchMeetingList]);
+
 
     const fetchSummary = (uuid) => {
         setSummaryLoading(true);
