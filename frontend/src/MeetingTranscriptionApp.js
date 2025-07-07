@@ -23,6 +23,13 @@ const MeetingTranscriptionApp = () => {
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
 
+
+    const truncateFileName = (name, maxLength = 20) => {
+        if (!name) return "";
+        return name.length > maxLength ? name.slice(0, maxLength).trim() + "..." : name;
+    };
+
+
     const toggleDarkMode = () => {
         setIsDarkMode(prev => !prev);
         document.documentElement.setAttribute('data-theme', !isDarkMode ? 'dark' : 'light');
@@ -432,7 +439,8 @@ const MeetingTranscriptionApp = () => {
                                         className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? 'btn-active' : ''}`}
                                         onClick={() => loadPastMeeting(meeting.uuid)}
                                     >
-                                        {meeting.name}
+                                        {truncateFileName(meeting.name)}
+
                                     </button>
                                     <button
                                         className="btn btn-danger btn-small"
