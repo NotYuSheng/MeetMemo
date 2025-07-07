@@ -374,13 +374,9 @@ const MeetingTranscriptionApp = () => {
 
                     {/* Uploading progress indicator */}
                     {loading && (
-                        <div className="progress-container">
-                        <div className="progress-bar">
-                            <div 
-                            className="progress-fill"
-                            ></div>
-                        </div>
-                        <p className="progress-text">Uploading...</p>
+                        <div className="processing-indicator">
+                        <div className="spinner"></div>
+                        <span>Processing audio with AI...</span>
                         </div>
                     )}
 
