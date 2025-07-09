@@ -287,7 +287,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             wav_file_name = file_name  # keep the original if already WAV
 
         logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
-        add_job(uuid, os.path.splitext(file_name)[0],"202")
+        add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -507,7 +507,7 @@ def summarise_job(uuid: str) -> dict[str, str]:
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", summary: "NIL"} # type: ignore
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""} # type: ignore
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
