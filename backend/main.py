@@ -451,11 +451,11 @@ def get_file_transcript(uuid: str) -> dict:
                 full_transcript = f.read()
             timestamp = get_timestamp()
             logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript}
+            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript,"status_code":"200"}
         else:
-            return {"uuid": uuid, "status": "not found"}
-        
-    except: return {"uuid": uuid, "status": "not found"}
+            return {"uuid": uuid, "status": "not found", "status_code":"404"}
+    except Exception as e: 
+        return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
 @app.get("/jobs/{uuid}/result")
 def get_job_result(uuid: str) -> dict:
@@ -543,7 +543,7 @@ def health_check():
 
 @app.post("/testingllm")
 def testingllm():
-    import requests, json
+    import requests
 
     payload = {
         "model": "Qwen2.5",
