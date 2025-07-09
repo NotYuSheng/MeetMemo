@@ -12,7 +12,7 @@ services:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
       - transcripts:/app/transcripts
-      - /home/fedora/.cache/whisper:/root/.cache/whisper ro
+      - whisper_cache:/root/.cache/whisper
     ports:
       - "8000:8000"
     depends_on:
@@ -46,6 +46,7 @@ volumes:
   audiofiles:
   logs:
   transcripts:
+  whisper_cache:
 
 networks:
   llm_calling:
