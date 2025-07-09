@@ -287,7 +287,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             wav_file_name = file_name  # keep the original if already WAV
 
         logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
-        add_job(uuid, os.path.splitext(file_name)[0],"202")
+        add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
