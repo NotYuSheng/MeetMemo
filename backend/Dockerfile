@@ -12,9 +12,9 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 
 # Install Python dependencies and ensure CUDA-enabled PyTorch remains
-RUN pip install --no-cache-dir -r requirements.txt \
+RUN pip install -r requirements.txt \
     && pip uninstall -y torch torchvision torchaudio \
-    && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu118 \
+    && pip install --index-url https://download.pytorch.org/whl/cu118 \
          torch torchvision torchaudio
 
 # Install system dependencies

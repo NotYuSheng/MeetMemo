@@ -93,3 +93,5 @@ yarn-error.log*
 # -----------------------------
 .DS_Store
 .idea/
+backend/audiofiles/
+backend/transcripts/

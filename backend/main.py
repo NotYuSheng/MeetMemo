@@ -49,7 +49,7 @@ UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
-DEVICE = "cpu" 
+DEVICE = "cuda:0" 
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -62,13 +62,17 @@ def get_timestamp() -> str:
 
 def format_result(diarized: list) -> list[dict]:
     """
-    Formats the diarized results into an array of speaker-utterance pairs.
+    Formats the diarized results into an array of
+    {speaker: text} entries.
+    
+    diarized: list of tuples (segment, speaker, utterance)
     """
     full_transcript = []
 
-    for _, speaker, utterance in diarized:
-        segment = {speaker: utterance}
-        full_transcript.append(segment)
+    for segment, speaker, utterance in diarized:
+        full_transcript.append({
+            speaker: utterance.strip()
+        })
 
     return full_transcript
 
@@ -160,7 +164,7 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
+def summarise_transcript(transcript: str) -> str:
     """
     Summarises the transcript using a defined LLM.
     """
@@ -171,7 +175,7 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
     payload = {
         "model": model_name,
         "temperature": 0.3,
-        "max_tokens": 150,
+        "max_tokens": 5000,
         "messages": [
             {"role": "system",
              "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
@@ -179,31 +183,24 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
                  "highlighting participants, key points, action items & next steps."
-                 "Format your response as such:"
-                 "<participants>\n---\n<keyPoints>\n---\n<actionItems>\n---\n<nextSteps>\n"
-                 "The summary should contain point forms phrased in consise English."
-                 "Here's an example for <keyPoints>:"
-                 "-<point 1>\n-<point 2>..."
-                 "You are to give the final summary in markdown format for easier visualisation:\n\n"
+                 "The summary should contain point forms phrased in concise standard English."
+                 "You are to give the final summary in markdown format for easier visualisation."
+                 "Do not give the output in an integrated code block i.e.: '```markdown ```"
+                 "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself.\n\n"
                  + transcript
              )},
         ],
     }
+
     try:
-        resp = requests.post(url, json=payload)
+        resp = requests.post(url, headers={"Content-Type": "application/json"}, json=payload)
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
-        summary_chunks = summary.split("\n---\n")
-        summary_chunks_dict = {
-            "participants": summary_chunks[0],
-            "keyPoints": summary_chunks[1],
-            "actionItems": summary_chunks[2],
-            "nextSteps": summary_chunks[3]
-        }
-        return summary_chunks_dict
+        return summary
+    
     except requests.RequestException as e:
-        return {"error": str(e)}
+        return f"Error: {e}"
 
 def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
@@ -280,7 +277,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         file_name = upload_audio(uuid, file)
         file_path = os.path.join(UPLOAD_DIR, file_name)
 
-        # 🔁 Check and convert to WAV if needed
+        # Check and convert to WAV if needed
         if not file_name.lower().endswith(".wav"):
             wav_file_name = f"{os.path.splitext(file_name)[0]}.wav"
             wav_file_path = os.path.join(UPLOAD_DIR, wav_file_name)
@@ -290,7 +287,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             wav_file_name = file_name  # keep the original if already WAV
 
         logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
-        add_job(uuid, wav_file_name,"202")
+        add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -318,7 +315,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         os.makedirs("transcripts", exist_ok=True)
         json_path = os.path.join("transcripts", f"{file_name}.json")
         if not os.path.exists(json_path):
-            with open(os.path.join("transcripts", f"{file_name.split(".")[0]}.json"), "w", encoding="utf-8") as f:
+            with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.json"), "w", encoding="utf-8") as f:
                 json.dump(full_transcript, f, indent=4)
             
         logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
@@ -442,18 +439,23 @@ def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
     """
-    uuid = uuid.zfill(4)
-    file_name = get_file_name(uuid).get("file_name", "unknown")
-    file_path = f"transcripts/{file_name}.json"
-    if os.path.exists(file_path):
-        full_transcript = []
-        with open(file_path, "r", encoding="utf-8") as f:
-            full_transcript = f.read()
-        timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-        return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript}
-    else:
-        return {"uuid": uuid, "status": "not found"}
+    try:
+        uuid = uuid.zfill(4)
+        file_name = get_file_name(uuid)["file_name"]
+        file_path = f"transcripts/{file_name}.json"
+        logging.info(file_path)
+        
+        if os.path.exists(file_path):
+            full_transcript = []
+            with open(file_path, "r", encoding="utf-8") as f:
+                full_transcript = f.read()
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
+            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript,"status_code":"200"}
+        else:
+            return {"uuid": uuid, "status": "not found", "status_code":"404"}
+    except Exception as e: 
+        return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
 @app.get("/jobs/{uuid}/result")
 def get_job_result(uuid: str) -> dict:
@@ -474,7 +476,7 @@ def get_job_result(uuid: str) -> dict:
     return {"uuid": uuid, "status": "exists", "result": full_result}
 
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> dict:
+def summarise_job(uuid: str) -> dict[str, str]:
     """
     Summarises the transcript for the given UUID using a defined LLM.
     """
@@ -488,21 +490,24 @@ def summarise_job(uuid: str) -> dict:
             full_transcript = get_full_transcript_response["full_transcript"]
 
         summary = summarise_transcript(full_transcript)
-        
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-        final = {
+
+        if "Error" in summary:
+            logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
+            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
+        else:
+            logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
+            return {
             "uuid": uuid,
             "fileName": file_name,
             "status": "success",
-            "status_code": "200"}
-        final.update(summary)
-        return final
+            "status_code": "200",
+            "summary": summary}
     
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""} # type: ignore
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
@@ -534,3 +539,26 @@ def health_check():
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e), "status_code": "500"}
+
+
+@app.post("/testingllm")
+def testingllm():
+    import requests
+
+    payload = {
+        "model": "Qwen2.5",
+        "messages": [
+            {"role": "system", "content": "You are a travel advisor."},
+            {"role": "user", "content": "What are the 3 Laws of Newton?"}
+        ],
+        "temperature": 0.8,
+        "max_tokens": 8000
+    }
+
+    r = requests.post(
+        "http://qwen2.5:8000/v1/chat/completions",
+        headers={"Content-Type": "application/json"},
+        json=payload, timeout=60
+    )
+    resp = r.json()
+    return(resp['choices'][0]['message']['content'])

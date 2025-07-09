@@ -12,6 +12,7 @@ services:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
       - transcripts:/app/transcripts
+      - whisper_cache:/root/.cache/whisper
     ports:
       - "8000:8000"
     depends_on:
@@ -23,6 +24,8 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    networks:
+      - llm_calling
 
   frontend:
     build:
@@ -37,8 +40,14 @@ services:
       - transcripts:/app/transcripts
     ports:
       - "3000:3000"
-
+    networks:
+      - llm_calling
 volumes:
   audiofiles:
   logs:
   transcripts:
+  whisper_cache:
+
+networks:
+  llm_calling:
+    external: true

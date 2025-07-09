@@ -1,11 +1,7 @@
-import './App.css';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route
-} from 'react-router-dom';
+import "./App.css";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-import MeetingTranscriptionApp from './MeetingTranscriptionApp';
+import MeetingTranscriptionApp from "./MeetingTranscriptionApp";
 
 function App() {
   return (
