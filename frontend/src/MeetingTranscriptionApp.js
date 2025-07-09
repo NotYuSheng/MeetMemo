@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Upload, Download, FileText, Users, Clock, Hash } from 'lucide-react';
+import { Mic, MicOff, Upload, Download, FileText, Hash } from 'lucide-react';
 import './MeetingTranscriptionApp.css';
 import jsPDF from "jspdf";
 import { useCallback } from 'react';
