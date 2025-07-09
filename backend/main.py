@@ -439,20 +439,23 @@ def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
     """
-    uuid = uuid.zfill(4)
-    file_name = get_file_name(uuid)["file_name"]
-    file_path = f"transcripts/{file_name}.json"
-    logging.info(file_path)
-    
-    if os.path.exists(file_path):
-        full_transcript = []
-        with open(file_path, "r", encoding="utf-8") as f:
-            full_transcript = f.read()
-        timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-        return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript}
-    else:
-        return {"uuid": uuid, "status": "not found"}
+    try:
+        uuid = uuid.zfill(4)
+        file_name = get_file_name(uuid)["file_name"]
+        file_path = f"transcripts/{file_name}.json"
+        logging.info(file_path)
+        
+        if os.path.exists(file_path):
+            full_transcript = []
+            with open(file_path, "r", encoding="utf-8") as f:
+                full_transcript = f.read()
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
+            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript}
+        else:
+            return {"uuid": uuid, "status": "not found"}
+        
+    except: return {"uuid": uuid, "status": "not found"}
 
 @app.get("/jobs/{uuid}/result")
 def get_job_result(uuid: str) -> dict:
