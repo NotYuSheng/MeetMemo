@@ -4,8 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Optional: install express and multer for the upload server
-RUN npm install express multer react-router-dom jspdf lucide-react
+RUN npm install react-router-dom jspdf lucide-react react-markdown remark-gfm
 
 EXPOSE 3000
 EXPOSE 4000

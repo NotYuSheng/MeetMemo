@@ -12,6 +12,7 @@ services:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
       - transcripts:/app/transcripts
+      - /home/fedora/.cache/whisper:/root/.cache/whisper ro
     ports:
       - "8000:8000"
     depends_on:

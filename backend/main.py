@@ -164,7 +164,7 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
+def summarise_transcript(transcript: str) -> str:
     """
     Summarises the transcript using a defined LLM.
     """
@@ -183,20 +183,24 @@ def summarise_transcript(transcript: str) -> dict[str, list[str] | str]:
              "content": (
                  "Please provide a concise summary of the following meeting transcript, "
                  "highlighting participants, key points, action items & next steps."
-                 "The summary should contain point forms phrased in consise English."
-                 "You are to give the final summary in markdown format for easier visualisation:\n\n"
+                 "The summary should contain point forms phrased in concise standard English."
+                 "You are to give the final summary in markdown format for easier visualisation."
+                 "Do not give the output in an integrated code block i.e.: '```markdown ```"
+                 "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself.\n\n"
                  + transcript
              )},
         ],
     }
+
     try:
         resp = requests.post(url, headers={"Content-Type": "application/json"}, json=payload)
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
         return summary
+    
     except requests.RequestException as e:
-        return {"error": str(e)}
+        return f"Error: {e}"
 
 def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
@@ -469,7 +473,7 @@ def get_job_result(uuid: str) -> dict:
     return {"uuid": uuid, "status": "exists", "result": full_result}
 
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> str:
+def summarise_job(uuid: str) -> dict[str, str]:
     """
     Summarises the transcript for the given UUID using a defined LLM.
     """
@@ -490,17 +494,17 @@ def summarise_job(uuid: str) -> str:
             return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
         else:
             logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
-            final = {
+            return {
             "uuid": uuid,
             "fileName": file_name,
             "status": "success",
-            "status_code": "200"}
-        return summary
+            "status_code": "200",
+            "summary": summary}
     
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", summary: "NIL"}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")

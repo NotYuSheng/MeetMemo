@@ -337,7 +337,7 @@ body {
 }
 
 .transcript-container {
-  max-height: 24rem;
+  max-height: 30rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -538,7 +538,6 @@ body {
 }
 
 .summary-text {
-  font-size: 0.875rem;
   color: var(--text);
 }
 
@@ -590,4 +589,34 @@ body {
     display: flex;
     align-items: center;
     margin-bottom: 0.5rem;
+}
+/* 1 ── don’t hide the page scroll entirely */
+.main-grid {
+  height: calc(100vh - 10rem);
+  min-height: 0;
+  /* overflow: hidden;   ⟵  remove this */
+}
+
+/* 2 ── columns may still clip, so let them scroll when needed */
+.left-column,
+.right-column {
+  min-height: 0;
+  overflow-y: auto;     /* instead of hidden */
+}
+
+/* 3 ── tell the growing cards they are allowed to shrink + scroll */
+.left-column .card:last-child,
+.right-column .card:last-child {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;        /* ← crucial */
+  overflow: hidden;     /* keep the card chrome fixed           */
+}
+
+.transcript-container,
+.summary-content {
+  flex: 1 1 auto;
+  min-height: 0;        /* ← also crucial inside flex columns   */
+  overflow-y: auto;     /* inner scrollbar appears when needed  */
 }
