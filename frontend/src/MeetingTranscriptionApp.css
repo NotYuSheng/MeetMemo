@@ -3,7 +3,7 @@
   --icon: black;
 
   /* Backgrounds */
-  --bg: #ffffff;
+  --bg: #fff;
   --card-bg: #f9fafb;
   --alt-bg: #f3f4f6;
   --transcript-entry-bg: #f9fafb;
@@ -11,7 +11,7 @@
   /* Text */
   --text: #1f2937;
   --text-muted: #6b7280;
-  --text-inverse: #ffffff;
+  --text-inverse: #fff;
 
   /* Borders */
   --border: #e5e7eb;
@@ -20,22 +20,17 @@
   --btn-bg: #e5e7eb;
   --btn-text: #111827;
   --btn-hover: #d1d5db;
-
-  --btn-primary: rgb(40, 40, 255);
+  --btn-primary: rgb(40 40 255);
   --btn-primary-hover: #475569;
-
   --btn-danger: #f87171;
   --btn-danger-hover: #ef4444;
-
   --btn-secondary: #9ca3af;
   --btn-secondary-hover: #6b7280;
-
   --btn-success: #6ee7b7;
   --btn-success-hover: #34d399;
   --btn-success-text: #065f46;
-
   --btn-active: #2563eb;
-  --btn-active-text: #ffffff;
+  --btn-active-text: #fff;
 
   /* Accent Colors */
   --purple: #4f46e5;
@@ -65,22 +60,17 @@
   --btn-bg: #4b5563;
   --btn-text: #f9fafb;
   --btn-hover: #6b7280;
-
   --btn-primary: #006aff;
   --btn-primary-hover: #475569;
-
   --btn-danger: #f87171;
   --btn-danger-hover: #ef4444;
-
   --btn-secondary: #9ca3af;
   --btn-secondary-hover: #6b7280;
-
   --btn-success: #10b981;
   --btn-success-hover: #059669;
   --btn-success-text: #d1fae5;
-
   --btn-active: #3b82f6;
-  --btn-active-text: #ffffff;
+  --btn-active-text: #fff;
 
   /* Accent Colors (unchanged for consistency) */
   --purple: #8b5cf6;
@@ -91,7 +81,9 @@
 body {
   background-color: var(--bg);
   color: var(--text);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .btn {
@@ -186,13 +178,14 @@ body {
   min-height: 0;
 }
 
-@media (min-width: 1024px) {
+@media (width >= 1024px) {
   .main-grid {
     grid-template-columns: 2fr 1fr;
   }
 }
 
-.left-column, .right-column {
+.left-column,
+.right-column {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -223,8 +216,7 @@ body {
 }
 
 .header-title,
-.section-title
- {
+.section-title {
   color: var(--text);
 }
 
@@ -241,7 +233,7 @@ body {
   gap: 1rem;
 }
 
-@media (min-width: 640px) {
+@media (width >= 640px) {
   .controls-container {
     flex-direction: row;
     align-items: center;
@@ -280,16 +272,20 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
 }
 
 .recording-time {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+    monospace;
   font-size: 1.125rem;
 }
 
@@ -402,7 +398,7 @@ body {
 }
 
 .empty-icon {
-  margin: 0 auto 1rem auto;
+  margin: 0 auto 1rem;
   height: 3rem;
   width: 3rem;
   color: var(--border);
@@ -528,6 +524,7 @@ body {
   background-color: #dbeafe;
   color: #1e3a8a;
 }
+
 [data-theme="dark"] .btn-past-1 {
   background-color: #1e3a8a;
   color: #dbeafe;
@@ -537,6 +534,7 @@ body {
   background-color: #dcfce7;
   color: #065f46;
 }
+
 [data-theme="dark"] .btn-past-2 {
   background-color: #065f46;
   color: #dcfce7;
@@ -546,6 +544,7 @@ body {
   background-color: #fef3c7;
   color: #92400e;
 }
+
 [data-theme="dark"] .btn-past-3 {
   background-color: #92400e;
   color: #fef3c7;
@@ -555,6 +554,7 @@ body {
   background-color: #fce7f3;
   color: #9d174d;
 }
+
 [data-theme="dark"] .btn-past-4 {
   background-color: #9d174d;
   color: #fce7f3;
@@ -577,13 +577,15 @@ body {
 }
 
 * {
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .meeting-entry {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 /* 3 ── tell the growing cards they are allowed to shrink + scroll */
@@ -592,13 +594,13 @@ body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;        /* ← crucial */
-  overflow: hidden;     /* keep the card chrome fixed           */
+  min-height: 0; /* ← crucial */
+  overflow: hidden; /* keep the card chrome fixed           */
 }
 
 .transcript-container,
 .summary-content {
   flex: 1 1 auto;
-  min-height: 0;        /* ← also crucial inside flex columns   */
-  overflow-y: auto;     /* inner scrollbar appears when needed  */
+  min-height: 0; /* ← also crucial inside flex columns   */
+  overflow-y: auto; /* inner scrollbar appears when needed  */
 }
