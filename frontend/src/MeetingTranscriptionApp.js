@@ -511,29 +511,31 @@ const MeetingTranscriptionApp = () => {
                 Meetings
               </h2>
 
-              {meetingList.map((meeting, index) => {
-                const colorClass = `btn-past-${(index % 4) + 1}`;
-                return (
-                  <div key={meeting.uuid} className="meeting-entry">
-                    {/* Past meeting button */}
-                    <button
-                      className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? "btn-active" : ""}`}
-                      onClick={() => loadPastMeeting(meeting.uuid)}
-                    >
-                      {truncateFileName(meeting.name)}
-                    </button>
+              <div className="meetings-scroll-wrapper">
+                {meetingList.map((meeting, index) => {
+                  const colorClass = `btn-past-${(index % 4) + 1}`;
+                  return (
+                    <div key={meeting.uuid} className="meeting-entry">
+                      {/* Past meeting button */}
+                      <button
+                        className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? "btn-active" : ""}`}
+                        onClick={() => loadPastMeeting(meeting.uuid)}
+                      >
+                        {truncateFileName(meeting.name)}
+                      </button>
 
-                    {/* Delete button */}
-                    <button
-                      className="btn btn-danger btn-small"
-                      onClick={() => handleDeleteMeeting(meeting.uuid)}
-                      style={{ marginLeft: "0.5rem" }}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                );
-              })}
+                      {/* Delete button */}
+                      <button
+                        className="btn btn-danger btn-small"
+                        onClick={() => handleDeleteMeeting(meeting.uuid)}
+                        style={{ marginLeft: "0.5rem" }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* AI Summary */}

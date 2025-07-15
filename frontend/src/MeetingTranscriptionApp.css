@@ -604,3 +604,13 @@ body {
   min-height: 0; /* ← also crucial inside flex columns   */
   overflow-y: auto; /* inner scrollbar appears when needed  */
 }
+
+.meetings-scroll-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
