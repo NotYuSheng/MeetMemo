@@ -528,7 +528,7 @@ const MeetingTranscriptionApp = () => {
                       <button
                         className="btn btn-danger btn-small"
                         onClick={() => handleDeleteMeeting(meeting.uuid)}
-                        style={{ marginLeft: "0.5rem" }}
+                        className="btn btn-danger btn-small delete-meeting-btn"
                       >
                         🗑️
                       </button>
