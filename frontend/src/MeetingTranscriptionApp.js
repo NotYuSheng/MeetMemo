@@ -23,6 +23,7 @@ const MeetingTranscriptionApp = () => {
   const [meetingList, setMeetingList] = useState([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
@@ -45,7 +46,6 @@ const MeetingTranscriptionApp = () => {
     );
   };
 
-  // Loads data & summary of past meeting that's selected by user
   const loadPastMeeting = (uuid) => {
     getSpeakerColor.speakerMap = {};
     fetch(`/jobs/${uuid}/transcript`)
@@ -63,10 +63,22 @@ const MeetingTranscriptionApp = () => {
       })
       .then((res) => res.json())
       .then((data) => {
-        setSummary({
-          meetingTitle: data.fileName,
-          summary: data.summary,
-        });
+        if (data) {
+          const summaryText = `
+### Key Points
+${data.keyPoints.map((item) => `- ${item}`).join("\n")}
+
+### Action Items
+${data.actionItems.map((item) => `- ${item}`).join("\n")}
+
+### Next Steps
+${data.nextSteps.map((item) => `- ${item}`).join("\n")}
+`;
+          setSummary({
+            meetingTitle: data.fileName,
+            summary: summaryText,
+          });
+        }
         setSelectedMeetingId(uuid);
       })
       .catch((err) => console.error("Failed to load past meeting", err));
@@ -187,16 +199,25 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to fetch meeting list", err));
   }, []);
 
-  // Feeds the transcript into desired LLM for AI-generated summary
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
     fetch(`/jobs/${uuid}/summarise`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data) {
+          const summaryText = `
+### Key Points
+${data.keyPoints.map((item) => `- ${item}`).join("\n")}
+
+### Action Items
+${data.actionItems.map((item) => `- ${item}`).join("\n")}
+
+### Next Steps
+${data.nextSteps.map((item) => `- ${item}`).join("\n")}
+`;
           setSummary({
             meetingTitle: data.fileName,
-            summary: data.summary,
+            summary: summaryText,
           });
         }
       })
@@ -461,67 +482,116 @@ const MeetingTranscriptionApp = () => {
               )}
             </div>
 
-            {/* Transcript Section */}
+            {/* Transcript and Summary Section */}
             <div className="card">
-              <h2 className="section-title">
-                <FileText className="section-icon" />
-                Live Transcript
-              </h2>
-
-              <div className="transcript-container">
-                {transcript.length > 0 ? (
-                  transcript.map((entry) => (
-                    <div key={entry.id} className="transcript-entry">
-                      <div className="transcript-header">
-                        <span
-                          className={`speaker-badge ${getSpeakerColor(entry.speaker)}`}
-                        >
-                          {entry.speaker}
-                        </span>
-                      </div>
-                      <p className="transcript-text">{entry.text}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="empty-state">
-                    <Mic className="empty-icon" />
-                    <p className="empty-title">No transcript available</p>
-                    <p className="empty-subtitle">
-                      Start recording or upload an audio file to begin
-                    </p>
-                  </div>
+              <div className="transcript-summary-header">
+                <div className="tabs">
+                  <button
+                    className={`tab-button ${!showSummary ? "active" : ""}`}
+                    onClick={() => setShowSummary(false)}
+                  >
+                    <FileText className="section-icon" />
+                    Transcript
+                  </button>
+                  <button
+                    className={`tab-button ${showSummary ? "active" : ""}`}
+                    onClick={() => setShowSummary(true)}
+                  >
+                    <Hash className="section-icon" />
+                    Summary
+                  </button>
+                </div>
+                {showSummary && (
+                  <button
+                    onClick={exportToPDF}
+                    className="btn btn-success btn-small"
+                  >
+                    <Download className="btn-icon" />
+                    Export PDF
+                  </button>
                 )}
               </div>
+
+              {showSummary ? (
+                summaryLoading ? (
+                  <div className="processing-indicator">
+                    <div className="spinner"></div>
+                    <span>Generating summary with AI…</span>
+                  </div>
+                ) : summary && summary.summary ? (
+                  <div className="summary-content">
+                    <p>
+                      <strong>Title:</strong> {summary.meetingTitle}
+                    </p>
+                    <div className="summary-text">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {summary.summary}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <Hash className="empty-icon" />
+                    <p className="empty-title">No summary available</p>
+                    <p className="empty-subtitle">
+                      Summary will appear after processing audio
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="transcript-container">
+                  {transcript.length > 0 ? (
+                    transcript.map((entry) => (
+                      <div key={entry.id} className="transcript-entry">
+                        <div className="transcript-header">
+                          <span
+                            className={`speaker-badge ${getSpeakerColor(
+                              entry.speaker,
+                            )}`}
+                          >
+                            {entry.speaker}
+                          </span>
+                        </div>
+                        <p className="transcript-text">{entry.text}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-state">
+                      <Mic className="empty-icon" />
+                      <p className="empty-title">No transcript available</p>
+                      <p className="empty-subtitle">
+                        Start recording or upload an audio file to begin
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Column – Past Meetings & AI Summary */}
+          {/* Right Column – Past Meetings */}
           <div className="right-column">
-            {/* Past Meetings */}
-            <div className="card">
+            <div className="card meetings-card">
               <h2 className="section-title">
                 <FileText className="section-icon" />
                 Meetings
               </h2>
-
               <div className="meetings-scroll-wrapper">
                 {meetingList.map((meeting, index) => {
                   const colorClass = `btn-past-${(index % 4) + 1}`;
                   return (
                     <div key={meeting.uuid} className="meeting-entry">
-                      {/* Past meeting button */}
                       <button
-                        className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? "btn-active" : ""}`}
+                        className={`space btn btn-small ${colorClass} ${
+                          selectedMeetingId === meeting.uuid ? "btn-active" : ""
+                        }`}
                         onClick={() => loadPastMeeting(meeting.uuid)}
                       >
                         {truncateFileName(meeting.name)}
                       </button>
-
-                      {/* Delete button */}
                       <button
-                        className="btn btn-danger btn-small"
-                        onClick={() => handleDeleteMeeting(meeting.uuid)}
                         className="btn btn-danger btn-small delete-meeting-btn"
+                        onClick={() => handleDeleteMeeting(meeting.uuid)}
                       >
                         🗑️
                       </button>
@@ -529,49 +599,6 @@ const MeetingTranscriptionApp = () => {
                   );
                 })}
               </div>
-            </div>
-
-            {/* AI Summary */}
-            <div className="card">
-              <div className="summary-header">
-                <h2 className="section-title">
-                  <Hash className="section-icon" />
-                  AI Summary
-                </h2>
-                <button
-                  onClick={exportToPDF}
-                  className="btn btn-success btn-small"
-                >
-                  <Download className="btn-icon" />
-                  Export PDF
-                </button>
-              </div>
-
-              {summaryLoading ? (
-                <div className="processing-indicator">
-                  <div className="spinner"></div>
-                  <span>Generating summary with AI…</span>
-                </div>
-              ) : summary && summary.summary ? (
-                <div className="summary-content">
-                  <p>
-                    <strong>Title:</strong> {summary.meetingTitle}
-                  </p>
-                  <div className="summary-text">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {summary.summary}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <Hash className="empty-icon" />
-                  <p className="empty-title">No summary available</p>
-                  <p className="empty-subtitle">
-                    Summary will appear after processing audio
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
