@@ -349,9 +349,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
     fetchMeetingList();
   }, []);
 
-  console.log("summary here" ,summary)
-
-
   return (
     <div className="app-container">
       <div className="max-width-container">
