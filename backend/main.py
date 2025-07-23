@@ -491,6 +491,47 @@ def summarise_job(uuid: str) -> dict[str, str]:
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
         return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""} # type: ignore
 
+@app.patch("/jobs/{uuid}/rename")
+def rename_job(uuid: str, new_name: str) -> dict:
+    """
+    Renames the job with the given UUID.
+    """
+    uuid = uuid.zfill(4)
+    
+    with CSV_LOCK:
+        rows = []
+        file_name_to_rename = None
+        if os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row["uuid"] == uuid:
+                        file_name_to_rename = row["file_name"]
+                        row["file_name"] = new_name
+                    rows.append(row)
+
+        if file_name_to_rename:
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+                writer.writerows(rows)
+            
+            # Rename the audio file
+            old_audio_path = os.path.join(UPLOAD_DIR, file_name_to_rename)
+            new_audio_path = os.path.join(UPLOAD_DIR, new_name)
+            if os.path.exists(old_audio_path):
+                os.rename(old_audio_path, new_audio_path)
+
+            # Rename the transcript file
+            old_transcript_path = os.path.join("transcripts", f"{file_name_to_rename}.json")
+            new_transcript_path = os.path.join("transcripts", f"{new_name}.json")
+            if os.path.exists(old_transcript_path):
+                os.rename(old_transcript_path, new_transcript_path)
+            
+            return {"uuid": uuid, "status": "success", "new_name": new_name}
+        else:
+            return {"error": "UUID not found", "status_code": "404"}
+
 ##################################### Functionality check #####################################
 @app.get("/logs")
 def get_logs() -> dict:

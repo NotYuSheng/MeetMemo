@@ -74,7 +74,25 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to load past meeting", err));
   };
 
-  // Helps with recording functionality when user chooses to record audio directly from site
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const handleRename = () => {
+    if (!selectedMeetingId) return;
+
+    fetch(`/jobs/${selectedMeetingId}/rename?new_name=${newName}`, {
+      method: "PATCH",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          setSummary((prev) => ({ ...prev, meetingTitle: newName }));
+          fetchMeetingList();
+          setIsRenaming(false);
+        }
+      })
+      .catch((err) => console.error("Failed to rename meeting", err));
+  };
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -548,9 +566,23 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                   </div>
                 ) : summary && summary.summary ? (
                   <div className="summary-content">
-                    <p>
-                      <strong>Title:</strong> {summary.meetingTitle}
-                    </p>
+                    {isRenaming ? (
+                      <div className="rename-container">
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="rename-input"
+                        />
+                        <button onClick={handleRename} className="btn btn-success btn-small">Save</button>
+                        <button onClick={() => setIsRenaming(false)} className="btn btn-secondary btn-small">Cancel</button>
+                      </div>
+                    ) : (
+                      <p>
+                        <strong>Title:</strong> {summary.meetingTitle}
+                        <button onClick={() => { setIsRenaming(true); setNewName(summary.meetingTitle); }} className="btn btn-secondary btn-small rename-btn">Rename</button>
+                      </p>
+                    )}
                     <div className="summary-text">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {summary.summary}
