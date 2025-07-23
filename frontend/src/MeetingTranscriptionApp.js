@@ -282,6 +282,43 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
     doc.save("meeting-summary.pdf");
   };
 
+  const exportTranscriptToPDF = () => {
+    if (transcript.length === 0) return;
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const lineHeight = 14;
+    let y = margin;
+
+    const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont(undefined, isBold ? "bold" : "normal");
+      const wrapped = doc.splitTextToSize(text, pageWidth - indent - margin);
+      wrapped.forEach((line) => {
+        if (y + lineHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, indent, y);
+        y += lineHeight;
+      });
+    };
+
+    doc.setFontSize(18);
+    addLine("Meeting Transcript", margin, 18, true);
+    y += lineHeight;
+
+    transcript.forEach(entry => {
+      addLine(entry.speaker, margin, 12, true);
+      addLine(entry.text, margin + 15);
+      y += lineHeight;
+    });
+
+    doc.save("meeting-transcript.pdf");
+  };
+
   // Formats time to be displayed (works with display of meeting recording duration)
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -484,6 +521,15 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     Summary
                   </button>
                 </div>
+                {!showSummary && (
+                  <button
+                    onClick={exportTranscriptToPDF}
+                    className="btn btn-success btn-small"
+                  >
+                    <Download className="btn-icon" />
+                    Export PDF
+                  </button>
+                )}
                 {showSummary && (
                   <button
                     onClick={exportToPDF}
