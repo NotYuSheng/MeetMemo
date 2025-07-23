@@ -313,12 +313,12 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         # Save results & log activity process
         timestamp = get_timestamp()
         os.makedirs("transcripts", exist_ok=True)
-        json_path = os.path.join("transcripts", f"{file_name}.json")
+        json_path = os.path.join("transcripts", f"{file_name}.wav.json")
         if not os.path.exists(json_path):
-            with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.json"), "w", encoding="utf-8") as f:
+            with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.wav.json"), "w", encoding="utf-8") as f:
                 json.dump(full_transcript, f, indent=4)
             
-        logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
+        logging.info(f"{timestamp}: Successfully processed file {file_name} with model {model_name}")
         update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     

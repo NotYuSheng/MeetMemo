@@ -25,7 +25,7 @@ const MeetingTranscriptionApp = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState("turbo");
 
   /////////////////////////// All funct6ions //////////////////////////
   // Shortens transcripts with overly long file names
@@ -252,7 +252,7 @@ const MeetingTranscriptionApp = () => {
     };
 
     // bullet-list or paragraph
-    const addList = (title, items, bullet = "•") => {
+    const addList = (title, items, bullet = "") => {
       if (!items || (Array.isArray(items) && items.length === 0)) return;
 
       addLine(""); // blank line
@@ -272,15 +272,8 @@ const MeetingTranscriptionApp = () => {
 
     doc.setFontSize(12);
     addLine(`Title: ${summary.meetingTitle || "N/A"}`);
-    addLine(
-      `Participants: ${(summary.participants || []).join(", ") || "N/A"}`,
-    );
 
     addList("Summary", summary.summary); // plain string ok
-    addList("Key Discussion Points", summary.keyPoints);
-    addList("Action Items", summary.actionItems);
-    addList("Next Steps", summary.nextSteps);
-
     doc.save("meeting-summary.pdf");
   };
 
