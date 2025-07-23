@@ -286,14 +286,13 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         else:
             wav_file_name = file_name  # keep the original if already WAV
 
-        logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
         add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
         file_path = os.path.join(UPLOAD_DIR, wav_file_name)
-
-        # Log time & activity
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Processing file {wav_file_name} with model {model_name}")
 
@@ -317,7 +316,8 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         if not os.path.exists(json_path):
             with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.wav.json"), "w", encoding="utf-8") as f:
                 json.dump(full_transcript, f, indent=4)
-            
+
+        timestamp = get_timestamp()
         logging.info(f"{timestamp}: Successfully processed file {file_name} with model {model_name}")
         update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
@@ -361,13 +361,15 @@ def delete_job(uuid: str) -> dict:
     try:
         os.remove(os.path.join(UPLOAD_DIR, file_name))
     except FileNotFoundError:
-        logging.warning(f"File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
+        timestamp = get_timestamp()
+        logging.warning(f"{timestamp}: File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
     try:  
         os.remove(os.path.join("transcripts", f"{file_name}.json"))
     except FileNotFoundError:
-        logging.warning(f"Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
-    timestamp = get_timestamp()
+        timestamp = get_timestamp()
+        logging.warning(f"{timestamp}: Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
 
+    timestamp = get_timestamp()
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
     return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
@@ -443,18 +445,23 @@ def get_file_transcript(uuid: str) -> dict:
         uuid = uuid.zfill(4)
         file_name = get_file_name(uuid)["file_name"]
         file_path = f"transcripts/{file_name}.json"
-        logging.info(file_path)
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Retrieving transcript for UUID: {uuid}, file name: {file_name}")
         
         if os.path.exists(file_path):
             full_transcript = []
             with open(file_path, "r", encoding="utf-8") as f:
                 full_transcript = f.read()
             timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
+            logging.info(f"{timestamp}: Successfully retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
             return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript,"status_code":"200"}
         else:
+            timestamp = get_timestamp()
+            logging.error(f"{timestamp}: {file_name} transcript not found.")
             return {"uuid": uuid, "status": "not found", "status_code":"404"}
     except Exception as e: 
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error retrieving {file_name} transcript.")
         return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
 @app.post("/jobs/{uuid}/summarise")
@@ -472,12 +479,13 @@ def summarise_job(uuid: str) -> dict[str, str]:
             full_transcript = get_full_transcript_response["full_transcript"]
 
         summary = summarise_transcript(full_transcript)
-        timestamp = get_timestamp()
 
         if "Error" in summary:
+            timestamp = get_timestamp()
             logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
             return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
         else:
+            timestamp = get_timestamp()
             logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
             return {
             "uuid": uuid,
@@ -551,11 +559,12 @@ def health_check():
     try:
         logs = get_logs()
         error_msg = [i for i in logs['logs'] if "error" in i.lower()]
-        timestamp = get_timestamp()
         if error_msg:
+            timestamp = get_timestamp()
             logging.error(f"{timestamp}: Health check found errors: {error_msg}")
             return {"status": "error", "message": error_msg, "status_code": "500"}
         else:
+            timestamp = get_timestamp()
             logging.info(f"{timestamp}: Health check passed successfully.")
             return {"status": "ok", "status_code": "200"}
     except Exception as e:
