@@ -66,23 +66,11 @@ const MeetingTranscriptionApp = () => {
       })
       .then((res) => res.json())
       .then((data) => {
-        if (data) {
-          const summaryText = `
-### Key Points
-${data.keyPoints.map((item) => `- ${item}`).join("\n")}
-
-### Action Items
-${data.actionItems.map((item) => `- ${item}`).join("\n")}
-
-### Next Steps
-${data.nextSteps.map((item) => `- ${item}`).join("\n")}
-`;
           setSummary({
             meetingTitle: data.fileName,
-            summary: summaryText,
+            summary: data.summary,
           });
-        }
-      })
+        })
       .catch((err) => console.error("Failed to load past meeting", err));
   };
 
@@ -359,7 +347,10 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
   // Automatically loads past meetings from server side
   useEffect(() => {
     fetchMeetingList();
-  }, [fetchMeetingList]);
+  }, []);
+
+  console.log("summary here" ,summary)
+
 
   return (
     <div className="app-container">
@@ -427,7 +418,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     className="btn btn-secondary"
                   >
                     <Upload className="btn-icon" />
-                    {selectedFile ? "Change Audio File" : "Choose Audio File"}
+                    {selectedFile ? "Change Audio File" : "Upload Audio File"}
                   </button>
 
                   <button
@@ -440,7 +431,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                       ? "Uploading..."
                       : selectedFile
                         ? "Upload Selected File"
-                        : "Upload Audio"}
+                        : "Start Transcription"}
                   </button>
                 </div>
 
@@ -477,7 +468,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                 </div>
               )}
             </div>
-
             {/* Transcript and Summary Section */}
             <div className="card">
               <div className="transcript-summary-header">
@@ -507,7 +497,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                   </button>
                 )}
               </div>
-
               {showSummary ? (
                 summaryLoading ? (
                   <div className="processing-indicator">
@@ -526,6 +515,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     </div>
                   </div>
                 ) : (
+                  
                   <div className="empty-state">
                     <Hash className="empty-icon" />
                     <p className="empty-title">No summary available</p>

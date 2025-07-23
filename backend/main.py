@@ -457,24 +457,6 @@ def get_file_transcript(uuid: str) -> dict:
     except Exception as e: 
         return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
-@app.get("/jobs/{uuid}/result")
-def get_job_result(uuid: str) -> dict:
-    """
-    Returns the  transcript with timestamps for the given UUID, separated by speakers.
-    """
-    uuid = uuid.zfill(4)
-    raw_transcript = get_file_transcript(uuid)["full_transcript"]
-    result = parse_transcript_with_times(raw_transcript)
-    full_result = ""
-    for speaker, entries in result.items():
-        full_result += f"{speaker}:\n"
-        for e in entries:
-            full_result += f"  {e['start']:.2f}–{e['end']:.2f} → {e['text']}\n"
-    timestamp = get_timestamp()
-    file_name = get_file_name(uuid)["file_name"]
-    logging.info(f"{timestamp}: Retrieved diarised transcript for UUID: {uuid}, file name: {file_name}")
-    return {"uuid": uuid, "status": "exists", "result": full_result}
-
 @app.post("/jobs/{uuid}/summarise")
 def summarise_job(uuid: str) -> dict[str, str]:
     """
@@ -539,26 +521,3 @@ def health_check():
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e), "status_code": "500"}
-
-
-@app.post("/testingllm")
-def testingllm():
-    import requests
-
-    payload = {
-        "model": "Qwen2.5",
-        "messages": [
-            {"role": "system", "content": "You are a travel advisor."},
-            {"role": "user", "content": "What are the 3 Laws of Newton?"}
-        ],
-        "temperature": 0.8,
-        "max_tokens": 8000
-    }
-
-    r = requests.post(
-        "http://qwen2.5:8000/v1/chat/completions",
-        headers={"Content-Type": "application/json"},
-        json=payload, timeout=60
-    )
-    resp = r.json()
-    return(resp['choices'][0]['message']['content'])
