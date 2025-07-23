@@ -47,6 +47,9 @@ const MeetingTranscriptionApp = () => {
   };
 
   const loadPastMeeting = (uuid) => {
+    setTranscript([]);
+    setSummary(null);
+    setSelectedMeetingId(uuid);
     getSpeakerColor.speakerMap = {};
     fetch(`/jobs/${uuid}/transcript`)
       .then((res) => res.json())
@@ -79,7 +82,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
             summary: summaryText,
           });
         }
-        setSelectedMeetingId(uuid);
       })
       .catch((err) => console.error("Failed to load past meeting", err));
   };
@@ -186,7 +188,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
   };
 
   // Fetches a list of all past meetings to be displayed in side bar
-  const fetchMeetingList = useCallback(() => {
+  const fetchMeetingList = () => {
     fetch("/jobs")
       .then((res) => res.json())
       .then((data) => {
@@ -197,7 +199,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
         setMeetingList(list);
       })
       .catch((err) => console.error("Failed to fetch meeting list", err));
-  }, []);
+  };
 
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
@@ -246,21 +248,19 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       .catch((err) => console.error("Delete failed:", err));
   };
 
-  // Exports summary to user in PDF format
   const exportToPDF = () => {
     if (!summary) return;
 
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 40; // uniform page margin
+    const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const lineHeight = 14;
     let y = margin;
 
-    /* ---------- helpers ---------- */
-
-    // writes text, adding new page when needed
-    const addLine = (text, indent = margin) => {
+    const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont(undefined, isBold ? "bold" : "normal");
       const wrapped = doc.splitTextToSize(text, pageWidth - indent - margin);
       wrapped.forEach((line) => {
         if (y + lineHeight > pageHeight - margin) {
@@ -272,29 +272,25 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       });
     };
 
-    // bullet-list or paragraph
-    const addList = (title, items, bullet = "") => {
-      if (!items || (Array.isArray(items) && items.length === 0)) return;
-
-      addLine(""); // blank line
-      addLine(`${title}:`);
-
-      const listItems = Array.isArray(items)
-        ? items
-        : String(items).split("\n"); // treat plain string as paragraph
-
-      listItems.forEach((item) => addLine(`${bullet} ${item}`, margin + 14));
-    };
-
-    /* ---------- document body ---------- */
-
     doc.setFontSize(18);
-    addLine("Meeting Summary");
+    addLine("Meeting Summary", margin, 18, true);
+    y += lineHeight;
 
     doc.setFontSize(12);
-    addLine(`Title: ${summary.meetingTitle || "N/A"}`);
+    addLine(`Title: ${summary.meetingTitle || "N/A"}`, margin, 12, true);
+    y += lineHeight;
 
-    addList("Summary", summary.summary); // plain string ok
+    const lines = summary.summary.split("\n");
+    lines.forEach((line) => {
+      if (line.startsWith("### ")) {
+        addLine(line.substring(4), margin, 14, true);
+      } else if (line.startsWith("- ")) {
+        addLine(line.substring(2), margin + 15);
+      } else {
+        addLine(line, margin);
+      }
+    });
+
     doc.save("meeting-summary.pdf");
   };
 
