@@ -95,3 +95,4 @@ yarn-error.log*
 .idea/
 backend/audiofiles/
 backend/transcripts/
+frontend/package.json
