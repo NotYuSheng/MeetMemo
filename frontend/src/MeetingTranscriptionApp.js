@@ -56,11 +56,13 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
         setTranscript(
-          parsed.map((entry, idx) => {
-            const speaker = Object.keys(entry)[0];
-            const text = entry[speaker];
-            return { id: idx, speaker, text };
-          }),
+          parsed.map((entry, idx) => ({
+            id: idx,
+            speaker: entry.speaker,
+            text: entry.text,
+            start: entry.start,
+            end: entry.end,
+          })),
         );
         return fetch(`/jobs/${uuid}/summarise`, { method: "POST" });
       })
@@ -145,11 +147,13 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         setTranscript(
           Array.isArray(data.transcript)
-            ? data.transcript.map((entry, idx) => {
-                const speaker = Object.keys(entry)[0];
-                const text = entry[speaker];
-                return { id: idx, speaker, text };
-              })
+            ? data.transcript.map((entry, idx) => ({
+                id: idx,
+                speaker: entry.speaker,
+                text: entry.text,
+                start: entry.start,
+                end: entry.end,
+              }))
             : [],
         );
         fetchSummary(data.uuid);
@@ -176,11 +180,13 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         setTranscript(
           Array.isArray(data.transcript)
-            ? data.transcript.map((entry, idx) => {
-                const speaker = Object.keys(entry)[0];
-                const text = entry[speaker];
-                return { id: idx, speaker, text };
-              })
+            ? data.transcript.map((entry, idx) => ({
+                id: idx,
+                speaker: entry.speaker,
+                text: entry.text,
+                start: entry.start,
+                end: entry.end,
+              }))
             : [],
         );
         fetchSummary(data.uuid);
@@ -614,6 +620,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                           >
                             {entry.speaker}
                           </span>
+                          <span className="timestamp">{entry.start}s - {entry.end}s</span>
                         </div>
                         <p className="transcript-text">{entry.text}</p>
                       </div>

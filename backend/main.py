@@ -62,18 +62,19 @@ def get_timestamp() -> str:
 
 def format_result(diarized: list) -> list[dict]:
     """
-    Formats the diarized results into an array of
-    {speaker: text} entries.
+    Formats the diarized results into a list of dictionaries,
+    each with speaker, text, start, and end time.
     
     diarized: list of tuples (segment, speaker, utterance)
     """
     full_transcript = []
-
     for segment, speaker, utterance in diarized:
         full_transcript.append({
-            speaker: utterance.strip()
+            "speaker": speaker,
+            "text": utterance.strip(),
+            "start": f"{segment.start:.2f}",
+            "end": f"{segment.end:.2f}",
         })
-
     return full_transcript
 
 

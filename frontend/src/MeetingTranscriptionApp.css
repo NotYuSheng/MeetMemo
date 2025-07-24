@@ -665,3 +665,9 @@ body {
 .tab-button .section-icon {
   margin-right: 0.5rem;
 }
+
+.timestamp {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
