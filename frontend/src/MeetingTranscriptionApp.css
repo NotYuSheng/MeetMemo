@@ -529,7 +529,7 @@ body {
 
 .btn-past-1 {
   background-color: #265289;
-  color: #272b2d;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .btn-past-1 {
@@ -539,7 +539,7 @@ body {
 
 .btn-past-2 {
   background-color: #BBA88E;
-  color: #272b2d;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .btn-past-2 {
@@ -549,7 +549,7 @@ body {
 
 .btn-past-3 {
   background-color: #C42030;
-  color: #272b2d;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .btn-past-3 {
@@ -559,7 +559,7 @@ body {
 
 .btn-past-4 {
   background-color: #2998D5;
-  color: #272b2d;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .btn-past-4 {
