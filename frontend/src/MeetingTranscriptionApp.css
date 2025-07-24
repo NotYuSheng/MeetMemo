@@ -529,58 +529,58 @@ body {
 
 .btn-past-1 {
   background-color: #265289;
-  color: #3B6DAA;
+  color: #272b2d;
 }
 
 [data-theme="dark"] .btn-past-1 {
   background-color: #265289;
-  color: #3B6DAA;
+  color: #ffffff;
 }
 
 .btn-past-2 {
   background-color: #BBA88E;
-  color: #D6C7AE;
+  color: #272b2d;
 }
 
 [data-theme="dark"] .btn-past-2 {
   background-color: #BBA88E;
-  color: #D6C7AE;
+  color: #ffffff;
 }
 
 .btn-past-3 {
   background-color: #C42030;
-  color: #E03A46;
+  color: #272b2d;
 }
 
 [data-theme="dark"] .btn-past-3 {
   background-color: #C42030;
-  color: #E03A46;
+  color: #ffffff;
 }
 
 .btn-past-4 {
   background-color: #2998D5;
-  color: #1B75BB;
+  color: #272b2d;
 }
 
 [data-theme="dark"] .btn-past-4 {
   background-color: #2998D5;
-  color: #1B75BB;
+  color: #ffffff;
 }
 
 .btn-past-1:hover {
-  background-color: #bfdbfe;
+  background-color: #3B6DAA;
 }
 
 .btn-past-2:hover {
-  background-color: #bbf7d0;
+  background-color: #D6C7AE;
 }
 
 .btn-past-3:hover {
-  background-color: #fde68a;
+  background-color: #E03A46;
 }
 
 .btn-past-4:hover {
-  background-color: #fbcfe8;
+  background-color: #1B75BB;
 }
 
 * {
