@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Upload, Download, FileText, Hash } from "lucide-react";
+import { Mic, MicOff, Upload, Download, FileText, Hash, Send } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
 import { useCallback } from "react";
@@ -478,11 +478,11 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     disabled={!selectedFile || loading}
                     className={`btn ${selectedFile ? "btn-primary" : "btn-disabled"}`}
                   >
-                    <Upload className="btn-icon" />
+                    <Send className="btn-icon" />
                     {loading
-                      ? "Uploading..."
+                      ? "Transcribing..."
                       : selectedFile
-                        ? "Upload Selected File"
+                        ? "Start Transcription"
                         : "Start Transcription"}
                   </button>
                 </div>
