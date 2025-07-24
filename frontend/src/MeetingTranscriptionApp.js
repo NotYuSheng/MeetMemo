@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Upload, Download, FileText, Hash, Send } from "lucide-react";
+import { Mic, MicOff, Upload, Download, FileText, Hash, Send, MessagesSquare, } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
 import { useCallback } from "react";
@@ -347,10 +347,10 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
   // Alternates speaker colors for more vibrant front-end display
   const getSpeakerColor = useCallback((speaker) => {
     const colors = [
-      "speaker-blue",
-      "speaker-green",
-      "speaker-purple",
-      "speaker-orange",
+      "speaker-afblue",
+      "speaker-poisedgold",
+      "speaker-navyblue",
+      "speaker-armyred",
     ];
     if (!(speaker in speakerColorMap.current)) {
       const newColorIndex =
@@ -409,7 +409,9 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       <div className="max-width-container">
         {/* Header */}
         <div className="header-card">
-          <h1 className="header-title">🧠 MeetMemo</h1>
+          <h1 className="header-title">
+            <MessagesSquare className="header-icon" /> MeetMemo
+          </h1>
           <button
             className="btn btn-small"
             onClick={toggleDarkMode}

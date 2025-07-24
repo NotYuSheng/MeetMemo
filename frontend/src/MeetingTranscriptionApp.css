@@ -3,32 +3,32 @@
   --icon: black;
 
   /* Backgrounds */
-  --bg: #fff;
-  --card-bg: #f9fafb;
+  --bg: #ffffff;
+  --card-bg: #ffffff;
   --alt-bg: #f3f4f6;
-  --transcript-entry-bg: #f9fafb;
+  --transcript-entry-bg: #75797C;
 
   /* Text */
-  --text: #1f2937;
-  --text-muted: #6b7280;
-  --text-inverse: #fff;
+  --text: #272B2D;
+  --text-muted: #BBA88E;
+  --text-inverse: #ffffff;
 
   /* Borders */
-  --border: #e5e7eb;
+  --border: #BBA88E;
 
   /* Buttons */
   --btn-bg: #e5e7eb;
   --btn-text: #111827;
   --btn-hover: #d1d5db;
-  --btn-primary: rgb(40 40 255);
-  --btn-primary-hover: #475569;
-  --btn-danger: #f87171;
-  --btn-danger-hover: #ef4444;
+  --btn-primary: #265289;
+  --btn-primary-hover: #3B6DAA;
+  --btn-danger: #c42030;
+  --btn-danger-hover: #E03A46;
   --btn-secondary: #9ca3af;
   --btn-secondary-hover: #6b7280;
-  --btn-success: #6ee7b7;
-  --btn-success-hover: #34d399;
-  --btn-success-text: #065f46;
+  --btn-success: #2998D5;
+  --btn-success-hover: #1B75BB;
+  --btn-success-text: #265289;
   --btn-active: #2563eb;
   --btn-active-text: #fff;
 
@@ -43,34 +43,34 @@
   --icon: white;
 
   /* Backgrounds */
-  --bg: #1f2937;
-  --card-bg: #374151;
+  --bg: #272b2d;
+  --card-bg: #75797c;
   --alt-bg: #4b5563;
-  --transcript-entry-bg: #1f2937;
+  --transcript-entry-bg: #75797c;
 
   /* Text */
-  --text: #f9fafb;
-  --text-muted: #9ca3af;
-  --text-inverse: #111827;
+  --text: #ffffff;
+  --text-muted: #BBA88E;
+  --text-inverse: #272b2d;
 
   /* Borders */
-  --border: #4b5563;
+  --border: #bba88e;
 
   /* Buttons */
   --btn-bg: #4b5563;
   --btn-text: #f9fafb;
   --btn-hover: #6b7280;
-  --btn-primary: #006aff;
-  --btn-primary-hover: #475569;
-  --btn-danger: #f87171;
-  --btn-danger-hover: #ef4444;
+  --btn-primary: #2998D5;
+  --btn-primary-hover: #1B75BB;
+  --btn-danger: #c42030;
+  --btn-danger-hover: #E03A46;
   --btn-secondary: #9ca3af;
   --btn-secondary-hover: #6b7280;
-  --btn-success: #10b981;
-  --btn-success-hover: #059669;
+  --btn-success: #2998D5;
+  --btn-success-hover: #1B75BB;
   --btn-success-text: #d1fae5;
   --btn-active: #3b82f6;
-  --btn-active-text: #fff;
+  --btn-active-text: #ffffff;
 
   /* Accent Colors (unchanged for consistency) */
   --purple: #8b5cf6;
@@ -84,6 +84,8 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+  font-family: 'Barlow', sans-serif;
+  font-weight: 700;
 }
 
 .btn {
@@ -163,7 +165,7 @@ body {
   box-shadow: none;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #BBA88E;
 }
 
 .header-subtitle {
@@ -324,7 +326,7 @@ body {
   width: 1rem;
   height: 1rem;
   border: 2px solid transparent;
-  border-bottom: 2px solid #4f46e5;
+  border-bottom: 2px solid #BBA88E;
   border-radius: 50%;
   margin-right: 0.5rem;
   animation: spin 1s linear infinite;
@@ -345,7 +347,7 @@ body {
 }
 
 .transcript-entry {
-  border-left: 4px solid #c7d2fe;
+  border-left: 4px solid #BBA88E;
   padding-left: 1rem;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
@@ -371,24 +373,24 @@ body {
   font-weight: 500;
 }
 
-.speaker-blue {
-  background-color: #e0f2fe;
-  color: #1e3a8a;
+.speaker-afblue {
+  background-color: #1B75BB;
+  color: #2998d5;
 }
 
-.speaker-green {
-  background-color: #d1fae5;
-  color: #065f46;
+.speaker-poisedgold {
+  background-color: #D6C7AE;
+  color: #bba88e;
 }
 
-.speaker-purple {
-  background-color: #ede9fe;
-  color: #5b21b6;
+.speaker-navyblue {
+  background-color: #3B6DAA;
+  color: #265289;
 }
 
-.speaker-orange {
-  background-color: #ffedd5;
-  color: #7c2d12;
+.speaker-armyred {
+  background-color: #E03A46;
+  color: #c42030;
 }
 
 .empty-state {
