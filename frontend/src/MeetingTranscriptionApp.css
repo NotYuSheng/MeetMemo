@@ -33,9 +33,9 @@
   --btn-active-text: #fff;
 
   /* Accent Colors */
-  --purple: #4f46e5;
-  --orange: #f97316;
-  --green: #10b981;
+  --purple: #c42030;
+  --orange: #265289;
+  --green: #bba88e;
 }
 
 [data-theme="dark"] {
@@ -73,9 +73,9 @@
   --btn-active-text: #ffffff;
 
   /* Accent Colors (unchanged for consistency) */
-  --purple: #8b5cf6;
-  --orange: #fb923c;
-  --green: #34d399;
+  --purple: #bba88e;
+  --orange: #2998d5;
+  --green: #c42030;
 }
 
 body {
@@ -374,23 +374,23 @@ body {
 }
 
 .speaker-afblue {
-  background-color: #1B75BB;
-  color: #2998d5;
+  background-color: #2998d5;
+  color: #ffffff;
 }
 
 .speaker-poisedgold {
-  background-color: #D6C7AE;
-  color: #bba88e;
+  background-color: #bba88e;
+  color: #ffffff;
 }
 
 .speaker-navyblue {
-  background-color: #3B6DAA;
-  color: #265289;
+  background-color: #265289;
+  color: #ffffff;
 }
 
 .speaker-armyred {
-  background-color: #E03A46;
-  color: #c42030;
+  background-color: #c42030;
+  color: #ffffff;
 }
 
 .empty-state {
@@ -523,43 +523,43 @@ body {
 }
 
 .btn-past-1 {
-  background-color: #dbeafe;
-  color: #1e3a8a;
+  background-color: #265289;
+  color: #3B6DAA;
 }
 
 [data-theme="dark"] .btn-past-1 {
-  background-color: #1e3a8a;
-  color: #dbeafe;
+  background-color: #265289;
+  color: #3B6DAA;
 }
 
 .btn-past-2 {
-  background-color: #dcfce7;
-  color: #065f46;
+  background-color: #BBA88E;
+  color: #D6C7AE;
 }
 
 [data-theme="dark"] .btn-past-2 {
-  background-color: #065f46;
-  color: #dcfce7;
+  background-color: #BBA88E;
+  color: #D6C7AE;
 }
 
 .btn-past-3 {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: #C42030;
+  color: #E03A46;
 }
 
 [data-theme="dark"] .btn-past-3 {
-  background-color: #92400e;
-  color: #fef3c7;
+  background-color: #C42030;
+  color: #E03A46;
 }
 
 .btn-past-4 {
-  background-color: #fce7f3;
-  color: #9d174d;
+  background-color: #2998D5;
+  color: #1B75BB;
 }
 
 [data-theme="dark"] .btn-past-4 {
-  background-color: #9d174d;
-  color: #fce7f3;
+  background-color: #2998D5;
+  color: #1B75BB;
 }
 
 .btn-past-1:hover {

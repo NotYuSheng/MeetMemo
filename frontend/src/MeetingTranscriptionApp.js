@@ -28,7 +28,7 @@ const MeetingTranscriptionApp = () => {
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
 
-  /////////////////////////// All funct6ions //////////////////////////
+  /////////////////////////// All functions //////////////////////////
   // Shortens transcripts with overly long file names
   const truncateFileName = (name, maxLength = 20) => {
     if (!name) return "";
