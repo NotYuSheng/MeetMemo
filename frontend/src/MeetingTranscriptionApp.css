@@ -1,17 +1,17 @@
 :root {
-  /* Icons */
-  --icon: black;
+    /* Icons */
+  --icon: #272B2D;
 
   /* Backgrounds */
-  --bg: #ffffff;
-  --card-bg: #ffffff;
+  --bg: #FFFFFF;
+  --card-bg: #FFFFFF;
   --alt-bg: #f3f4f6;
-  --transcript-entry-bg: #75797C;
+  --transcript-entry-bg: #FFFFFF;
 
   /* Text */
   --text: #272B2D;
-  --text-muted: #BBA88E;
-  --text-inverse: #ffffff;
+  --text-muted: #75797C;
+  --text-inverse: #FFFFFF;
 
   /* Borders */
   --border: #BBA88E;
@@ -22,60 +22,60 @@
   --btn-hover: #d1d5db;
   --btn-primary: #265289;
   --btn-primary-hover: #3B6DAA;
-  --btn-danger: #c42030;
+  --btn-danger: #C42030;
   --btn-danger-hover: #E03A46;
-  --btn-secondary: #9ca3af;
-  --btn-secondary-hover: #6b7280;
+  --btn-secondary: #75797C;
+  --btn-secondary-hover: #5E6264;
   --btn-success: #2998D5;
   --btn-success-hover: #1B75BB;
-  --btn-success-text: #265289;
-  --btn-active: #2563eb;
+  --btn-success-text: #FFFFFF;
+  --btn-active: #2998D5;
   --btn-active-text: #fff;
 
   /* Accent Colors */
-  --purple: #c42030;
+  --purple: #C42030;
   --orange: #265289;
-  --green: #bba88e;
+  --green: #BBA88E;
 }
 
 [data-theme="dark"] {
   /* Icons */
-  --icon: white;
+  --icon: #FFFFFF;
 
   /* Backgrounds */
-  --bg: #272b2d;
-  --card-bg: #75797c;
-  --alt-bg: #4b5563;
-  --transcript-entry-bg: #75797c;
+  --bg: #272B2D;
+  --card-bg: #4a4e50;
+  --alt-bg: #3d4143;
+  --transcript-entry-bg: #272B2D;
 
   /* Text */
-  --text: #ffffff;
+  --text: #FFFFFF;
   --text-muted: #BBA88E;
-  --text-inverse: #272b2d;
+  --text-inverse: #272B2D;
 
   /* Borders */
-  --border: #bba88e;
+  --border: #BBA88E;
 
   /* Buttons */
-  --btn-bg: #4b5563;
-  --btn-text: #f9fafb;
-  --btn-hover: #6b7280;
+  --btn-bg: #75797C;
+  --btn-text: #FFFFFF;
+  --btn-hover: #5E6264;
   --btn-primary: #2998D5;
   --btn-primary-hover: #1B75BB;
-  --btn-danger: #c42030;
+  --btn-danger: #C42030;
   --btn-danger-hover: #E03A46;
-  --btn-secondary: #9ca3af;
-  --btn-secondary-hover: #6b7280;
+  --btn-secondary: #75797C;
+  --btn-secondary-hover: #5E6264;
   --btn-success: #2998D5;
   --btn-success-hover: #1B75BB;
-  --btn-success-text: #d1fae5;
-  --btn-active: #3b82f6;
-  --btn-active-text: #ffffff;
+  --btn-success-text: #FFFFFF;
+  --btn-active: #2998D5;
+  --btn-active-text: #FFFFFF;
 
   /* Accent Colors (unchanged for consistency) */
-  --purple: #bba88e;
-  --orange: #2998d5;
-  --green: #c42030;
+  --purple: #BBA88E;
+  --orange: #2998D5;
+  --green: #C42030;
 }
 
 body {
