@@ -15,6 +15,7 @@ from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pydub import AudioSegment
+from pydantic import BaseModel
 
 # Start up the app
 app = FastAPI()    
@@ -50,6 +51,11 @@ CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0" 
+
+###################################### Classes ######################################
+class SpeakerNameMapping(BaseModel):
+    '''Pydantic model for mapping old speaker names to new ones.'''
+    mapping: dict[str, str]
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -540,6 +546,71 @@ def rename_job(uuid: str, new_name: str) -> dict:
             return {"uuid": uuid, "status": "success", "new_name": new_name}
         else:
             return {"error": "UUID not found", "status_code": "404"}
+        
+@app.patch("/jobs/{uuid}/speakers")
+def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
+    """
+    Updates the speaker names in a transcript file based on a provided mapping.
+    
+    Expects a JSON body with a 'mapping' key, e.g.:
+    {
+        "mapping": {
+            "SPEAKER_00": "Alice",
+            "SPEAKER_01": "Bob"
+        }
+    }
+    """
+    try:
+        uuid = uuid.zfill(4)
+        timestamp = get_timestamp()
+        
+        # 1. Get the filename associated with the UUID
+        filename_response = get_file_name(uuid)
+        if "error" in filename_response:
+            logging.error(f"{timestamp}: No file found for UUID {uuid} during speaker rename attempt.")
+            return {"error": f"UUID {uuid} not found", "status_code": "404"}
+            
+        file_name = filename_response["file_name"]
+        transcript_path = os.path.join("transcripts", f"{file_name}.json")
+
+        # 2. Check if the transcript file exists
+        if not os.path.exists(transcript_path):
+            logging.error(f"{timestamp}: Transcript file not found at {transcript_path} for UUID {uuid}.")
+            return {"error": "Transcript file not found", "status_code": "404"}
+
+        # 3. Read, update, and write the transcript data
+        with open(transcript_path, "r+", encoding="utf-8") as f:
+            transcript_data = json.load(f)
+            
+            # Create a copy of the mapping from the Pydantic model
+            name_map = speaker_map.mapping
+
+            # Iterate through each segment and update the speaker name if it's in the map
+            for segment in transcript_data:
+                if segment.get("speaker") in name_map:
+                    segment["speaker"] = name_map[segment["speaker"]]
+            
+            # Go back to the beginning of the file to overwrite it
+            f.seek(0)
+            json.dump(transcript_data, f, indent=4)
+            f.truncate() # Remove any leftover data if the new content is shorter
+
+        logging.info(f"{timestamp}: Successfully renamed speakers for UUID {uuid}, file: {file_name}")
+        return {
+            "uuid": uuid, 
+            "status": "success", 
+            "message": "Speaker names updated successfully.",
+            "status_code": "200"
+        }
+
+    except json.JSONDecodeError as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error decoding JSON for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": "Invalid transcript file format.", "status_code": "500"}
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")

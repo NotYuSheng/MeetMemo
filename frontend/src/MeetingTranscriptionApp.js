@@ -27,6 +27,9 @@ const MeetingTranscriptionApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [speakerNameMap, setSpeakerNameMap] = useState({});
+  const [isSavingNames, setIsSavingNames] = useState(false);
 
   /////////////////////////// All functions //////////////////////////
   // Shortens transcripts with overly long file names
@@ -35,6 +38,82 @@ const MeetingTranscriptionApp = () => {
     return name.length > maxLength
       ? name.slice(0, maxLength).trim() + "..."
       : name;
+  };
+
+  // Handles the editing of transcripts for name tagging
+  const handleOpenRenameModal = () => {
+    if (transcript.length === 0) {
+      alert("There is no transcript to edit.");
+      return;
+    }
+    // Get unique speaker names from the transcript
+    const uniqueSpeakers = [
+      ...new Set(transcript.map((entry) => entry.speaker ?? 'SPEAKER_00')),
+    ];
+    // Initialize the map with current speaker names
+    const initialMap = uniqueSpeakers.reduce((acc, speaker) => {
+      acc[speaker] = speaker;
+      return acc;
+    }, {});
+    setSpeakerNameMap(initialMap);
+    setIsRenameModalOpen(true);
+  };
+
+  // Swaps the old name variable with the new one
+  const handleSpeakerNameChange = (oldName, newName) => {
+    setSpeakerNameMap((prev) => ({
+      ...prev,
+      [oldName]: newName,
+    }));
+  };
+
+  // Updates the transcript, both in the stored file & the web app
+  const handleSubmitSpeakerNames = () => {
+    if (!selectedMeetingId) {
+      alert("No meeting is selected.");
+      return;
+    }
+    setIsSavingNames(true);
+    
+    // Filter out names that haven't changed to send a smaller payload
+    const changedNames = Object.keys(speakerNameMap).reduce((acc, oldName) => {
+      if(speakerNameMap[oldName] !== oldName) {
+        acc[oldName] = speakerNameMap[oldName];
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(changedNames).length === 0) {
+      setIsRenameModalOpen(false);
+      setIsSavingNames(false);
+      return;
+    }
+
+    fetch(`/jobs/${selectedMeetingId}/speakers`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mapping: changedNames }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to update speaker names");
+        return res.json();
+      })
+      .then(() => {
+        // Update the transcript state locally for immediate feedback
+        const updatedTranscript = transcript.map((entry) => ({
+          ...entry,
+          speaker: speakerNameMap[entry.speaker] ?? entry.speaker,
+        }));
+        setTranscript(updatedTranscript);
+        setIsRenameModalOpen(false);
+      })
+      .catch((err) => {
+        console.error("Failed to save speaker names:", err);
+        alert("An error occurred while saving the new names.");
+      })
+      .finally(() => {
+        setIsSavingNames(false);
+      });
   };
 
   // Allows user to switch between light & dark modes
@@ -58,7 +137,7 @@ const MeetingTranscriptionApp = () => {
         setTranscript(
           parsed.map((entry, idx) => ({
             id: idx,
-            speaker: entry.speaker,
+            speaker: entry.speaker ?? 'SPEAKER_00',
             text: entry.text,
             start: entry.start,
             end: entry.end,
@@ -76,9 +155,12 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to load past meeting", err));
   };
 
+  // Constants for the function below
+  // DO NOT move these to the top
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState("");
 
+  // Renames meetings based on user input
   const handleRename = () => {
     if (!selectedMeetingId) return;
 
@@ -95,6 +177,8 @@ const MeetingTranscriptionApp = () => {
       })
       .catch((err) => console.error("Failed to rename meeting", err));
   };
+
+  // Starts recording meeting via web app interface
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -149,7 +233,7 @@ const MeetingTranscriptionApp = () => {
           Array.isArray(data.transcript)
             ? data.transcript.map((entry, idx) => ({
                 id: idx,
-                speaker: entry.speaker,
+                speaker: entry.speaker ?? 'SPEAKER_00',
                 text: entry.text,
                 start: entry.start,
                 end: entry.end,
@@ -182,7 +266,7 @@ const MeetingTranscriptionApp = () => {
           Array.isArray(data.transcript)
             ? data.transcript.map((entry, idx) => ({
                 id: idx,
-                speaker: entry.speaker,
+                speaker: entry.speaker ?? 'SPEAKER_00',
                 text: entry.text,
                 start: entry.start,
                 end: entry.end,
@@ -213,6 +297,7 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to fetch meeting list", err));
   };
 
+  // Fetches summary to be displayed on front-end
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
     fetch(`/jobs/${uuid}/summarise`, { method: "POST" })
@@ -260,6 +345,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       .catch((err) => console.error("Delete failed:", err));
   };
 
+  // Exports summary to PDF format for download
   const exportToPDF = () => {
     if (!summary) return;
 
@@ -306,6 +392,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
     doc.save("meeting-summary.pdf");
   };
 
+  // To export transcript to PDF for download
   const exportTranscriptToPDF = () => {
     if (transcript.length === 0) return;
 
@@ -335,7 +422,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
     y += lineHeight;
 
     transcript.forEach(entry => {
-      addLine(entry.speaker, margin, 12, true);
+      addLine(entry.speaker  ?? 'SPEAKER_00', margin, 12, true);
       addLine(entry.text, margin + 15);
       y += lineHeight;
     });
@@ -615,10 +702,10 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                         <div className="transcript-header">
                           <span
                             className={`speaker-badge ${getSpeakerColor(
-                              entry.speaker,
+                              entry.speaker  ?? 'SPEAKER_00',
                             )}`}
                           >
-                            {entry.speaker}
+                            {entry.speaker  ?? 'SPEAKER_00'}
                           </span>
                           <span className="timestamp">{entry.start}s - {entry.end}s</span>
                         </div>
@@ -673,6 +760,48 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
           </div>
         </div>
       </div>
+
+      {/* Speaker Rename Modal */}
+      {isRenameModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2 className="section-title">Rename Speakers</h2>
+            <div className="rename-speakers-form">
+              {Object.keys(speakerNameMap).map((oldName) => (
+                <div key={oldName} className="rename-speaker-entry">
+                  <label htmlFor={oldName} className="speaker-label">
+                    {oldName}:
+                  </label>
+                  <input
+                    id={oldName}
+                    type="text"
+                    value={speakerNameMap[oldName]}
+                    onChange={(e) =>
+                      handleSpeakerNameChange(oldName, e.target.value)
+                    }
+                    className="rename-input"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button
+                onClick={() => setIsRenameModalOpen(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitSpeakerNames}
+                className="btn btn-primary"
+                disabled={isSavingNames}
+              >
+                {isSavingNames ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
