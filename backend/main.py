@@ -579,8 +579,9 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
             return {"error": "Transcript file not found", "status_code": "404"}
 
         # 3. Read, update, and write the transcript data
-        with open(transcript_path, "r+", encoding="utf-8") as f:
-            transcript_data = json.load(f)
+        temp_file_path = transcript_path + ".tmp"
+        with open(transcript_path, "r", encoding="utf-8") as f_read, open(temp_file_path, "w", encoding="utf-8") as f_write:
+            transcript_data = json.load(f_read)
             
             # Create a copy of the mapping from the Pydantic model
             name_map = speaker_map.mapping
@@ -590,17 +591,18 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
                 if segment.get("speaker") in name_map:
                     segment["speaker"] = name_map[segment["speaker"]]
             
-            # Go back to the beginning of the file to overwrite it
-            f.seek(0)
-            json.dump(transcript_data, f, indent=4)
-            f.truncate() # Remove any leftover data if the new content is shorter
+            json.dump(transcript_data, f_write, indent=4)
+
+        # Atomically replace the original file with the updated one
+        os.replace(temp_file_path, transcript_path)
 
         logging.info(f"{timestamp}: Successfully renamed speakers for UUID {uuid}, file: {file_name}")
         return {
             "uuid": uuid, 
             "status": "success", 
             "message": "Speaker names updated successfully.",
-            "status_code": "200"
+            "status_code": "200",
+            "transcript": transcript_data
         }
 
     except json.JSONDecodeError as e:

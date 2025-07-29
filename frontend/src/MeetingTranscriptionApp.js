@@ -98,13 +98,8 @@ const MeetingTranscriptionApp = () => {
         if (!res.ok) throw new Error("Failed to update speaker names");
         return res.json();
       })
-      .then(() => {
-        // Update the transcript state locally for immediate feedback
-        const updatedTranscript = transcript.map((entry) => ({
-          ...entry,
-          speaker: speakerNameMap[entry.speaker] ?? entry.speaker,
-        }));
-        setTranscript(updatedTranscript);
+      .then((data) => {
+        setTranscript(data.transcript);
         setIsRenameModalOpen(false);
       })
       .catch((err) => {
