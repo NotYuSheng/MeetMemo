@@ -29,6 +29,7 @@ const MeetingTranscriptionApp = () => {
   const [selectedModel, setSelectedModel] = useState("turbo");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [speakerNameMap, setSpeakerNameMap] = useState({});
+  const [editingSpeaker, setEditingSpeaker] = useState(null);
   const [isSavingNames, setIsSavingNames] = useState(false);
 
   /////////////////////////// All functions //////////////////////////
@@ -59,40 +60,28 @@ const MeetingTranscriptionApp = () => {
     setIsRenameModalOpen(true);
   };
 
-  // Swaps the old name variable with the new one
   const handleSpeakerNameChange = (oldName, newName) => {
-    setSpeakerNameMap((prev) => ({
-      ...prev,
-      [oldName]: newName,
-    }));
+    setSpeakerNameMap((prev) => ({ ...prev, [oldName]: newName }));
+    const updatedTranscript = transcript.map((entry) => {
+      if (entry.speaker === oldName) {
+        return { ...entry, speaker: newName };
+      }
+      return entry;
+    });
+    setTranscript(updatedTranscript);
   };
 
-  // Updates the transcript, both in the stored file & the web app
   const handleSubmitSpeakerNames = () => {
     if (!selectedMeetingId) {
       alert("No meeting is selected.");
       return;
     }
     setIsSavingNames(true);
-    
-    // Filter out names that haven't changed to send a smaller payload
-    const changedNames = Object.keys(speakerNameMap).reduce((acc, oldName) => {
-      if(speakerNameMap[oldName] !== oldName) {
-        acc[oldName] = speakerNameMap[oldName];
-      }
-      return acc;
-    }, {});
-
-    if (Object.keys(changedNames).length === 0) {
-      setIsRenameModalOpen(false);
-      setIsSavingNames(false);
-      return;
-    }
 
     fetch(`/jobs/${selectedMeetingId}/speakers`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mapping: changedNames }),
+      body: JSON.stringify({ mapping: speakerNameMap }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to update speaker names");
@@ -629,24 +618,43 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     Summary
                   </button>
                 </div>
-                {!showSummary && (
-                  <button
-                    onClick={exportTranscriptToPDF}
-                    className="btn btn-success btn-small"
-                  >
-                    <Download className="btn-icon" />
-                    Export PDF
-                  </button>
-                )}
-                {showSummary && (
-                  <button
-                    onClick={exportToPDF}
-                    className="btn btn-success btn-small"
-                  >
-                    <Download className="btn-icon" />
-                    Export PDF
-                  </button>
-                )}
+                <div className="actions-group">
+                  {!showSummary && (
+                    <button
+                      onClick={handleOpenRenameModal}
+                      className="btn btn-secondary btn-small"
+                    >
+                      Rename Speakers
+                    </button>
+                  )}
+                  {!showSummary && (
+                    <button
+                      onClick={handleSubmitSpeakerNames}
+                      className="btn btn-primary btn-small"
+                      disabled={isSavingNames}
+                    >
+                      {isSavingNames ? "Saving..." : "Save All Names"}
+                    </button>
+                  )}
+                  {!showSummary && (
+                    <button
+                      onClick={exportTranscriptToPDF}
+                      className="btn btn-success btn-small"
+                    >
+                      <Download className="btn-icon" />
+                      Export PDF
+                    </button>
+                  )}
+                  {showSummary && (
+                    <button
+                      onClick={exportToPDF}
+                      className="btn btn-success btn-small"
+                    >
+                      <Download className="btn-icon" />
+                      Export PDF
+                    </button>
+                  )}
+                </div>
               </div>
               {showSummary ? (
                 summaryLoading ? (
@@ -695,13 +703,31 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     transcript.map((entry) => (
                       <div key={entry.id} className="transcript-entry">
                         <div className="transcript-header">
-                          <span
-                            className={`speaker-badge ${getSpeakerColor(
-                              entry.speaker  ?? 'SPEAKER_00',
-                            )}`}
-                          >
-                            {entry.speaker  ?? 'SPEAKER_00'}
-                          </span>
+                          {editingSpeaker === entry.id ? (
+                            <div className="speaker-edit-container">
+                              <input
+                                type="text"
+                                defaultValue={entry.speaker ?? 'SPEAKER_00'}
+                                onBlur={(e) => handleSpeakerNameChange(entry.speaker, e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSpeakerNameChange(entry.speaker, e.target.value);
+                                    setEditingSpeaker(null);
+                                  }
+                                }}
+                              />
+                              <button onClick={() => setEditingSpeaker(null)} className="btn btn-success btn-small">Save</button>
+                            </div>
+                          ) : (
+                            <span
+                              className={`speaker-badge ${getSpeakerColor(
+                                entry.speaker  ?? 'SPEAKER_00',
+                              )}`}
+                            >
+                              {entry.speaker  ?? 'SPEAKER_00'}
+                              <button onClick={() => setEditingSpeaker(entry.id)} className="btn btn-secondary btn-small rename-speaker-btn">Rename</button>
+                            </span>
+                          )}
                           <span className="timestamp">{entry.start}s - {entry.end}s</span>
                         </div>
                         <p className="transcript-text">{entry.text}</p>
