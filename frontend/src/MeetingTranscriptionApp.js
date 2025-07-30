@@ -27,7 +27,7 @@ const MeetingTranscriptionApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  
   const [speakerNameMap, setSpeakerNameMap] = useState({});
   const speakerNameMapRef = useRef(speakerNameMap);
   useEffect(() => {
@@ -45,36 +45,26 @@ const MeetingTranscriptionApp = () => {
       : name;
   };
 
-  // Handles the editing of transcripts for name tagging
-  const handleOpenRenameModal = () => {
-    if (transcript.length === 0) {
-      alert("There is no transcript to edit.");
-      return;
-    }
-    // Get unique speaker names from the transcript
-    const uniqueSpeakers = [
-      ...new Set(transcript.map((entry) => entry.speaker ?? 'SPEAKER_00')),
-    ];
-    // Initialize the map with current speaker names
-    const initialMap = uniqueSpeakers.reduce((acc, speaker) => {
-      acc[speaker] = speaker;
-      return acc;
-    }, {});
-    setSpeakerNameMap(initialMap);
-    setIsRenameModalOpen(true);
-  };
 
   const handleSpeakerNameChange = (oldName, newName) => {
-    setSpeakerNameMap((prev) => ({ ...prev, [oldName]: newName }));
-    const updatedTranscript = transcript.map((entry) => {
-      if (entry.speaker === oldName) {
-        return { ...entry, speaker: newName };
-      }
-      return entry;
-    });
-    setTranscript(updatedTranscript);
-    handleSubmitSpeakerNames(); // Autosave when a name is changed
+    if (!newName || oldName === newName) return;
+
+    // Update transcript entries
+    setTranscript((prevTranscript) =>
+      prevTranscript.map((entry) =>
+        entry.speaker === oldName ? { ...entry, speaker: newName } : entry
+      )
+    );
+
+    // Update speaker name map
+    setSpeakerNameMap((prev) => ({
+      ...prev,
+      [oldName]: newName,
+    }));
+
+    handleSubmitSpeakerNames(); // Save to backend
   };
+  
 
   const handleSubmitSpeakerNames = () => {
     if (!selectedMeetingId) {
@@ -97,7 +87,7 @@ const MeetingTranscriptionApp = () => {
       })
       .then((data) => {
         setTranscript(data.transcript);
-        setIsRenameModalOpen(false);
+        setIsRenaming(false);
       })
       .catch((err) => {
         console.error("Failed to save speaker names:", err);
@@ -627,14 +617,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                   </button>
                 </div>
                 <div className="actions-group">
-                  {!showSummary && (
-                    <button
-                      onClick={handleOpenRenameModal}
-                      className="btn btn-secondary btn-small"
-                    >
-                      Rename Speakers
-                    </button>
-                  )}
+                  
                   
                   {!showSummary && (
                     <button
@@ -703,30 +686,40 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     transcript.map((entry) => (
                       <div key={entry.id} className="transcript-entry">
                         <div className="transcript-header">
-                          {editingSpeaker === entry.id ? (
+                          {editingSpeaker === entry.speaker ? (
                             <div className="speaker-edit-container">
                               <input
                                 type="text"
                                 defaultValue={entry.speaker ?? 'SPEAKER_00'}
-                                onBlur={(e) => handleSpeakerNameChange(entry.speaker, e.target.value)}
+                                onBlur={(e) => {
+                                  handleSpeakerNameChange(entry.speaker, e.target.value);
+                                  setEditingSpeaker(null);
+                                }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     handleSpeakerNameChange(entry.speaker, e.target.value);
                                     setEditingSpeaker(null);
-                                    handleSubmitSpeakerNames();
                                   }
                                 }}
                               />
-                              <button onClick={() => { setEditingSpeaker(null); handleSubmitSpeakerNames(); }} className="btn btn-success btn-small">Save</button>
+                              <button
+                                onClick={() => setEditingSpeaker(null)}
+                                className="btn btn-success btn-small"
+                              >
+                                Save
+                              </button>
                             </div>
                           ) : (
                             <span
-                              className={`speaker-badge ${getSpeakerColor(
-                                entry.speaker  ?? 'SPEAKER_00',
-                              )}`}
+                              className={`speaker-badge ${getSpeakerColor(entry.speaker ?? 'SPEAKER_00')}`}
                             >
-                              {entry.speaker  ?? 'SPEAKER_00'}
-                              <button onClick={() => setEditingSpeaker(entry.id)} className="btn btn-secondary btn-small rename-speaker-btn">Rename</button>
+                              {speakerNameMap[entry.speaker] ?? entry.speaker}
+                              <button
+                                onClick={() => setEditingSpeaker(entry.speaker)}
+                                className="btn btn-secondary btn-small rename-speaker-btn"
+                              >
+                                Rename
+                              </button>
                             </span>
                           )}
                           <span className="timestamp">{entry.start}s - {entry.end}s</span>
@@ -783,47 +776,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
         </div>
       </div>
 
-      {/* Speaker Rename Modal */}
-      {isRenameModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 className="section-title">Rename Speakers</h2>
-            <div className="rename-speakers-form">
-              {Object.keys(speakerNameMap).map((oldName) => (
-                <div key={oldName} className="rename-speaker-entry">
-                  <label htmlFor={oldName} className="speaker-label">
-                    {oldName}:
-                  </label>
-                  <input
-                    id={oldName}
-                    type="text"
-                    value={speakerNameMap[oldName]}
-                    onChange={(e) =>
-                      handleSpeakerNameChange(oldName, e.target.value)
-                    }
-                    className="rename-input"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="modal-actions">
-              <button
-                onClick={() => setIsRenameModalOpen(false)}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitSpeakerNames}
-                className="btn btn-primary"
-                disabled={isSavingNames}
-              >
-                {isSavingNames ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 };
