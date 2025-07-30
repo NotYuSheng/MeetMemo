@@ -587,9 +587,11 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
             name_map = speaker_map.mapping
 
             # Iterate through each segment and update the speaker name if it's in the map
+            # Normalize None to placeholder
             for segment in transcript_data:
-                if segment.get("speaker") in name_map:
-                    segment["speaker"] = name_map[segment["speaker"]]
+                original_speaker = segment.get("speaker") or "SPEAKER_00"
+                if original_speaker in name_map:
+                    segment["speaker"] = name_map[original_speaker]
             
             json.dump(transcript_data, f_write, indent=4)
 
