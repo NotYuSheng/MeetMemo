@@ -29,6 +29,10 @@ const MeetingTranscriptionApp = () => {
   const [selectedModel, setSelectedModel] = useState("turbo");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [speakerNameMap, setSpeakerNameMap] = useState({});
+  const speakerNameMapRef = useRef(speakerNameMap);
+  useEffect(() => {
+    speakerNameMapRef.current = speakerNameMap;
+  }, [speakerNameMap]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
   const [isSavingNames, setIsSavingNames] = useState(false);
 
@@ -69,6 +73,7 @@ const MeetingTranscriptionApp = () => {
       return entry;
     });
     setTranscript(updatedTranscript);
+    handleSubmitSpeakerNames(); // Autosave when a name is changed
   };
 
   const handleSubmitSpeakerNames = () => {
@@ -78,10 +83,13 @@ const MeetingTranscriptionApp = () => {
     }
     setIsSavingNames(true);
 
+    // Use the ref to get the latest speakerNameMap
+    const currentSpeakerNameMap = speakerNameMapRef.current;
+
     fetch(`/jobs/${selectedMeetingId}/speakers`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mapping: speakerNameMap }),
+      body: JSON.stringify({ mapping: currentSpeakerNameMap }),
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to update speaker names");
@@ -627,15 +635,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                       Rename Speakers
                     </button>
                   )}
-                  {!showSummary && (
-                    <button
-                      onClick={handleSubmitSpeakerNames}
-                      className="btn btn-primary btn-small"
-                      disabled={isSavingNames}
-                    >
-                      {isSavingNames ? "Saving..." : "Save All Names"}
-                    </button>
-                  )}
+                  
                   {!showSummary && (
                     <button
                       onClick={exportTranscriptToPDF}
@@ -713,10 +713,11 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                                   if (e.key === 'Enter') {
                                     handleSpeakerNameChange(entry.speaker, e.target.value);
                                     setEditingSpeaker(null);
+                                    handleSubmitSpeakerNames();
                                   }
                                 }}
                               />
-                              <button onClick={() => setEditingSpeaker(null)} className="btn btn-success btn-small">Save</button>
+                              <button onClick={() => { setEditingSpeaker(null); handleSubmitSpeakerNames(); }} className="btn btn-success btn-small">Save</button>
                             </div>
                           ) : (
                             <span
