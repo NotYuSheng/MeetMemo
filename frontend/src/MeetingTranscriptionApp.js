@@ -661,7 +661,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     ) : (
                       <p>
                         <strong>Title:</strong> {summary.meetingTitle}
-                        <button onClick={() => { setIsRenaming(true); setNewName(summary.meetingTitle); }} className="btn btn-secondary btn-small rename-btn">Rename</button>
                       </p>
                     )}
                     <div className="summary-text">
