@@ -106,7 +106,7 @@ const MeetingTranscriptionApp = () => {
         return res.json();
       })
       .then((data) => {
-        setTranscript(data.transcript);
+        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
         setIsRenaming(false);
       })
       .catch((err) => {
