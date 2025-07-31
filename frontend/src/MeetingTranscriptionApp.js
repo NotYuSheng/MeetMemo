@@ -711,7 +711,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                             </div>
                           ) : (
                             <span
-                              className={`speaker-badge ${getSpeakerColor(entry.speaker ?? 'SPEAKER_00')}`}
+                              className={`speaker-badge ${getSpeakerColor(entry.id ?? 'SPEAKER_00')}`}
                             >
                               {speakerNameMap[entry.speaker] ?? entry.speaker}
                               <button
