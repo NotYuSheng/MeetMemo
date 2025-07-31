@@ -111,7 +111,8 @@ const MeetingTranscriptionApp = () => {
     setTranscript([]);
     setSummary(null);
     setSelectedMeetingId(uuid);
-    getSpeakerColor.speakerMap = {};
+    // getSpeakerColor.speakerMap = {};
+    speakerColorMap.current = {};
     fetch(`/jobs/${uuid}/transcript`)
       .then((res) => res.json())
       .then((data) => {
@@ -200,7 +201,8 @@ const MeetingTranscriptionApp = () => {
   // Uploads file to the back-end via the /jobs post method
   const uploadFile = () => {
     if (!selectedFile) return;
-    getSpeakerColor.speakerMap = {}; // Reset color cache
+    // getSpeakerColor.speakerMap = {}; // Reset color cache
+    speakerColorMap.current = {};
     setLoading(true);
     const formData = new FormData();
     formData.append("file", selectedFile);
