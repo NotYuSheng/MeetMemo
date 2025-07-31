@@ -6,6 +6,26 @@ import { useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+const processTranscriptWithSpeakerIds = (transcriptData) => {
+  const speakerMap = {};
+  let speakerCounter = 1;
+  return transcriptData.map((entry, idx) => {
+    const speaker = entry.speaker ?? 'SPEAKER_00';
+    if (!speakerMap[speaker]) {
+      speakerMap[speaker] = speakerCounter++;
+    }
+    return {
+      id: idx,
+      speaker: speaker,
+      speakerId: speakerMap[speaker],
+      text: entry.text,
+      start: entry.start,
+      end: entry.end,
+    };
+  });
+};
+
+
 const MeetingTranscriptionApp = () => {
   /////////////////////////// All constants ///////////////////////////
   // Constants for transcription function
@@ -117,15 +137,7 @@ const MeetingTranscriptionApp = () => {
       .then((res) => res.json())
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
-        setTranscript(
-          parsed.map((entry, idx) => ({
-            id: idx,
-            speaker: entry.speaker ?? 'SPEAKER_00',
-            text: entry.text,
-            start: entry.start,
-            end: entry.end,
-          })),
-        );
+        setTranscript(processTranscriptWithSpeakerIds(parsed));
         return fetch(`/jobs/${uuid}/summarise`, { method: "POST" });
       })
       .then((res) => res.json())
@@ -215,13 +227,7 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         setTranscript(
           Array.isArray(data.transcript)
-            ? data.transcript.map((entry, idx) => ({
-                id: idx,
-                speaker: entry.speaker ?? 'SPEAKER_00',
-                text: entry.text,
-                start: entry.start,
-                end: entry.end,
-              }))
+            ? processTranscriptWithSpeakerIds(data.transcript)
             : [],
         );
         fetchSummary(data.uuid);
@@ -248,13 +254,7 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         setTranscript(
           Array.isArray(data.transcript)
-            ? data.transcript.map((entry, idx) => ({
-                id: idx,
-                speaker: entry.speaker ?? 'SPEAKER_00',
-                text: entry.text,
-                start: entry.start,
-                end: entry.end,
-              }))
+            ? processTranscriptWithSpeakerIds(data.transcript)
             : [],
         );
         fetchSummary(data.uuid);
@@ -713,8 +713,8 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                             </div>
                           ) : (
                             <span
-                              className={`speaker-badge ${getSpeakerColor(entry.idx ?? 'SPEAKER_00')}`}
-                            >
+                                className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
+                              >
                               {speakerNameMap[entry.speaker] ?? entry.speaker}
                               <button
                                 onClick={() => setEditingSpeaker(entry.speaker)}
