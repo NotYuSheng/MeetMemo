@@ -713,6 +713,12 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                               className={`speaker-badge ${getSpeakerColor(entry.speaker ?? 'SPEAKER_00')}`}
                             >
                               {speakerNameMap[entry.speaker] ?? entry.speaker}
+                              <button
+                                onClick={() => setEditingSpeaker(entry.speaker)}
+                                className="btn btn-secondary btn-small rename-speaker-btn"
+                              >
+                                Rename
+                              </button>
                             </span>
                           )}
                           <span className="timestamp">{entry.start}s - {entry.end}s</span>
