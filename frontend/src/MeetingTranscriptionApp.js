@@ -69,14 +69,15 @@ const MeetingTranscriptionApp = () => {
   const handleSpeakerNameChange = (oldName, newName) => {
     if (!newName || oldName === newName) return;
 
-    // Update transcript entries
+    // Update the speaker name in the transcript data directly,
+    // while preserving the original speakerId for color consistency.
     setTranscript((prevTranscript) =>
       prevTranscript.map((entry) =>
         entry.speaker === oldName ? { ...entry, speaker: newName } : entry
       )
     );
 
-    // Update speaker name map
+    // Update the display name map for any future renders.
     setSpeakerNameMap((prev) => ({
       ...prev,
       [oldName]: newName,
@@ -106,7 +107,7 @@ const MeetingTranscriptionApp = () => {
         return res.json();
       })
       .then((data) => {
-        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        // setTranscript(processTranscriptWithSpeakerIds(data.transcript));
         setIsRenaming(false);
       })
       .catch((err) => {
