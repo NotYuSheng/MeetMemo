@@ -110,6 +110,8 @@ const MeetingTranscriptionApp = () => {
     setSummary(null);
     setSelectedMeetingId(uuid);
     speakerColorMap.current = {};
+    setSummaryLoading(true); 
+
     fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
       .then((res) => res.json())
       .then((data) => {
@@ -124,7 +126,8 @@ const MeetingTranscriptionApp = () => {
           summary: data.summary,
         });
       })
-      .catch((err) => console.error("Failed to load past meeting", err));
+      .catch((err) => console.error("Failed to load past meeting", err))
+      .finally(() => setSummaryLoading(false)); 
   };
 
   const [isRenaming, setIsRenaming] = useState(false);
@@ -321,36 +324,23 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
     doc.save("meeting-summary.pdf");
   };
 
-  const exportTranscriptToPDF = () => {
+  const exportTranscriptToTxt = () => {
     if (transcript.length === 0) return;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 40;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const lineHeight = 14;
-    let y = margin;
-    const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
-      doc.setFontSize(fontSize);
-      doc.setFont(undefined, isBold ? "bold" : "normal");
-      const wrapped = doc.splitTextToSize(text, pageWidth - indent - margin);
-      wrapped.forEach((line) => {
-        if (y + lineHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-        doc.text(line, indent, y);
-        y += lineHeight;
-      });
-    };
-    doc.setFontSize(18);
-    addLine("Meeting Transcript", margin, 18, true);
-    y += lineHeight;
-    transcript.forEach((entry) => {
-      addLine(entry.speaker ?? "SPEAKER_00", margin, 12, true);
-      addLine(entry.text, margin + 15);
-      y += lineHeight;
+    let textContent = "Meeting Transcript\n\n";
+    transcript.forEach(entry => {
+      const speaker = speakerNameMap[entry.speaker] ?? entry.speaker;
+      textContent += `${speaker}: ${entry.text}\n\n`;
     });
-    doc.save("meeting-transcript.pdf");
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "meeting-transcript.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const formatTime = (seconds) => {
@@ -502,9 +492,9 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                 </div>
                 <div className="actions-group">
                   {!showSummary && (
-                    <button onClick={exportTranscriptToPDF} className="btn btn-success btn-small">
+                    <button onClick={exportTranscriptToTxt} className="btn btn-success btn-small">
                       <Download className="btn-icon" />
-                      Export PDF
+                      Export TXT
                     </button>
                   )}
                   {showSummary && (
@@ -590,15 +580,17 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                               </button>
                             </div>
                           ) : (
-                            <span className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}>
-                              {speakerNameMap[entry.speaker] ?? entry.speaker}
+                            <div className="speaker-container">
+                              <span className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}>
+                                {speakerNameMap[entry.speaker] ?? entry.speaker}
+                              </span>
                               <button
                                 onClick={() => setEditingSpeaker(entry.speaker)}
                                 className="btn btn-secondary btn-small rename-speaker-btn"
                               >
                                 Rename
                               </button>
-                            </span>
+                            </div>
                           )}
                           <span className="timestamp">
                             {entry.start}s - {entry.end}s

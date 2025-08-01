@@ -374,6 +374,14 @@ body {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
+  display: flex; 
+  align-items: center;
+}
+
+.speaker-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; 
 }
 
 .speaker-afblue {
