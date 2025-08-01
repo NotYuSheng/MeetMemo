@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Upload, Download, FileText, Hash, Send, MessagesSquare, } from "lucide-react";
+import { Mic, MicOff, Upload, Download, FileText, Hash, Send, MessagesSquare } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
 import { useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+
 const processTranscriptWithSpeakerIds = (transcriptData) => {
   const speakerMap = {};
   let speakerCounter = 1;
   return transcriptData.map((entry, idx) => {
-    const speaker = entry.speaker ?? 'SPEAKER_00';
+    const speaker = entry.speaker ?? "SPEAKER_00";
     if (!speakerMap[speaker]) {
       speakerMap[speaker] = speakerCounter++;
     }
@@ -25,10 +27,7 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
   });
 };
 
-
 const MeetingTranscriptionApp = () => {
-  /////////////////////////// All constants ///////////////////////////
-  // Constants for transcription function
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState([]);
@@ -47,45 +46,30 @@ const MeetingTranscriptionApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
-  
   const [speakerNameMap, setSpeakerNameMap] = useState({});
   const speakerNameMapRef = useRef(speakerNameMap);
   useEffect(() => {
     speakerNameMapRef.current = speakerNameMap;
   }, [speakerNameMap]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
-  const [isSavingNames, setIsSavingNames] = useState(false);
+  const [_, setIsSavingNames] = useState(false);
 
-  /////////////////////////// All functions //////////////////////////
-  // Shortens transcripts with overly long file names
   const truncateFileName = (name, maxLength = 20) => {
     if (!name) return "";
-    return name.length > maxLength
-      ? name.slice(0, maxLength).trim() + "..."
-      : name;
+    return name.length > maxLength ? name.slice(0, maxLength).trim() + "..." : name;
   };
-
 
   const handleSpeakerNameChange = (oldName, newName) => {
     if (!newName || oldName === newName) return;
-
-    // Update the speaker name in the transcript data directly,
-    // while preserving the original speakerId for color consistency.
     setTranscript((prevTranscript) =>
-      prevTranscript.map((entry) =>
-        entry.speaker === oldName ? { ...entry, speaker: newName } : entry
-      )
+      prevTranscript.map((entry) => (entry.speaker === oldName ? { ...entry, speaker: newName } : entry))
     );
-
-    // Update the display name map for any future renders.
     setSpeakerNameMap((prev) => ({
       ...prev,
       [oldName]: newName,
     }));
-
-    handleSubmitSpeakerNames(); // Save to backend
+    handleSubmitSpeakerNames();
   };
-  
 
   const handleSubmitSpeakerNames = () => {
     if (!selectedMeetingId) {
@@ -93,11 +77,9 @@ const MeetingTranscriptionApp = () => {
       return;
     }
     setIsSavingNames(true);
-
-    // Use the ref to get the latest speakerNameMap
     const currentSpeakerNameMap = speakerNameMapRef.current;
 
-    fetch(`/jobs/${selectedMeetingId}/speakers`, {
+    fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/speakers`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mapping: currentSpeakerNameMap }),
@@ -106,8 +88,7 @@ const MeetingTranscriptionApp = () => {
         if (!res.ok) throw new Error("Failed to update speaker names");
         return res.json();
       })
-      .then((data) => {
-        // setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+      .then(() => {
         setIsRenaming(false);
       })
       .catch((err) => {
@@ -119,50 +100,40 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
-  // Allows user to switch between light & dark modes
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
-    document.documentElement.setAttribute(
-      "data-theme",
-      !isDarkMode ? "dark" : "light",
-    );
+    document.documentElement.setAttribute("data-theme", !isDarkMode ? "dark" : "light");
   };
 
   const loadPastMeeting = (uuid) => {
     setTranscript([]);
     setSummary(null);
     setSelectedMeetingId(uuid);
-    // getSpeakerColor.speakerMap = {};
     speakerColorMap.current = {};
-    fetch(`/jobs/${uuid}/transcript`)
+    fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
       .then((res) => res.json())
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
         setTranscript(processTranscriptWithSpeakerIds(parsed));
-        return fetch(`/jobs/${uuid}/summarise`, { method: "POST" });
+        return fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, { method: "POST" });
       })
       .then((res) => res.json())
       .then((data) => {
-          setSummary({
-            meetingTitle: data.fileName,
-            summary: data.summary,
-          });
-        })
+        setSummary({
+          meetingTitle: data.fileName,
+          summary: data.summary,
+        });
+      })
       .catch((err) => console.error("Failed to load past meeting", err));
   };
 
-  // Constants for the function below
-  // DO NOT move these to the top
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState("");
 
-  // Renames meetings based on user input
   const handleRename = () => {
     if (!selectedMeetingId) return;
 
-    fetch(`/jobs/${selectedMeetingId}/rename?new_name=${newName}`, {
-      method: "PATCH",
-    })
+    fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/rename?new_name=${newName}`, { method: "PATCH" })
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
@@ -174,7 +145,6 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to rename meeting", err));
   };
 
-  // Starts recording meeting via web app interface
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -186,9 +156,7 @@ const MeetingTranscriptionApp = () => {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/wav",
-        });
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
         processAudio(audioBlob);
       };
 
@@ -200,36 +168,29 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
-  // To stop audio recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
     }
   };
 
-  // Uploads file to the back-end via the /jobs post method
   const uploadFile = () => {
     if (!selectedFile) return;
-    // getSpeakerColor.speakerMap = {}; // Reset color cache
     speakerColorMap.current = {};
     setLoading(true);
     const formData = new FormData();
     formData.append("file", selectedFile);
 
-    fetch("/jobs", {
+    fetch(`${API_BASE_URL}/jobs`, {
       method: "POST",
       body: formData,
     })
       .then((result) => result.json())
       .then((data) => {
         setTranscript(
-          Array.isArray(data.transcript)
-            ? processTranscriptWithSpeakerIds(data.transcript)
-            : [],
+          Array.isArray(data.transcript) ? processTranscriptWithSpeakerIds(data.transcript) : []
         );
         fetchSummary(data.uuid);
         fetchMeetingList();
@@ -241,22 +202,19 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
-  // Transcribes submitted audio file, & generates a meeting summary for the user.
   const processAudio = async (audioBlob) => {
     setIsProcessing(true);
     const formData = new FormData();
     formData.append("file", audioBlob);
 
-    fetch("/jobs", {
+    fetch(`${API_BASE_URL}/jobs`, {
       method: "POST",
       body: formData,
     })
       .then((result) => result.json())
       .then((data) => {
         setTranscript(
-          Array.isArray(data.transcript)
-            ? processTranscriptWithSpeakerIds(data.transcript)
-            : [],
+          Array.isArray(data.transcript) ? processTranscriptWithSpeakerIds(data.transcript) : []
         );
         fetchSummary(data.uuid);
         fetchMeetingList();
@@ -268,9 +226,8 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
-  // Fetches a list of all past meetings to be displayed in side bar
   const fetchMeetingList = () => {
-    fetch("/jobs")
+    fetch(`${API_BASE_URL}/jobs`)
       .then((res) => res.json())
       .then((data) => {
         const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
@@ -282,10 +239,9 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to fetch meeting list", err));
   };
 
-  // Fetches summary to be displayed on front-end
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
-    fetch(`/jobs/${uuid}/summarise`, { method: "POST" })
+    fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data) {
@@ -309,17 +265,12 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       .finally(() => setSummaryLoading(false));
   };
 
-  // Handles deletion of past meeting by user
   const handleDeleteMeeting = (uuid) => {
-    if (!window.confirm("Are you sure you want to delete this meeting?"))
-      return;
+    if (!window.confirm("Are you sure you want to delete this meeting?")) return;
 
-    fetch(`/jobs/${uuid}`, {
-      method: "DELETE",
-    })
+    fetch(`${API_BASE_URL}/jobs/${uuid}`, { method: "DELETE" })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to delete meeting");
-        // Update UI state
         setMeetingList((prev) => prev.filter((m) => m.uuid !== uuid));
         if (selectedMeetingId === uuid) {
           setTranscript([]);
@@ -330,17 +281,14 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       .catch((err) => console.error("Delete failed:", err));
   };
 
-  // Exports summary to PDF format for download
   const exportToPDF = () => {
     if (!summary) return;
-
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const lineHeight = 14;
     let y = margin;
-
     const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
       doc.setFontSize(fontSize);
       doc.setFont(undefined, isBold ? "bold" : "normal");
@@ -354,15 +302,12 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
         y += lineHeight;
       });
     };
-
     doc.setFontSize(18);
     addLine("Meeting Summary", margin, 18, true);
     y += lineHeight;
-
     doc.setFontSize(12);
     addLine(`Title: ${summary.meetingTitle || "N/A"}`, margin, 12, true);
     y += lineHeight;
-
     const lines = summary.summary.split("\n");
     lines.forEach((line) => {
       if (line.startsWith("### ")) {
@@ -373,21 +318,17 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
         addLine(line, margin);
       }
     });
-
     doc.save("meeting-summary.pdf");
   };
 
-  // To export transcript to PDF for download
   const exportTranscriptToPDF = () => {
     if (transcript.length === 0) return;
-
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const lineHeight = 14;
     let y = margin;
-
     const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
       doc.setFontSize(fontSize);
       doc.setFont(undefined, isBold ? "bold" : "normal");
@@ -401,59 +342,40 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
         y += lineHeight;
       });
     };
-
     doc.setFontSize(18);
     addLine("Meeting Transcript", margin, 18, true);
     y += lineHeight;
-
-    transcript.forEach(entry => {
-      addLine(entry.speaker  ?? 'SPEAKER_00', margin, 12, true);
+    transcript.forEach((entry) => {
+      addLine(entry.speaker ?? "SPEAKER_00", margin, 12, true);
       addLine(entry.text, margin + 15);
       y += lineHeight;
     });
-
     doc.save("meeting-transcript.pdf");
   };
 
-  // Formats time to be displayed (works with display of meeting recording duration)
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Alternates speaker colors for more vibrant front-end display
   const getSpeakerColor = useCallback((speaker) => {
-    const colors = [
-      "speaker-afblue",
-      "speaker-poisedgold",
-      "speaker-navyblue",
-      "speaker-armyred",
-    ];
+    const colors = ["speaker-afblue", "speaker-poisedgold", "speaker-navyblue", "speaker-armyred"];
     if (!(speaker in speakerColorMap.current)) {
-      const newColorIndex =
-        Object.keys(speakerColorMap.current).length % colors.length;
+      const newColorIndex = Object.keys(speakerColorMap.current).length % colors.length;
       speakerColorMap.current[speaker] = colors[newColorIndex];
     }
     return speakerColorMap.current[speaker];
   }, []);
 
-  /////////////////////////// All use effects //////////////////////////
-  // Checks based on user's web settings if they prefer light or dark mode by default
   useEffect(() => {
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     setIsDarkMode(prefersDark);
-    document.documentElement.setAttribute(
-      "data-theme",
-      prefersDark ? "dark" : "light",
-    );
+    document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
   }, []);
 
-  // Converts past meeting data fetched from the back-end into compatible format to feed into the display card
   useEffect(() => {
-    fetch("/jobs")
+    fetch(`${API_BASE_URL}/jobs`)
       .then((res) => res.json())
       .then((data) => {
         const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
@@ -465,7 +387,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
       .catch((err) => console.error("Failed to fetch meeting list", err));
   }, []);
 
-  // Records the duration of the meeting, if the record button is toggled directly on the app
   useEffect(() => {
     if (isRecording) {
       timerRef.current = setInterval(() => {
@@ -477,7 +398,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
     return () => clearInterval(timerRef.current);
   }, [isRecording]);
 
-  // Automatically loads past meetings from server side
   useEffect(() => {
     fetchMeetingList();
   }, []);
@@ -490,21 +410,14 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
           <h1 className="header-title">
             <MessagesSquare className="header-icon" /> MeetMemo
           </h1>
-          <button
-            className="btn btn-small"
-            onClick={toggleDarkMode}
-            style={{ float: "right" }}
-          >
+          <button className="btn btn-small" onClick={toggleDarkMode} style={{ float: "right" }}>
             {isDarkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
           </button>
-          <p className="header-subtitle">
-            Record, transcribe, and summarize your meetings with AI-powered
-            insights
-          </p>
+          <p className="header-subtitle">Record, transcribe, and summarize your meetings with AI-powered insights</p>
         </div>
 
         <div className="main-grid">
-          {/* Left Column - Recording Controls and Transcript */}
+          {/* Left Column */}
           <div className="left-column">
             {/* Recording Controls */}
             <div className="card">
@@ -514,21 +427,15 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
               </h2>
 
               <div className="controls-container">
-                {/* Select model for transcription */}
+                {/* Model select */}
                 <label className="model-select-wrapper">
                   <span className="model-select-label">Model:</span>
-                  <select
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                    className="model-select"
-                  >
-                    {["tiny", "base", "small", "medium", "large", "turbo"].map(
-                      (m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ),
-                    )}
+                  <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="model-select">
+                    {["tiny", "base", "small", "medium", "large", "turbo"].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
@@ -537,18 +444,11 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     onClick={isRecording ? stopRecording : startRecording}
                     className={`btn ${isRecording ? "btn-danger" : "btn-primary"}`}
                   >
-                    {isRecording ? (
-                      <MicOff className="btn-icon" />
-                    ) : (
-                      <Mic className="btn-icon" />
-                    )}
+                    {isRecording ? <MicOff className="btn-icon" /> : <Mic className="btn-icon" />}
                     {isRecording ? "Stop Recording" : "Start Recording"}
                   </button>
 
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn btn-secondary"
-                  >
+                  <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary">
                     <Upload className="btn-icon" />
                     {selectedFile ? "Change Audio File" : "Upload Audio File"}
                   </button>
@@ -559,20 +459,14 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     className={`btn ${selectedFile ? "btn-primary" : "btn-disabled"}`}
                   >
                     <Send className="btn-icon" />
-                    {loading
-                      ? "Transcribing..."
-                      : selectedFile
-                        ? "Start Transcription"
-                        : "Start Transcription"}
+                    {loading ? "Transcribing..." : "Start Transcription"}
                   </button>
                 </div>
 
                 {isRecording && (
                   <div className="recording-indicator">
                     <div className="recording-dot"></div>
-                    <span className="recording-time">
-                      {formatTime(recordingTime)}
-                    </span>
+                    <span className="recording-time">{formatTime(recordingTime)}</span>
                   </div>
                 )}
               </div>
@@ -585,57 +479,36 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                 className="file-input"
               />
 
-              {/* Uploading progress indicator */}
-              {loading && (
-                <div className="processing-indicator">
-                  <div className="spinner"></div>
-                  <span>Processing audio with AI...</span>
-                </div>
-              )}
-
-              {isProcessing && (
+              {(loading || isProcessing) && (
                 <div className="processing-indicator">
                   <div className="spinner"></div>
                   <span>Processing audio with AI...</span>
                 </div>
               )}
             </div>
-            {/* Transcript and Summary Section */}
+
+            {/* Transcript & Summary */}
             <div className="card">
               <div className="transcript-summary-header">
                 <div className="tabs">
-                  <button
-                    className={`tab-button ${!showSummary ? "active" : ""}`}
-                    onClick={() => setShowSummary(false)}
-                  >
+                  <button className={`tab-button ${!showSummary ? "active" : ""}`} onClick={() => setShowSummary(false)}>
                     <FileText className="section-icon" />
                     Transcript
                   </button>
-                  <button
-                    className={`tab-button ${showSummary ? "active" : ""}`}
-                    onClick={() => setShowSummary(true)}
-                  >
+                  <button className={`tab-button ${showSummary ? "active" : ""}`} onClick={() => setShowSummary(true)}>
                     <Hash className="section-icon" />
                     Summary
                   </button>
                 </div>
                 <div className="actions-group">
-                  
-                  
                   {!showSummary && (
-                    <button
-                      onClick={exportTranscriptToPDF}
-                      className="btn btn-success btn-small"
-                    >
+                    <button onClick={exportTranscriptToPDF} className="btn btn-success btn-small">
                       <Download className="btn-icon" />
                       Export PDF
                     </button>
                   )}
                   {showSummary && (
-                    <button
-                      onClick={exportToPDF}
-                      className="btn btn-success btn-small"
-                    >
+                    <button onClick={exportToPDF} className="btn btn-success btn-small">
                       <Download className="btn-icon" />
                       Export PDF
                     </button>
@@ -658,29 +531,36 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                           onChange={(e) => setNewName(e.target.value)}
                           className="rename-input"
                         />
-                        <button onClick={handleRename} className="btn btn-success btn-small">Save</button>
-                        <button onClick={() => setIsRenaming(false)} className="btn btn-secondary btn-small">Cancel</button>
+                        <button onClick={handleRename} className="btn btn-success btn-small">
+                          Save
+                        </button>
+                        <button onClick={() => setIsRenaming(false)} className="btn btn-secondary btn-small">
+                          Cancel
+                        </button>
                       </div>
                     ) : (
                       <p>
                         <strong>Title:</strong> {summary.meetingTitle}
-                        <button onClick={() => { setIsRenaming(true); setNewName(summary.meetingTitle); }} className="btn btn-secondary btn-small rename-btn">Rename</button>
+                        <button
+                          onClick={() => {
+                            setIsRenaming(true);
+                            setNewName(summary.meetingTitle);
+                          }}
+                          className="btn btn-secondary btn-small rename-btn"
+                        >
+                          Rename
+                        </button>
                       </p>
                     )}
                     <div className="summary-text">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {summary.summary}
-                      </ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
                     </div>
                   </div>
                 ) : (
-                  
                   <div className="empty-state">
                     <Hash className="empty-icon" />
                     <p className="empty-title">No summary available</p>
-                    <p className="empty-subtitle">
-                      Summary will appear after processing audio
-                    </p>
+                    <p className="empty-subtitle">Summary will appear after processing audio</p>
                   </div>
                 )
               ) : (
@@ -693,29 +573,24 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                             <div className="speaker-edit-container">
                               <input
                                 type="text"
-                                defaultValue={entry.speaker ?? 'SPEAKER_00'}
+                                defaultValue={entry.speaker ?? "SPEAKER_00"}
                                 onBlur={(e) => {
                                   handleSpeakerNameChange(entry.speaker, e.target.value);
                                   setEditingSpeaker(null);
                                 }}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
+                                  if (e.key === "Enter") {
                                     handleSpeakerNameChange(entry.speaker, e.target.value);
                                     setEditingSpeaker(null);
                                   }
                                 }}
                               />
-                              <button
-                                onClick={() => setEditingSpeaker(null)}
-                                className="btn btn-success btn-small"
-                              >
+                              <button onClick={() => setEditingSpeaker(null)} className="btn btn-success btn-small">
                                 Save
                               </button>
                             </div>
                           ) : (
-                            <span
-                                className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
-                              >
+                            <span className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}>
                               {speakerNameMap[entry.speaker] ?? entry.speaker}
                               <button
                                 onClick={() => setEditingSpeaker(entry.speaker)}
@@ -725,7 +600,9 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                               </button>
                             </span>
                           )}
-                          <span className="timestamp">{entry.start}s - {entry.end}s</span>
+                          <span className="timestamp">
+                            {entry.start}s - {entry.end}s
+                          </span>
                         </div>
                         <p className="transcript-text">{entry.text}</p>
                       </div>
@@ -734,9 +611,7 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     <div className="empty-state">
                       <Mic className="empty-icon" />
                       <p className="empty-title">No transcript available</p>
-                      <p className="empty-subtitle">
-                        Start recording or upload an audio file to begin
-                      </p>
+                      <p className="empty-subtitle">Start recording or upload an audio file to begin</p>
                     </div>
                   )}
                 </div>
@@ -778,8 +653,6 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
           </div>
         </div>
       </div>
-
-      
     </div>
   );
 };
