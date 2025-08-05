@@ -3,10 +3,10 @@
   --icon: #272B2D;
 
   /* Backgrounds */
-  --bg: #FFFFFF;
-  --card-bg: #FFFFFF;
-  --alt-bg: #f3f4f6;
-  --transcript-entry-bg: #FFFFFF;
+  --bg: rgba(255, 255, 255, 0.85);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --alt-bg: rgba(243, 244, 246, 0.8);
+  --transcript-entry-bg: rgba(255, 255, 255, 0.85);
 
   /* Text */
   --text: #272B2D;
@@ -43,10 +43,10 @@
   --icon: #FFFFFF;
 
   /* Backgrounds */
-  --bg: #272B2D;
-  --card-bg: #4a4e50;
-  --alt-bg: #3d4143;
-  --transcript-entry-bg: #272B2D;
+  --bg: rgba(39, 43, 45, 0.85);
+  --card-bg: rgba(74, 78, 80, 0.8);
+  --alt-bg: rgba(61, 65, 67, 0.8);
+  --transcript-entry-bg: rgba(39, 43, 45, 0.85);
 
   /* Text */
   --text: #FFFFFF;
@@ -282,8 +282,8 @@ body {
     opacity: 1;
   }
 
-  50% {
-    opacity: 0.5;
+  70% {
+    opacity: 0.7;
   }
 }
 

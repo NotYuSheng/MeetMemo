@@ -11,3 +11,23 @@ code {
   font-family:
     source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
+
+/* Particles.js background */
+#particles-js {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+[data-theme="dark"] #particles-js {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
