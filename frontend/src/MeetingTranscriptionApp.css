@@ -791,3 +791,29 @@ body {
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* Rename Buttons Group */
+.rename-buttons-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Rename Container - Summary Section */
+.rename-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.rename-container .rename-input {
+  margin-bottom: 0;
+}
+
+/* Speaker Edit Container - Transcript Section */
+.speaker-edit-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

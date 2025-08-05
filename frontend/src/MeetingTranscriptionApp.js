@@ -579,12 +579,14 @@ const MeetingTranscriptionApp = () => {
                           onChange={(e) => setNewName(e.target.value)}
                           className="rename-input"
                         />
-                        <button onClick={handleRename} className="btn btn-success btn-small">
-                          Save
-                        </button>
-                        <button onClick={() => setIsRenaming(false)} className="btn btn-secondary btn-small">
-                          Cancel
-                        </button>
+                        <div className="rename-buttons-group">
+                          <button onClick={handleRename} className="btn btn-success btn-small">
+                            Save
+                          </button>
+                          <button onClick={() => setIsRenaming(false)} className="btn btn-secondary btn-small">
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <p>
