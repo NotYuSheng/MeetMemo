@@ -513,7 +513,7 @@ const MeetingTranscriptionApp = () => {
                     </button>
                   )}
                   {showSummary && (
-                    <>
+                    <div className="summary-actions-group">
                       <button 
                         onClick={() => setShowPromptInputs(!showPromptInputs)} 
                         className="btn btn-secondary btn-small"
@@ -524,7 +524,7 @@ const MeetingTranscriptionApp = () => {
                         <Download className="btn-icon" />
                         Export PDF
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>

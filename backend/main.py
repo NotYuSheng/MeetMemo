@@ -199,7 +199,12 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
 
     # Use custom prompts if provided, otherwise use defaults
     final_system_prompt = system_prompt if system_prompt else default_system_prompt
-    final_user_prompt = custom_prompt if custom_prompt else default_user_prompt + "\n\n" + transcript 
+    
+    # Always append transcript to user prompt, whether custom or default
+    if custom_prompt:
+        final_user_prompt = custom_prompt + "\n\n" + transcript
+    else:
+        final_user_prompt = default_user_prompt + "\n\n" + transcript 
 
     payload = {
         "model": model_name,

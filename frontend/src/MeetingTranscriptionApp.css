@@ -783,3 +783,11 @@ body {
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Summary Actions Group */
+.summary-actions-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
