@@ -43,6 +43,9 @@ const MeetingTranscriptionApp = () => {
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState("");                                                     
+  const [systemPrompt, setSystemPrompt] = useState("");                                                              
+  const [showPromptInputs, setShowPromptInputs] = useState(false);   
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
@@ -244,23 +247,35 @@ const MeetingTranscriptionApp = () => {
 
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
-    fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, { method: "POST" })
+    
+    // Prepare request body with custom prompts if provided
+    const requestBody = {};
+    if (customPrompt.trim()) {
+      requestBody.custom_prompt = customPrompt.trim();
+    }
+    if (systemPrompt.trim()) {
+      requestBody.system_prompt = systemPrompt.trim();
+    }
+    
+    const requestOptions = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+    
+    // Only add body if we have custom prompts
+    if (Object.keys(requestBody).length > 0) {
+      requestOptions.body = JSON.stringify(requestBody);
+    }
+    
+    fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, requestOptions)
       .then((res) => res.json())
       .then((data) => {
-        if (data) {
-          const summaryText = `
-### Key Points
-${data.keyPoints.map((item) => `- ${item}`).join("\n")}
-
-### Action Items
-${data.actionItems.map((item) => `- ${item}`).join("\n")}
-
-### Next Steps
-${data.nextSteps.map((item) => `- ${item}`).join("\n")}
-`;
+        if (data && data.summary) {
           setSummary({
             meetingTitle: data.fileName,
-            summary: summaryText,
+            summary: data.summary,
           });
         }
       })
@@ -498,13 +513,56 @@ ${data.nextSteps.map((item) => `- ${item}`).join("\n")}
                     </button>
                   )}
                   {showSummary && (
-                    <button onClick={exportToPDF} className="btn btn-success btn-small">
-                      <Download className="btn-icon" />
-                      Export PDF
-                    </button>
+                    <>
+                      <button 
+                        onClick={() => setShowPromptInputs(!showPromptInputs)} 
+                        className="btn btn-secondary btn-small"
+                      >
+                        {showPromptInputs ? "Hide Prompts" : "Custom Prompts"}
+                      </button>
+                      <button onClick={exportToPDF} className="btn btn-success btn-small">
+                        <Download className="btn-icon" />
+                        Export PDF
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
+              
+              {/* Custom Prompts Section */}
+              {showSummary && showPromptInputs && (
+                <div className="custom-prompts-section">
+                  <div className="prompt-input-group">
+                    <label htmlFor="system-prompt">System Prompt (Optional):</label>
+                    <textarea
+                      id="system-prompt"
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      placeholder="e.g., You are a helpful assistant that summarizes meeting transcripts with focus on technical decisions..."
+                      className="prompt-textarea"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="prompt-input-group">
+                    <label htmlFor="custom-prompt">Custom User Prompt (Optional):</label>
+                    <textarea
+                      id="custom-prompt"
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="e.g., Please summarize this meeting focusing on action items and deadlines..."
+                      className="prompt-textarea"
+                      rows={3}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => selectedMeetingId && fetchSummary(selectedMeetingId)} 
+                    className="btn btn-primary btn-small"
+                    disabled={!selectedMeetingId}
+                  >
+                    Regenerate Summary
+                  </button>
+                </div>
+              )}
               {showSummary ? (
                 summaryLoading ? (
                   <div className="processing-indicator">

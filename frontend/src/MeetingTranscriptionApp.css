@@ -735,3 +735,51 @@ body {
   display: flex;
   gap: 0.5rem;
 }
+
+/* Custom Prompts Section */
+.custom-prompts-section {
+  background: var(--alt-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.prompt-input-group {
+  margin-bottom: 16px;
+}
+
+.prompt-input-group label {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.prompt-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+.prompt-textarea:focus {
+  outline: none;
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 2px rgba(38, 82, 137, 0.1);
+}
+
+.prompt-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
