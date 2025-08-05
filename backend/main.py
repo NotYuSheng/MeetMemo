@@ -52,6 +52,11 @@ class SpeakerNameMapping(BaseModel):
     '''Pydantic model for mapping old speaker names to new ones.'''
     mapping: dict[str, str]
 
+class SummarizeRequest(BaseModel):
+    '''Pydantic model for summarization requests with optional custom prompts.'''
+    custom_prompt: str = None
+    system_prompt: str = None
+
 ##################################### Functions #####################################
 def get_timestamp() -> str:
     '''
@@ -166,31 +171,43 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str) -> str:
+def summarise_transcript(transcript: str, custom_prompt: str = None, system_prompt: str = None) -> str:
     """
     Summarises the transcript using a defined LLM.
+    
+    Args:
+        transcript: The transcript text to summarize
+        custom_prompt: Optional custom user prompt. If None, uses default prompt.
+        system_prompt: Optional custom system prompt. If None, uses default system prompt.
     """
 
     url = str(os.getenv("LLM_API_URL"))
     model_name = str(os.getenv("LLM_MODEL_NAME"))
+
+    # Default system prompt
+    default_system_prompt = "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."
+    
+    # Default user prompt
+    default_user_prompt = (
+        "Please provide a concise summary of the following meeting transcript, "
+        "highlighting participants, key points, action items & next steps."
+        "The summary should contain point forms phrased in concise standard English."
+        "You are to give the final summary in markdown format for easier visualisation."
+        "Do not give the output in an integrated code block i.e.: '```markdown ```"
+        "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself."
+    )
+
+    # Use custom prompts if provided, otherwise use defaults
+    final_system_prompt = system_prompt if system_prompt else default_system_prompt
+    final_user_prompt = custom_prompt if custom_prompt else default_user_prompt + "\n\n" + transcript 
 
     payload = {
         "model": model_name,
         "temperature": 0.3,
         "max_tokens": 5000,
         "messages": [
-            {"role": "system",
-             "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
-            {"role": "user",
-             "content": (
-                 "Please provide a concise summary of the following meeting transcript, "
-                 "highlighting participants, key points, action items & next steps."
-                 "The summary should contain point forms phrased in concise standard English."
-                 "You are to give the final summary in markdown format for easier visualisation."
-                 "Do not give the output in an integrated code block i.e.: '```markdown ```"
-                 "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself.\n\n"
-                 + transcript
-             )},
+            {"role": "system", "content": final_system_prompt},
+            {"role": "user", "content": final_user_prompt},
         ],
     }
 
@@ -467,9 +484,13 @@ def get_file_transcript(uuid: str) -> dict:
         return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> dict[str, str]:
+def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]:
     """
     Summarises the transcript for the given UUID using a defined LLM.
+    
+    Args:
+        uuid: The job UUID to summarize
+        request: Optional SummarizeRequest containing custom_prompt and/or system_prompt
     """
     uuid = uuid.zfill(4)
     file_name = get_file_name(uuid)["file_name"]
@@ -480,7 +501,14 @@ def summarise_job(uuid: str) -> dict[str, str]:
         else:
             full_transcript = get_full_transcript_response["full_transcript"]
 
-        summary = summarise_transcript(full_transcript)
+        # Extract custom prompts if provided
+        custom_prompt = None
+        system_prompt = None
+        if request:
+            custom_prompt = request.custom_prompt
+            system_prompt = request.system_prompt
+
+        summary = summarise_transcript(full_transcript, custom_prompt, system_prompt)
 
         if "Error" in summary:
             timestamp = get_timestamp()
