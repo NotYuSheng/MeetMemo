@@ -348,7 +348,7 @@ body {
 @media (width >= 640px) {
   .controls-container {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
   }
   
@@ -360,6 +360,7 @@ body {
 
 .button-group {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
@@ -779,11 +780,23 @@ body {
   border-bottom: 2px solid transparent;
   font-family: Barlow, sans-serif;
   font-weight: 700;
+  transition: all 0.2s ease;
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.tab-button:hover {
+  color: var(--text);
+  background-color: rgba(41, 152, 213, 0.1);
+  border-bottom-color: rgba(41, 152, 213, 0.3);
 }
 
 .tab-button.active {
   color: var(--text);
   border-bottom-color: var(--btn-primary);
+}
+
+.tab-button.active:hover {
+  background-color: rgba(41, 152, 213, 0.05);
 }
 
 .tab-button .section-icon {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Mic,
-  MicOff,
+  Square,
   Upload,
   Download,
   FileText,
@@ -635,7 +635,7 @@ const MeetingTranscriptionApp = () => {
                     title={isRecording ? "Stop Recording" : "Start Recording"}
                   >
                     {isRecording ? (
-                      <MicOff className="btn-icon" />
+                      <Square className="btn-icon" />
                     ) : (
                       <Mic className="btn-icon" />
                     )}
@@ -658,16 +658,16 @@ const MeetingTranscriptionApp = () => {
                     <Send className="btn-icon" />
                     {selectedFile && !loading ? "Process Audio" : ""}
                   </button>
-                </div>
 
-                {isRecording && (
-                  <div className="recording-indicator">
-                    <div className="recording-dot"></div>
-                    <span className="recording-time">
-                      {formatTime(recordingTime)}
-                    </span>
-                  </div>
-                )}
+                  {isRecording && (
+                    <div className="recording-indicator">
+                      <div className="recording-dot"></div>
+                      <span className="recording-time">
+                        {formatTime(recordingTime)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <input
