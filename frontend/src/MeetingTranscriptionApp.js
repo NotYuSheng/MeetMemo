@@ -77,7 +77,7 @@ const MeetingTranscriptionApp = () => {
             },
           },
           color: {
-            value: "#FFFFFF",
+            value: ["#2998D5", "#265289", "#75797C", "#bba88e", "#c42030", "#FFFFFF"],
           },
           shape: {
             type: "circle",
@@ -115,7 +115,7 @@ const MeetingTranscriptionApp = () => {
           },
           move: {
             enable: true,
-            speed: 6,
+            speed: 2,
             direction: "none",
             random: false,
             straight: false,
