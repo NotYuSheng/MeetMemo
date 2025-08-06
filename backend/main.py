@@ -538,7 +538,10 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
     Accepts optional custom prompts via request body.
     """
     uuid = uuid.zfill(4)
-    file_name = get_file_name(uuid)["file_name"]
+    file_name_response = get_file_name(uuid)
+    if "error" in file_name_response:
+        return {"error": f"File not found for UUID: {uuid}", "status_code": "404"}
+    file_name = file_name_response["file_name"]
     summary_dir = Path("summary")
     summary_dir.mkdir(exist_ok=True)
     summary_path = summary_dir / f"{uuid}.txt"
