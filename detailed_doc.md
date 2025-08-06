@@ -129,7 +129,7 @@ Once running, access MeetMemo at: **http://localhost:3000/MeetMemo**
 #### 1. Upload or Record Audio
 - **Upload**: Click the `Upload Audio File` button and select your audio file
 - **Record**: Click the `Start Recording` button to start recording directly in the browser
-- **Starting the transcription**: CLick the `Start Transcription` button to start the transcription process
+- **Starting the transcription**: Click the `Start Transcription` button to start the transcription process
 
 #### 2. Monitor Processing
 - Obtain status updates to view when the transcription process is still ongoing or has been completed
@@ -220,7 +220,7 @@ MeetMemo provides a comprehensive REST API for programmatic access:
 # Check NVIDIA Docker runtime
 docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
 ```
-#### Whipser Models Download Fails
+#### Whisper Models Download Fails
 - Verify Hugging Face token is correct and authenticated
 - Ensure model licenses are accepted
 - Check internet connectivity
