@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Upload, Download, FileText, Hash, Send, MessagesSquare } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  Upload,
+  Download,
+  FileText,
+  Hash,
+  Send,
+  MessagesSquare,
+} from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
 import { useCallback } from "react";
@@ -43,9 +52,9 @@ const MeetingTranscriptionApp = () => {
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState("");                                                     
-  const [systemPrompt, setSystemPrompt] = useState("");                                                              
-  const [showPromptInputs, setShowPromptInputs] = useState(false);   
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [showPromptInputs, setShowPromptInputs] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
@@ -64,18 +73,18 @@ const MeetingTranscriptionApp = () => {
             value: 80,
             density: {
               enable: true,
-              value_area: 800
-            }
+              value_area: 800,
+            },
           },
           color: {
-            value: "#FFFFFF"
+            value: "#FFFFFF",
           },
           shape: {
             type: "circle",
             stroke: {
               width: 0,
-              color: "#000000"
-            }
+              color: "#000000",
+            },
           },
           opacity: {
             value: 1,
@@ -84,8 +93,8 @@ const MeetingTranscriptionApp = () => {
               enable: false,
               speed: 1,
               opacity_min: 0.7,
-              sync: false
-            }
+              sync: false,
+            },
           },
           size: {
             value: 3,
@@ -94,15 +103,15 @@ const MeetingTranscriptionApp = () => {
               enable: false,
               speed: 40,
               size_min: 0.1,
-              sync: false
-            }
+              sync: false,
+            },
           },
           line_linked: {
             enable: true,
             distance: 150,
             color: "#FFFFFF",
             opacity: 1,
-            width: 1.5
+            width: 1.5,
           },
           move: {
             enable: true,
@@ -115,50 +124,50 @@ const MeetingTranscriptionApp = () => {
             attract: {
               enable: false,
               rotateX: 600,
-              rotateY: 1200
-            }
-          }
+              rotateY: 1200,
+            },
+          },
         },
         interactivity: {
           detect_on: "canvas",
           events: {
             onhover: {
               enable: true,
-              mode: "repulse"
+              mode: "repulse",
             },
             onclick: {
               enable: true,
-              mode: "push"
+              mode: "push",
             },
-            resize: true
+            resize: true,
           },
           modes: {
             grab: {
               distance: 400,
               line_linked: {
-                opacity: 1
-              }
+                opacity: 1,
+              },
             },
             bubble: {
               distance: 400,
               size: 40,
               duration: 2,
               opacity: 8,
-              speed: 3
+              speed: 3,
             },
             repulse: {
               distance: 200,
-              duration: 0.4
+              duration: 0.4,
             },
             push: {
-              particles_nb: 4
+              particles_nb: 4,
             },
             remove: {
-              particles_nb: 2
-            }
-          }
+              particles_nb: 2,
+            },
+          },
         },
-        retina_detect: true
+        retina_detect: true,
       });
     }
   }, [isDarkMode]);
@@ -167,13 +176,17 @@ const MeetingTranscriptionApp = () => {
 
   const truncateFileName = (name, maxLength = 20) => {
     if (!name) return "";
-    return name.length > maxLength ? name.slice(0, maxLength).trim() + "..." : name;
+    return name.length > maxLength
+      ? name.slice(0, maxLength).trim() + "..."
+      : name;
   };
 
   const handleSpeakerNameChange = (oldName, newName) => {
     if (!newName || oldName === newName) return;
     setTranscript((prevTranscript) =>
-      prevTranscript.map((entry) => (entry.speaker === oldName ? { ...entry, speaker: newName } : entry))
+      prevTranscript.map((entry) =>
+        entry.speaker === oldName ? { ...entry, speaker: newName } : entry,
+      ),
     );
     setSpeakerNameMap((prev) => ({
       ...prev,
@@ -213,7 +226,10 @@ const MeetingTranscriptionApp = () => {
 
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
-    document.documentElement.setAttribute("data-theme", !isDarkMode ? "dark" : "light");
+    document.documentElement.setAttribute(
+      "data-theme",
+      !isDarkMode ? "dark" : "light",
+    );
   };
 
   const loadPastMeeting = (uuid) => {
@@ -221,14 +237,16 @@ const MeetingTranscriptionApp = () => {
     setSummary(null);
     setSelectedMeetingId(uuid);
     speakerColorMap.current = {};
-    setSummaryLoading(true); 
+    setSummaryLoading(true);
 
     fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
       .then((res) => res.json())
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
         setTranscript(processTranscriptWithSpeakerIds(parsed));
-        return fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, { method: "POST" });
+        return fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, {
+          method: "POST",
+        });
       })
       .then((res) => res.json())
       .then((data) => {
@@ -238,7 +256,7 @@ const MeetingTranscriptionApp = () => {
         });
       })
       .catch((err) => console.error("Failed to load past meeting", err))
-      .finally(() => setSummaryLoading(false)); 
+      .finally(() => setSummaryLoading(false));
   };
 
   const [isRenaming, setIsRenaming] = useState(false);
@@ -247,7 +265,10 @@ const MeetingTranscriptionApp = () => {
   const handleRename = () => {
     if (!selectedMeetingId) return;
 
-    fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/rename?new_name=${newName}`, { method: "PATCH" })
+    fetch(
+      `${API_BASE_URL}/jobs/${selectedMeetingId}/rename?new_name=${newName}`,
+      { method: "PATCH" },
+    )
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
@@ -270,7 +291,9 @@ const MeetingTranscriptionApp = () => {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/wav",
+        });
         processAudio(audioBlob);
       };
 
@@ -286,7 +309,9 @@ const MeetingTranscriptionApp = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+      mediaRecorderRef.current.stream
+        .getTracks()
+        .forEach((track) => track.stop());
     }
   };
 
@@ -304,7 +329,9 @@ const MeetingTranscriptionApp = () => {
       .then((result) => result.json())
       .then((data) => {
         setTranscript(
-          Array.isArray(data.transcript) ? processTranscriptWithSpeakerIds(data.transcript) : []
+          Array.isArray(data.transcript)
+            ? processTranscriptWithSpeakerIds(data.transcript)
+            : [],
         );
         fetchSummary(data.uuid);
         fetchMeetingList();
@@ -328,7 +355,9 @@ const MeetingTranscriptionApp = () => {
       .then((result) => result.json())
       .then((data) => {
         setTranscript(
-          Array.isArray(data.transcript) ? processTranscriptWithSpeakerIds(data.transcript) : []
+          Array.isArray(data.transcript)
+            ? processTranscriptWithSpeakerIds(data.transcript)
+            : [],
         );
         fetchSummary(data.uuid);
         fetchMeetingList();
@@ -355,7 +384,7 @@ const MeetingTranscriptionApp = () => {
 
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
-    
+
     // Prepare request body with custom prompts if provided
     const requestBody = {};
     if (customPrompt.trim()) {
@@ -364,19 +393,19 @@ const MeetingTranscriptionApp = () => {
     if (systemPrompt.trim()) {
       requestBody.system_prompt = systemPrompt.trim();
     }
-    
+
     const requestOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
     };
-    
+
     // Only add body if we have custom prompts
     if (Object.keys(requestBody).length > 0) {
       requestOptions.body = JSON.stringify(requestBody);
     }
-    
+
     fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, requestOptions)
       .then((res) => res.json())
       .then((data) => {
@@ -392,7 +421,8 @@ const MeetingTranscriptionApp = () => {
   };
 
   const handleDeleteMeeting = (uuid) => {
-    if (!window.confirm("Are you sure you want to delete this meeting?")) return;
+    if (!window.confirm("Are you sure you want to delete this meeting?"))
+      return;
 
     fetch(`${API_BASE_URL}/jobs/${uuid}`, { method: "DELETE" })
       .then((res) => {
@@ -450,12 +480,12 @@ const MeetingTranscriptionApp = () => {
   const exportTranscriptToTxt = () => {
     if (transcript.length === 0) return;
     let textContent = "Meeting Transcript\n\n";
-    transcript.forEach(entry => {
+    transcript.forEach((entry) => {
       const speaker = speakerNameMap[entry.speaker] ?? entry.speaker;
       textContent += `${speaker}: ${entry.text}\n\n`;
     });
 
-    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -473,18 +503,29 @@ const MeetingTranscriptionApp = () => {
   };
 
   const getSpeakerColor = useCallback((speaker) => {
-    const colors = ["speaker-afblue", "speaker-poisedgold", "speaker-navyblue", "speaker-armyred"];
+    const colors = [
+      "speaker-afblue",
+      "speaker-poisedgold",
+      "speaker-navyblue",
+      "speaker-armyred",
+    ];
     if (!(speaker in speakerColorMap.current)) {
-      const newColorIndex = Object.keys(speakerColorMap.current).length % colors.length;
+      const newColorIndex =
+        Object.keys(speakerColorMap.current).length % colors.length;
       speakerColorMap.current[speaker] = colors[newColorIndex];
     }
     return speakerColorMap.current[speaker];
   }, []);
 
   useEffect(() => {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     setIsDarkMode(prefersDark);
-    document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+    document.documentElement.setAttribute(
+      "data-theme",
+      prefersDark ? "dark" : "light",
+    );
   }, []);
 
   useEffect(() => {
@@ -523,10 +564,17 @@ const MeetingTranscriptionApp = () => {
           <h1 className="header-title">
             <MessagesSquare className="header-icon" /> MeetMemo
           </h1>
-          <button className="btn btn-small" onClick={toggleDarkMode} style={{ float: "right" }}>
+          <button
+            className="btn btn-small"
+            onClick={toggleDarkMode}
+            style={{ float: "right" }}
+          >
             {isDarkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
           </button>
-          <p className="header-subtitle">Record, transcribe, and summarize your meetings with AI-powered insights</p>
+          <p className="header-subtitle">
+            Record, transcribe, and summarize your meetings with AI-powered
+            insights
+          </p>
         </div>
 
         <div className="main-grid">
@@ -543,7 +591,11 @@ const MeetingTranscriptionApp = () => {
                 {/* Model select */}
                 <label className="model-select-wrapper">
                   <span className="model-select-label">Model:</span>
-                  <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="model-select">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="model-select"
+                  >
                     {["tiny", "medium", "turbo"].map((m) => (
                       <option key={m} value={m}>
                         {m}
@@ -557,11 +609,18 @@ const MeetingTranscriptionApp = () => {
                     onClick={isRecording ? stopRecording : startRecording}
                     className={`btn ${isRecording ? "btn-danger" : "btn-primary"}`}
                   >
-                    {isRecording ? <MicOff className="btn-icon" /> : <Mic className="btn-icon" />}
+                    {isRecording ? (
+                      <MicOff className="btn-icon" />
+                    ) : (
+                      <Mic className="btn-icon" />
+                    )}
                     {isRecording ? "Stop Recording" : "Start Recording"}
                   </button>
 
-                  <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn btn-secondary"
+                  >
                     <Upload className="btn-icon" />
                     {selectedFile ? "Change Audio File" : "Upload Audio File"}
                   </button>
@@ -579,7 +638,9 @@ const MeetingTranscriptionApp = () => {
                 {isRecording && (
                   <div className="recording-indicator">
                     <div className="recording-dot"></div>
-                    <span className="recording-time">{formatTime(recordingTime)}</span>
+                    <span className="recording-time">
+                      {formatTime(recordingTime)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -604,31 +665,43 @@ const MeetingTranscriptionApp = () => {
             <div className="card">
               <div className="transcript-summary-header">
                 <div className="tabs">
-                  <button className={`tab-button ${!showSummary ? "active" : ""}`} onClick={() => setShowSummary(false)}>
+                  <button
+                    className={`tab-button ${!showSummary ? "active" : ""}`}
+                    onClick={() => setShowSummary(false)}
+                  >
                     <FileText className="section-icon" />
                     Transcript
                   </button>
-                  <button className={`tab-button ${showSummary ? "active" : ""}`} onClick={() => setShowSummary(true)}>
+                  <button
+                    className={`tab-button ${showSummary ? "active" : ""}`}
+                    onClick={() => setShowSummary(true)}
+                  >
                     <Hash className="section-icon" />
                     Summary
                   </button>
                 </div>
                 <div className="actions-group">
                   {!showSummary && (
-                    <button onClick={exportTranscriptToTxt} className="btn btn-success btn-small">
+                    <button
+                      onClick={exportTranscriptToTxt}
+                      className="btn btn-success btn-small"
+                    >
                       <Download className="btn-icon" />
                       Export TXT
                     </button>
                   )}
                   {showSummary && (
                     <div className="summary-actions-group">
-                      <button 
-                        onClick={() => setShowPromptInputs(!showPromptInputs)} 
+                      <button
+                        onClick={() => setShowPromptInputs(!showPromptInputs)}
                         className="btn btn-secondary btn-small"
                       >
                         {showPromptInputs ? "Hide Prompts" : "Custom Prompts"}
                       </button>
-                      <button onClick={exportToPDF} className="btn btn-success btn-small">
+                      <button
+                        onClick={exportToPDF}
+                        className="btn btn-success btn-small"
+                      >
                         <Download className="btn-icon" />
                         Export PDF
                       </button>
@@ -636,12 +709,14 @@ const MeetingTranscriptionApp = () => {
                   )}
                 </div>
               </div>
-              
+
               {/* Custom Prompts Section */}
               {showSummary && showPromptInputs && (
                 <div className="custom-prompts-section">
                   <div className="prompt-input-group">
-                    <label htmlFor="system-prompt">System Prompt (Optional):</label>
+                    <label htmlFor="system-prompt">
+                      System Prompt (Optional):
+                    </label>
                     <textarea
                       id="system-prompt"
                       value={systemPrompt}
@@ -652,7 +727,9 @@ const MeetingTranscriptionApp = () => {
                     />
                   </div>
                   <div className="prompt-input-group">
-                    <label htmlFor="custom-prompt">Custom User Prompt (Optional):</label>
+                    <label htmlFor="custom-prompt">
+                      Custom User Prompt (Optional):
+                    </label>
                     <textarea
                       id="custom-prompt"
                       value={customPrompt}
@@ -662,8 +739,10 @@ const MeetingTranscriptionApp = () => {
                       rows={3}
                     />
                   </div>
-                  <button 
-                    onClick={() => selectedMeetingId && fetchSummary(selectedMeetingId)} 
+                  <button
+                    onClick={() =>
+                      selectedMeetingId && fetchSummary(selectedMeetingId)
+                    }
                     className="btn btn-primary btn-small"
                     disabled={!selectedMeetingId}
                   >
@@ -688,10 +767,16 @@ const MeetingTranscriptionApp = () => {
                           className="rename-input"
                         />
                         <div className="rename-buttons-group">
-                          <button onClick={handleRename} className="btn btn-success btn-small">
+                          <button
+                            onClick={handleRename}
+                            className="btn btn-success btn-small"
+                          >
                             Save
                           </button>
-                          <button onClick={() => setIsRenaming(false)} className="btn btn-secondary btn-small">
+                          <button
+                            onClick={() => setIsRenaming(false)}
+                            className="btn btn-secondary btn-small"
+                          >
                             Cancel
                           </button>
                         </div>
@@ -711,14 +796,18 @@ const MeetingTranscriptionApp = () => {
                       </p>
                     )}
                     <div className="summary-text">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {summary.summary}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 ) : (
                   <div className="empty-state">
                     <Hash className="empty-icon" />
                     <p className="empty-title">No summary available</p>
-                    <p className="empty-subtitle">Summary will appear after processing audio</p>
+                    <p className="empty-subtitle">
+                      Summary will appear after processing audio
+                    </p>
                   </div>
                 )
               ) : (
@@ -733,23 +822,34 @@ const MeetingTranscriptionApp = () => {
                                 type="text"
                                 defaultValue={entry.speaker ?? "SPEAKER_00"}
                                 onBlur={(e) => {
-                                  handleSpeakerNameChange(entry.speaker, e.target.value);
+                                  handleSpeakerNameChange(
+                                    entry.speaker,
+                                    e.target.value,
+                                  );
                                   setEditingSpeaker(null);
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
-                                    handleSpeakerNameChange(entry.speaker, e.target.value);
+                                    handleSpeakerNameChange(
+                                      entry.speaker,
+                                      e.target.value,
+                                    );
                                     setEditingSpeaker(null);
                                   }
                                 }}
                               />
-                              <button onClick={() => setEditingSpeaker(null)} className="btn btn-success btn-small">
+                              <button
+                                onClick={() => setEditingSpeaker(null)}
+                                className="btn btn-success btn-small"
+                              >
                                 Save
                               </button>
                             </div>
                           ) : (
                             <div className="speaker-container">
-                              <span className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}>
+                              <span
+                                className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
+                              >
                                 {speakerNameMap[entry.speaker] ?? entry.speaker}
                               </span>
                               <button
@@ -771,7 +871,9 @@ const MeetingTranscriptionApp = () => {
                     <div className="empty-state">
                       <Mic className="empty-icon" />
                       <p className="empty-title">No transcript available</p>
-                      <p className="empty-subtitle">Start recording or upload an audio file to begin</p>
+                      <p className="empty-subtitle">
+                        Start recording or upload an audio file to begin
+                      </p>
                     </div>
                   )}
                 </div>

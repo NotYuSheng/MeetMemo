@@ -1,81 +1,81 @@
 :root {
-    /* Icons */
-  --icon: #272B2D;
+  /* Icons */
+  --icon: #272b2d;
 
   /* Backgrounds */
-  --bg: rgba(255, 255, 255, 0.85);
-  --card-bg: rgba(255, 255, 255, 0.8);
-  --alt-bg: rgba(243, 244, 246, 0.8);
-  --transcript-entry-bg: rgba(255, 255, 255, 0.85);
+  --bg: rgb(255 255 255 / 85%);
+  --card-bg: rgb(255 255 255 / 80%);
+  --alt-bg: rgb(243 244 246 / 80%);
+  --transcript-entry-bg: rgb(255 255 255 / 85%);
 
   /* Text */
-  --text: #272B2D;
-  --text-muted: #75797C;
-  --text-inverse: #FFFFFF;
+  --text: #272b2d;
+  --text-muted: #75797c;
+  --text-inverse: #fff;
 
   /* Borders */
-  --border: #BBA88E;
+  --border: #bba88e;
 
   /* Buttons */
   --btn-bg: #e5e7eb;
   --btn-text: #111827;
   --btn-hover: #d1d5db;
   --btn-primary: #265289;
-  --btn-primary-hover: #3B6DAA;
-  --btn-danger: #C42030;
-  --btn-danger-hover: #E03A46;
-  --btn-secondary: #75797C;
-  --btn-secondary-hover: #5E6264;
-  --btn-success: #2998D5;
-  --btn-success-hover: #1B75BB;
-  --btn-success-text: #FFFFFF;
-  --btn-active: #2998D5;
+  --btn-primary-hover: #3b6daa;
+  --btn-danger: #c42030;
+  --btn-danger-hover: #e03a46;
+  --btn-secondary: #75797c;
+  --btn-secondary-hover: #5e6264;
+  --btn-success: #2998d5;
+  --btn-success-hover: #1b75bb;
+  --btn-success-text: #fff;
+  --btn-active: #2998d5;
   --btn-active-text: #fff;
 
   /* Accent Colors */
-  --purple: #C42030;
+  --purple: #c42030;
   --orange: #265289;
-  --green: #BBA88E;
+  --green: #bba88e;
 }
 
 [data-theme="dark"] {
   /* Icons */
-  --icon: #FFFFFF;
+  --icon: #fff;
 
   /* Backgrounds */
-  --bg: rgba(39, 43, 45, 0.85);
-  --card-bg: rgba(74, 78, 80, 0.8);
-  --alt-bg: rgba(61, 65, 67, 0.8);
-  --transcript-entry-bg: rgba(39, 43, 45, 0.85);
+  --bg: rgb(39 43 45 / 85%);
+  --card-bg: rgb(74 78 80 / 80%);
+  --alt-bg: rgb(61 65 67 / 80%);
+  --transcript-entry-bg: rgb(39 43 45 / 85%);
 
   /* Text */
-  --text: #FFFFFF;
-  --text-muted: #BBA88E;
-  --text-inverse: #272B2D;
+  --text: #fff;
+  --text-muted: #bba88e;
+  --text-inverse: #272b2d;
 
   /* Borders */
-  --border: #BBA88E;
+  --border: #bba88e;
 
   /* Buttons */
-  --btn-bg: #75797C;
-  --btn-text: #FFFFFF;
-  --btn-hover: #5E6264;
-  --btn-primary: #2998D5;
-  --btn-primary-hover: #1B75BB;
-  --btn-danger: #C42030;
-  --btn-danger-hover: #E03A46;
-  --btn-secondary: #75797C;
-  --btn-secondary-hover: #5E6264;
-  --btn-success: #2998D5;
-  --btn-success-hover: #1B75BB;
-  --btn-success-text: #FFFFFF;
-  --btn-active: #2998D5;
-  --btn-active-text: #FFFFFF;
+  --btn-bg: #75797c;
+  --btn-text: #fff;
+  --btn-hover: #5e6264;
+  --btn-primary: #2998d5;
+  --btn-primary-hover: #1b75bb;
+  --btn-danger: #c42030;
+  --btn-danger-hover: #e03a46;
+  --btn-secondary: #75797c;
+  --btn-secondary-hover: #5e6264;
+  --btn-success: #2998d5;
+  --btn-success-hover: #1b75bb;
+  --btn-success-text: #fff;
+  --btn-active: #2998d5;
+  --btn-active-text: #fff;
 
   /* Accent Colors (unchanged for consistency) */
-  --purple: #BBA88E;
-  --orange: #2998D5;
-  --green: #C42030;
+  --purple: #bba88e;
+  --orange: #2998d5;
+  --green: #c42030;
 }
 
 body {
@@ -84,7 +84,7 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
 }
 
@@ -95,7 +95,7 @@ body {
   align-items: center;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
   border: none;
   cursor: pointer;
@@ -166,7 +166,7 @@ body {
   box-shadow: none;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #BBA88E;
+  border: 1px solid #bba88e;
 }
 
 .header-subtitle {
@@ -206,7 +206,7 @@ body {
 
 .section-title {
   font-size: 1.25rem;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
   margin-bottom: 1rem;
   display: flex;
@@ -215,7 +215,7 @@ body {
 
 .header-title {
   font-size: 1.875rem;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
@@ -329,7 +329,7 @@ body {
   width: 1rem;
   height: 1rem;
   border: 2px solid transparent;
-  border-bottom: 2px solid #BBA88E;
+  border-bottom: 2px solid #bba88e;
   border-radius: 50%;
   margin-right: 0.5rem;
   animation: spin 1s linear infinite;
@@ -350,7 +350,7 @@ body {
 }
 
 .transcript-entry {
-  border-left: 4px solid #BBA88E;
+  border-left: 4px solid #bba88e;
   padding-left: 1rem;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
@@ -374,34 +374,34 @@ body {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
-  display: flex; 
+  display: flex;
   align-items: center;
 }
 
 .speaker-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem; 
+  gap: 0.5rem;
 }
 
 .speaker-afblue {
   background-color: #2998d5;
-  color: #ffffff;
+  color: #fff;
 }
 
 .speaker-poisedgold {
   background-color: #bba88e;
-  color: #ffffff;
+  color: #fff;
 }
 
 .speaker-navyblue {
   background-color: #265289;
-  color: #ffffff;
+  color: #fff;
 }
 
 .speaker-armyred {
   background-color: #c42030;
-  color: #ffffff;
+  color: #fff;
 }
 
 .empty-state {
@@ -419,7 +419,7 @@ body {
 
 .empty-title {
   font-size: 1.125rem;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
@@ -447,7 +447,7 @@ body {
 }
 
 .meeting-title {
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
   font-size: 1.125rem;
   margin-bottom: 0.5rem;
@@ -536,47 +536,47 @@ body {
 }
 
 .btn-past-1 {
-  background-color: #2998D5;
-  color: #ffffff;
+  background-color: #2998d5;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn-past-1 {
-  background-color: #2998D5;
-  color: #ffffff;
+  background-color: #2998d5;
+  color: #fff;
 }
 
 .btn-past-2 {
   background-color: #2880bb;
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn-past-2 {
   background-color: #2880bb;
-  color: #ffffff;
+  color: #fff;
 }
 
 .btn-past-3 {
   background-color: #2769a2;
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn-past-3 {
   background-color: #2769a2;
-  color: #ffffff;
+  color: #fff;
 }
 
 .btn-past-4 {
   background-color: #265289;
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn-past-4 {
   background-color: #265289;
-  color: #ffffff;
+  color: #fff;
 }
 
 .btn-past-1:hover {
-  background-color: #1B75BB;
+  background-color: #1b75bb;
 }
 
 .btn-past-2:hover {
@@ -588,7 +588,7 @@ body {
 }
 
 .btn-past-4:hover {
-  background-color: #3B6DAA;
+  background-color: #3b6daa;
 }
 
 * {
@@ -641,14 +641,14 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
 }
 
 .tabs {
   display: flex;
   gap: 0.5rem;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
 }
 
@@ -661,7 +661,7 @@ body {
   align-items: center;
   color: var(--text-muted);
   border-bottom: 2px solid transparent;
-  font-family: 'Barlow', sans-serif;
+  font-family: Barlow, sans-serif;
   font-weight: 700;
 }
 
@@ -677,17 +677,16 @@ body {
 .timestamp {
   font-size: 0.75rem;
   color: var(--text-muted);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+    monospace;
 }
 
 /* Modal styles */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background-color: rgb(0 0 0 / 60%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -701,7 +700,7 @@ body {
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 5px 15px rgb(0 0 0 / 30%);
 }
 
 .rename-speakers-form {
@@ -776,7 +775,7 @@ body {
 .prompt-textarea:focus {
   outline: none;
   border-color: var(--btn-primary);
-  box-shadow: 0 0 0 2px rgba(38, 82, 137, 0.1);
+  box-shadow: 0 0 0 2px rgb(38 82 137 / 10%);
 }
 
 .prompt-textarea::placeholder {
