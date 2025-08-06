@@ -382,42 +382,65 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to fetch meeting list", err));
   };
 
-  const fetchSummary = (uuid) => {
+  const fetchSummary = (uuid, forceRegenerate = false) => {
     setSummaryLoading(true);
 
-    // Prepare request body with custom prompts if provided
-    const requestBody = {};
-    if (customPrompt.trim()) {
-      requestBody.custom_prompt = customPrompt.trim();
-    }
-    if (systemPrompt.trim()) {
-      requestBody.system_prompt = systemPrompt.trim();
-    }
+    const generateSummary = () => {
+      // Prepare request body with custom prompts if provided
+      const requestBody = {};
+      if (customPrompt.trim()) {
+        requestBody.custom_prompt = customPrompt.trim();
+      }
+      if (systemPrompt.trim()) {
+        requestBody.system_prompt = systemPrompt.trim();
+      }
 
-    const requestOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      const requestOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+
+      // Only add body if we have custom prompts
+      if (Object.keys(requestBody).length > 0) {
+        requestOptions.body = JSON.stringify(requestBody);
+      }
+
+      fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, requestOptions)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.summary) {
+            setSummary({
+              meetingTitle: data.fileName,
+              summary: data.summary,
+            });
+          }
+        })
+        .catch((err) => console.error("Failed to fetch summary", err))
+        .finally(() => setSummaryLoading(false));
     };
 
-    // Only add body if we have custom prompts
-    if (Object.keys(requestBody).length > 0) {
-      requestOptions.body = JSON.stringify(requestBody);
-    }
-
-    fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, requestOptions)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.summary) {
-          setSummary({
-            meetingTitle: data.fileName,
-            summary: data.summary,
-          });
-        }
+    if (forceRegenerate) {
+      // First delete the cached summary, then generate a new one
+      fetch(`${API_BASE_URL}/jobs/${uuid}/summary`, {
+        method: "DELETE",
       })
-      .catch((err) => console.error("Failed to fetch summary", err))
-      .finally(() => setSummaryLoading(false));
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Summary deletion result:", data);
+          // Generate new summary regardless of deletion result
+          generateSummary();
+        })
+        .catch((err) => {
+          console.error("Failed to delete cached summary", err);
+          // Still try to generate new summary even if deletion failed
+          generateSummary();
+        });
+    } else {
+      // Normal fetch - will return cached if available
+      generateSummary();
+    }
   };
 
   const handleDeleteMeeting = (uuid) => {
@@ -741,7 +764,7 @@ const MeetingTranscriptionApp = () => {
                   </div>
                   <button
                     onClick={() =>
-                      selectedMeetingId && fetchSummary(selectedMeetingId)
+                      selectedMeetingId && fetchSummary(selectedMeetingId, true)
                     }
                     className="btn btn-primary btn-small"
                     disabled={!selectedMeetingId}

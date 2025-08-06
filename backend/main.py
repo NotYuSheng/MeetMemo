@@ -493,11 +493,49 @@ def get_file_transcript(uuid: str) -> dict:
         logging.error(f"{timestamp}: Error retrieving {file_name} transcript.")
         return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
+@app.delete("/jobs/{uuid}/summary")
+def delete_summary(uuid: str) -> dict:
+    """
+    Deletes the cached summary for the given UUID.
+    """
+    try:
+        uuid = uuid.zfill(4)
+        file_name = get_file_name(uuid)["file_name"]
+        summary_dir = Path("summary")
+        summary_path = summary_dir / f"{uuid}.txt"
+        
+        if summary_path.exists():
+            summary_path.unlink()
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Deleted cached summary for UUID: {uuid}, file name: {file_name}")
+            return {
+                "uuid": uuid,
+                "fileName": file_name,
+                "status": "success",
+                "message": "Summary deleted successfully",
+                "status_code": "200"
+            }
+        else:
+            timestamp = get_timestamp()
+            logging.warning(f"{timestamp}: No cached summary found to delete for UUID: {uuid}, file name: {file_name}")
+            return {
+                "uuid": uuid,
+                "fileName": file_name,
+                "status": "not_found",
+                "message": "No cached summary found",
+                "status_code": "404"
+            }
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error deleting summary for UUID: {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> dict[str, str]:
+def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]:
     """
     Summarises the transcript for the given UUID using a defined LLM.
     Summary is cached to a text file in the "summary" folder.
+    Accepts optional custom prompts via request body.
     """
     uuid = uuid.zfill(4)
     file_name = get_file_name(uuid)["file_name"]
@@ -531,7 +569,14 @@ def summarise_job(uuid: str) -> dict[str, str]:
         else:
             full_transcript = get_full_transcript_response["full_transcript"]
 
-        summary = summarise_transcript(full_transcript)
+        # Use custom prompts if provided
+        custom_prompt = None
+        system_prompt = None
+        if request:
+            custom_prompt = request.custom_prompt
+            system_prompt = request.system_prompt
+
+        summary = summarise_transcript(full_transcript, custom_prompt, system_prompt)
         timestamp = get_timestamp()
 
         if "Error" in summary:
