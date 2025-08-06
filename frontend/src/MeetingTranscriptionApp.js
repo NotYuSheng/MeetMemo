@@ -2,12 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import {
   Mic,
   Square,
+  Pause,
+  Play,
   Upload,
   Download,
   FileText,
   Hash,
   Send,
   MessagesSquare,
+  Trash2,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
@@ -38,6 +41,10 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
 
 const MeetingTranscriptionApp = () => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState(null);
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
+  const audioPlayerRef = useRef(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -294,7 +301,7 @@ const MeetingTranscriptionApp = () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/wav",
         });
-        processAudio(audioBlob);
+        setRecordedAudio(audioBlob);
       };
 
       mediaRecorderRef.current.start();
@@ -305,14 +312,61 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && isRecording && isPaused) {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsPaused(false);
       mediaRecorderRef.current.stream
         .getTracks()
         .forEach((track) => track.stop());
     }
+  };
+
+  // Set audio source when recordedAudio changes
+  useEffect(() => {
+    if (recordedAudio && audioPlayerRef.current) {
+      const audioUrl = URL.createObjectURL(recordedAudio);
+      audioPlayerRef.current.src = audioUrl;
+      
+      return () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+    }
+  }, [recordedAudio]);
+
+  const stopPlayback = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.currentTime = 0;
+      setIsPlayingRecording(false);
+    }
+  };
+
+  const processRecordedAudio = () => {
+    if (recordedAudio) {
+      processAudio(recordedAudio);
+      setRecordedAudio(null); // Clear the recorded audio after processing
+    }
+  };
+
+  const discardRecording = () => {
+    setRecordedAudio(null);
+    setRecordingTime(0);
   };
 
   const uploadFile = () => {
@@ -565,7 +619,7 @@ const MeetingTranscriptionApp = () => {
   }, []);
 
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording && !isPaused) {
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
@@ -573,7 +627,7 @@ const MeetingTranscriptionApp = () => {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [isRecording]);
+  }, [isRecording, isPaused]);
 
   useEffect(() => {
     fetchMeetingList();
@@ -629,41 +683,81 @@ const MeetingTranscriptionApp = () => {
                 </label>
 
                 <div className="button-group">
-                  <button
-                    onClick={isRecording ? stopRecording : startRecording}
-                    className={`btn ${isRecording ? "btn-discrete" : "btn-discrete"}`}
-                    title={isRecording ? "Stop Recording" : "Start Recording"}
-                  >
-                    {isRecording ? (
-                      <Square className="btn-icon" />
-                    ) : (
-                      <Mic className="btn-icon" />
-                    )}
-                  </button>
+                  {!isRecording && !recordedAudio ? (
+                    <>
+                      <button
+                        onClick={startRecording}
+                        className="btn btn-discrete"
+                        title="Start Recording"
+                      >
+                        <Mic className="btn-icon" />
+                      </button>
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn btn-discrete"
+                        title={selectedFile ? "Change Audio File" : "Upload Audio File"}
+                      >
+                        <Upload className="btn-icon" />
+                      </button>
+                    </>
+                  ) : isRecording ? (
+                    <>
+                      <button
+                        onClick={isPaused ? resumeRecording : pauseRecording}
+                        className="btn btn-discrete"
+                        title={isPaused ? "Resume Recording" : "Pause Recording"}
+                      >
+                        {isPaused ? (
+                          <Play className="btn-icon" />
+                        ) : (
+                          <Pause className="btn-icon" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={stopRecording}
+                        className="btn btn-discrete"
+                        title="Stop Recording"
+                      >
+                        <Square className="btn-icon" />
+                      </button>
+                    </>
+                  ) : recordedAudio ? (
+                    <>
+                      <button
+                        onClick={discardRecording}
+                        className="btn btn-discrete"
+                        title="Discard Recording"
+                      >
+                        <Trash2 className="btn-icon" />
+                      </button>
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn btn-discrete"
+                        title={selectedFile ? "Change Audio File" : "Upload Audio File"}
+                      >
+                        <Upload className="btn-icon" />
+                      </button>
+                    </>
+                  ) : null}
 
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn btn-discrete"
-                    title={selectedFile ? "Change Audio File" : "Upload Audio File"}
-                  >
-                    <Upload className="btn-icon" />
-                  </button>
-
-                  <button
-                    onClick={uploadFile}
-                    disabled={!selectedFile || loading}
-                    className={`btn ${selectedFile && !loading ? "btn-discrete-prominent" : "btn-discrete"}`}
+                    onClick={recordedAudio ? processRecordedAudio : uploadFile}
+                    disabled={(!selectedFile && !recordedAudio) || loading}
+                    className={`btn ${(selectedFile || recordedAudio) && !loading ? "btn-discrete-prominent" : "btn-discrete"}`}
                     title={loading ? "Processing..." : "Process Audio"}
                   >
                     <Send className="btn-icon" />
-                    {selectedFile && !loading ? "Process Audio" : ""}
+                    {((selectedFile || recordedAudio) && !loading) ? "Process Audio" : ""}
                   </button>
 
                   {isRecording && (
                     <div className="recording-indicator">
-                      <div className="recording-dot"></div>
+                      <div className={`recording-dot ${isPaused ? 'paused' : ''}`}></div>
                       <span className="recording-time">
-                        {formatTime(recordingTime)}
+                        {formatTime(recordingTime)} {isPaused ? '(Paused)' : ''}
                       </span>
                     </div>
                   )}
@@ -677,6 +771,20 @@ const MeetingTranscriptionApp = () => {
                 onChange={(e) => setSelectedFile(e.target.files[0])}
                 className="file-input"
               />
+
+              {recordedAudio && (
+                <div className="audio-preview">
+                  <h3 className="audio-preview-title">Recording Preview</h3>
+                  <audio 
+                    ref={audioPlayerRef} 
+                    controls 
+                    className="audio-player"
+                    onPlay={() => setIsPlayingRecording(true)}
+                    onPause={() => setIsPlayingRecording(false)}
+                    onEnded={() => setIsPlayingRecording(false)}
+                  />
+                </div>
+              )}
 
               {(loading || isProcessing) && (
                 <div className="processing-indicator">
