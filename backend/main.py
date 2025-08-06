@@ -22,7 +22,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000","http://localhost:3000/MeetMemo", "http://127.0.0.1:3000/MeetMemo"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +46,10 @@ CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0" 
+
+# Ensure required directories exist
+os.makedirs("transcripts", exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ###################################### Classes ######################################
 class SpeakerNameMapping(BaseModel):
@@ -257,7 +261,7 @@ def get_jobs() -> dict:
                 }
 
         if not jobs:
-            return {"csv_list": "No audio files found."}
+            return {"csv_list": {}}
         return {"csv_list": jobs}
 
     except Exception as e:
