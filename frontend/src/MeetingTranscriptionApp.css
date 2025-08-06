@@ -268,7 +268,13 @@ body {
 @media (width >= 640px) {
   .controls-container {
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .model-select-wrapper {
+    margin-bottom: 0;
+    margin-right: 1rem;
   }
 }
 
@@ -884,6 +890,65 @@ input:checked + .toggle-slider:after {
 
 .theme-toggle:hover .toggle-slider {
   box-shadow: var(--shadow-lg);
+}
+
+/* Model Select Styling */
+.model-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.model-select-label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.875rem;
+  min-width: fit-content;
+}
+
+.model-select {
+  background-color: white;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  font-family: Barlow, sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  min-width: 80px;
+}
+
+[data-theme="dark"] .model-select {
+  background-color: #4a4e50;
+  color: #fff;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 2px rgba(38, 82, 137, 0.1);
+}
+
+.model-select:hover {
+  border-color: var(--btn-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.model-select option {
+  background-color: white;
+  color: #272b2d;
+  font-family: Barlow, sans-serif;
+  font-weight: 500;
+  padding: 0.5rem;
+}
+
+[data-theme="dark"] .model-select option {
+  background-color: #4a4e50;
+  color: #fff;
 }
 
 /* Summary Actions Group */
