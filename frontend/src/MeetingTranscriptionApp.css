@@ -13,8 +13,9 @@
   --text-muted: #75797c;
   --text-inverse: #fff;
 
-  /* Borders - Warmer tone */
+  /* Borders - Enhanced with subtle gradient */
   --border: #bba88e;
+  --border-enhanced: linear-gradient(135deg, #bba88e 0%, #d4c2a8 50%, #bba88e 100%);
 
   /* Buttons - Enhanced with organizational colors */
   --btn-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
@@ -58,8 +59,9 @@
   --text-muted: #bba88e;
   --text-inverse: #272b2d;
 
-  /* Borders */
+  /* Borders - Enhanced for dark mode */
   --border: #bba88e;
+  --border-enhanced: linear-gradient(135deg, #bba88e 0%, #c9b599 50%, #bba88e 100%);
 
   /* Buttons */
   --btn-bg: #75797c;
@@ -189,10 +191,22 @@ body {
   background: var(--card-bg);
   color: var(--text);
   border-radius: 0.5rem;
-  box-shadow: var(--shadow-lg);
+  box-shadow: none;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid var(--border);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.header-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--border-enhanced);
+  border-radius: calc(0.5rem + 2px);
+  z-index: -1;
+  box-shadow: var(--shadow-lg);
 }
 
 .header-subtitle {
@@ -226,8 +240,20 @@ body {
   background: var(--card-bg);
   color: var(--text);
   border-radius: 0.5rem;
-  border: 1px solid var(--border);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
   padding: 1.5rem;
+  box-shadow: none;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--border-enhanced);
+  border-radius: calc(0.5rem + 2px);
+  z-index: -1;
   box-shadow: var(--shadow-md);
 }
 
