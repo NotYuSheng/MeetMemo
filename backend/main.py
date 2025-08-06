@@ -186,7 +186,8 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
         system_prompt: Optional custom system prompt. If None, uses default system prompt.
     """
 
-    url = str(os.getenv("LLM_API_URL"))
+    base_url = str(os.getenv("LLM_API_URL"))
+    url = f"{base_url.rstrip('/')}/v1/chat/completions"
     model_name = str(os.getenv("LLM_MODEL_NAME"))
 
     # Default system prompt
@@ -326,7 +327,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         logging.info(f"{timestamp}: Processing file {wav_file_name} with model {model_name}")
 
         # Transcription & diarization of text
-        hf_token = os.getenv("USE_AUTH_TOKEN")
+        hf_token = os.getenv("HF_TOKEN")
         pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization", 
             use_auth_token=hf_token
