@@ -12,6 +12,7 @@ services:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
       - transcripts:/app/transcripts
+      - summary:/app/summary
       - whisper_cache:/root/.cache/whisper
     ports:
       - "8000:8000"
@@ -39,6 +40,8 @@ services:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
       - transcripts:/app/transcripts
+      - summary:/app/summary
+
     ports:
       - "3000:3000"
     networks:
@@ -50,6 +53,7 @@ volumes:
   logs:
   transcripts:
   whisper_cache:
+  summary:
 
 networks:
   shared-network:
