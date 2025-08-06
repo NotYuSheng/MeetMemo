@@ -3,7 +3,7 @@
   --icon: #272b2d;
 
   /* Backgrounds - Enhanced with subtle organizational colors */
-  --bg: linear-gradient(135deg, rgb(249 250 251 / 90%) 0%, rgb(243 244 246 / 85%) 100%);
+  --bg: linear-gradient(135deg, rgb(249 250 251 / 60%) 0%, rgb(243 244 246 / 50%) 100%);
   --card-bg: linear-gradient(145deg, rgb(255 255 255 / 85%) 0%, rgb(248 250 252 / 80%) 100%);
   --alt-bg: linear-gradient(135deg, rgb(241 245 249 / 80%) 0%, rgb(248 250 252 / 75%) 100%);
   --transcript-entry-bg: linear-gradient(135deg, rgb(255 255 255 / 90%) 0%, rgb(249 250 251 / 85%) 100%);

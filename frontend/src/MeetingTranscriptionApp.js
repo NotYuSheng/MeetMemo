@@ -77,7 +77,7 @@ const MeetingTranscriptionApp = () => {
             },
           },
           color: {
-            value: ["#2998D5", "#265289", "#75797C", "#bba88e", "#c42030", "#FFFFFF"],
+            value: ["#2998D5", "#265289", "#75797C", "#bba88e", "#FFFFFF"],
           },
           shape: {
             type: "circle",
@@ -87,7 +87,7 @@ const MeetingTranscriptionApp = () => {
             },
           },
           opacity: {
-            value: 1,
+            value: 0.9,
             random: false,
             anim: {
               enable: false,
@@ -109,9 +109,9 @@ const MeetingTranscriptionApp = () => {
           line_linked: {
             enable: true,
             distance: 150,
-            color: "#FFFFFF",
-            opacity: 1,
-            width: 1.5,
+            color: "#8a7c6b",
+            opacity: 0.8,
+            width: 2.5,
           },
           move: {
             enable: true,
@@ -587,13 +587,14 @@ const MeetingTranscriptionApp = () => {
           <h1 className="header-title">
             <MessagesSquare className="header-icon" /> MeetMemo
           </h1>
-          <button
-            className="btn btn-small"
-            onClick={toggleDarkMode}
-            style={{ float: "right" }}
-          >
-            {isDarkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
-          </button>
+          <label className="theme-toggle" style={{ float: "right" }}>
+            <input
+              type="checkbox"
+              checked={isDarkMode}
+              onChange={toggleDarkMode}
+            />
+            <span className="toggle-slider"></span>
+          </label>
           <p className="header-subtitle">
             Record, transcribe, and summarize your meetings with AI-powered
             insights
