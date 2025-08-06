@@ -11,7 +11,7 @@ from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pydub import AudioSegment
