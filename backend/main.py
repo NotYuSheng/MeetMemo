@@ -22,7 +22,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000","http://localhost:3000/MeetMemo", "http://127.0.0.1:3000/MeetMemo"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -618,9 +618,6 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
             # Normalize None to placeholder
             for segment in transcript_data:
                 original_speaker = (segment.get("speaker") or "SPEAKER_00").strip()
-
-                if original_speaker is None:
-                    original_speaker = "SPEAKER_00"
 
                 if original_speaker in name_map:
                     segment["speaker"] = name_map[original_speaker].strip()
