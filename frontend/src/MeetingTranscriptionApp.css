@@ -813,6 +813,79 @@ body {
   font-style: italic;
 }
 
+/* Dark Mode Toggle Switch */
+.theme-toggle {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 32px;
+}
+
+.theme-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #2998d5 0%, #265289 100%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 32px;
+  box-shadow: var(--shadow-md);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 24px;
+  width: 24px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Default (unchecked = light mode) - Sun icon */
+.toggle-slider:after {
+  content: "☀️";
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  color: #ffffff;
+  font-size: 14px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+}
+
+/* Checked = dark mode styles */
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #75797c 0%, #272b2d 100%);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(28px);
+}
+
+/* Moon icon (checked = dark mode) */
+input:checked + .toggle-slider:after {
+  content: "🌙";
+  left: 38px;
+  opacity: 1;
+}
+
+.theme-toggle:hover .toggle-slider {
+  box-shadow: var(--shadow-lg);
+}
+
 /* Summary Actions Group */
 .summary-actions-group {
   display: flex;
