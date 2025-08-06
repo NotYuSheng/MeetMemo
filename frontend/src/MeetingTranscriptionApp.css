@@ -36,6 +36,11 @@
   --purple: #c42030;
   --orange: #265289;
   --green: #bba88e;
+  
+  /* Box Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 [data-theme="dark"] {
@@ -76,6 +81,11 @@
   --purple: #bba88e;
   --orange: #2998d5;
   --green: #c42030;
+  
+  /* Dark Mode Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
 
 body {
@@ -99,12 +109,15 @@ body {
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
   text-decoration: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn:hover {
   background-color: var(--btn-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .btn-primary {
@@ -163,7 +176,7 @@ body {
   background-color: var(--card-bg);
   color: var(--text);
   border-radius: 0.5rem;
-  box-shadow: none;
+  box-shadow: var(--shadow-lg);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 1px solid #bba88e;
@@ -200,8 +213,9 @@ body {
   background-color: var(--card-bg);
   color: var(--text);
   border-radius: 0.5rem;
-  border: 1px solid var(--border); /* use CSS variable */
+  border: 1px solid var(--border);
   padding: 1.5rem;
+  box-shadow: var(--shadow-md);
 }
 
 .section-title {
@@ -355,6 +369,9 @@ body {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   background-color: var(--transcript-entry-bg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.5rem;
+  border-radius: 0.25rem;
 }
 
 .transcript-header {
