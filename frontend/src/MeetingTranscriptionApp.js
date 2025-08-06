@@ -1131,7 +1131,9 @@ const MeetingTranscriptionApp = () => {
               </h2>
               <div className="meetings-scroll-wrapper">
                 {meetingList.map((meeting, index) => {
-                  const colorClass = `btn-past-${(index % 4) + 1}`;
+                  // Create gradient pattern: 1-2-3-4-3-2-1-2-3-4-3-2...
+                  const pattern = [1, 2, 3, 4, 3, 2];
+                  const colorClass = `btn-past-${pattern[index % pattern.length]}`;
                   return (
                     <div key={meeting.uuid} className="meeting-entry">
                       <button
