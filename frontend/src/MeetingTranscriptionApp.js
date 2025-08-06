@@ -1083,10 +1083,11 @@ const MeetingTranscriptionApp = () => {
                         {truncateFileName(meeting.name)}
                       </button>
                       <button
-                        className="btn btn-danger btn-small delete-meeting-btn"
+                        className="btn btn-discrete btn-small delete-meeting-btn"
                         onClick={() => handleDeleteMeeting(meeting.uuid)}
+                        title="Delete Meeting"
                       >
-                        🗑️
+                        <Trash2 className="btn-icon" />
                       </button>
                     </div>
                   );
