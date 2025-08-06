@@ -220,7 +220,7 @@ MeetMemo provides a comprehensive REST API for programmatic access:
 # Check NVIDIA Docker runtime
 docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
 ```
-#### Whipser Models Download Fails
+#### Whisper Models Download Fails
 - Verify Hugging Face token is correct and authenticated
 - Ensure model licenses are accepted
 - Check internet connectivity
