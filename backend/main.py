@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 from pydub import AudioSegment
 from pydantic import BaseModel
+from pathlib import Path
 
 # Start up the app
 app = FastAPI()    
@@ -493,50 +494,69 @@ def get_file_transcript(uuid: str) -> dict:
         return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]:
+def summarise_job(uuid: str) -> dict[str, str]:
     """
     Summarises the transcript for the given UUID using a defined LLM.
-    
-    Args:
-        uuid: The job UUID to summarize
-        request: Optional SummarizeRequest containing custom_prompt and/or system_prompt
+    Summary is cached to a text file in the "summary" folder.
     """
     uuid = uuid.zfill(4)
     file_name = get_file_name(uuid)["file_name"]
+    summary_dir = Path("summary")
+    summary_dir.mkdir(exist_ok=True)
+    summary_path = summary_dir / f"{uuid}.txt"
+
+    # Return cached summary if it exists
+    if summary_path.exists():
+        try:
+            cached_summary = summary_path.read_text(encoding="utf-8")
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Returned cached summary for UUID: {uuid}, file name: {file_name}")
+            return {
+                "uuid": uuid,
+                "fileName": file_name,
+                "status": "success",
+                "status_code": "200",
+                "summary": cached_summary
+            }
+        except Exception as e:
+            timestamp = get_timestamp()
+            logging.error(f"{timestamp}: Error reading cached summary for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+            # Fall through to generate new summary if reading cached summary fails
+
+    # Generate new summary if not cached or error reading cached
     try:
         get_full_transcript_response = get_file_transcript(uuid)
         if get_full_transcript_response["status"] == "not found":
-            raise HTTPException(status_code=404, detail={"error": f"Transcript not found for the given UUID: {uuid}."})
+            return {"error": f"Transcript not found for the given UUID: {uuid}."}
         else:
             full_transcript = get_full_transcript_response["full_transcript"]
 
-        # Extract custom prompts if provided
-        custom_prompt = None
-        system_prompt = None
-        if request:
-            custom_prompt = request.custom_prompt
-            system_prompt = request.system_prompt
-
-        summary = summarise_transcript(full_transcript, custom_prompt, system_prompt)
+        summary = summarise_transcript(full_transcript)
+        timestamp = get_timestamp()
 
         if "Error" in summary:
-            timestamp = get_timestamp()
             logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
-            raise HTTPException(status_code=500, detail={"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary})
+            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
         else:
-            timestamp = get_timestamp()
+            # Save summary to file
+            try:
+                summary_path.write_text(summary, encoding="utf-8")
+            except Exception as e:
+                logging.error(f"{timestamp}: Error saving summary to file for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+
             logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
             return {
-            "uuid": uuid,
-            "fileName": file_name,
-            "status": "success",
-            "status_code": "200",
-            "summary": summary}
-    
+                "uuid": uuid,
+                "fileName": file_name,
+                "status": "success",
+                "status_code": "200",
+                "summary": summary
+            }
+
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail={"uuid": uuid, "file_name": file_name, "error": str(e), "summary": ""})
+        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""}  # type: ignore
 
 @app.patch("/jobs/{uuid}/rename")
 def rename_job(uuid: str, new_name: str) -> dict:
