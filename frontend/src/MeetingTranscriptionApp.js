@@ -185,7 +185,7 @@ const MeetingTranscriptionApp = () => {
   const [editingSpeaker, setEditingSpeaker] = useState(null);
   const [, setIsSavingNames] = useState(false);
 
-  const truncateFileName = (name, maxLength = 20) => {
+  const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
     return name.length > maxLength
       ? name.slice(0, maxLength).trim() + "..."

@@ -683,7 +683,9 @@ body {
 
 .space {
   margin: 1vw;
-  width: 15vw;
+  width: 22vw;
+  max-width: 280px;
+  min-width: 180px;
 }
 
 .summary-text {
