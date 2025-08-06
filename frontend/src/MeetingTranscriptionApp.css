@@ -2,34 +2,34 @@
   /* Icons */
   --icon: #272b2d;
 
-  /* Backgrounds */
-  --bg: rgb(255 255 255 / 85%);
-  --card-bg: rgb(255 255 255 / 80%);
-  --alt-bg: rgb(243 244 246 / 80%);
-  --transcript-entry-bg: rgb(255 255 255 / 85%);
+  /* Backgrounds - Enhanced with subtle organizational colors */
+  --bg: linear-gradient(135deg, rgb(249 250 251 / 90%) 0%, rgb(243 244 246 / 85%) 100%);
+  --card-bg: linear-gradient(145deg, rgb(255 255 255 / 85%) 0%, rgb(248 250 252 / 80%) 100%);
+  --alt-bg: linear-gradient(135deg, rgb(241 245 249 / 80%) 0%, rgb(248 250 252 / 75%) 100%);
+  --transcript-entry-bg: linear-gradient(135deg, rgb(255 255 255 / 90%) 0%, rgb(249 250 251 / 85%) 100%);
 
   /* Text */
   --text: #272b2d;
   --text-muted: #75797c;
   --text-inverse: #fff;
 
-  /* Borders */
+  /* Borders - Warmer tone */
   --border: #bba88e;
 
-  /* Buttons */
-  --btn-bg: #e5e7eb;
-  --btn-text: #111827;
-  --btn-hover: #d1d5db;
-  --btn-primary: #265289;
-  --btn-primary-hover: #3b6daa;
-  --btn-danger: #c42030;
-  --btn-danger-hover: #e03a46;
-  --btn-secondary: #75797c;
-  --btn-secondary-hover: #5e6264;
-  --btn-success: #2998d5;
-  --btn-success-hover: #1b75bb;
+  /* Buttons - Enhanced with organizational colors */
+  --btn-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  --btn-text: #272b2d;
+  --btn-hover: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  --btn-primary: linear-gradient(135deg, #265289 0%, #2998d5 100%);
+  --btn-primary-hover: linear-gradient(135deg, #1e3a52 0%, #1b75bb 100%);
+  --btn-danger: linear-gradient(135deg, #c42030 0%, #dc2626 100%);
+  --btn-danger-hover: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+  --btn-secondary: linear-gradient(135deg, #75797c 0%, #64748b 100%);
+  --btn-secondary-hover: linear-gradient(135deg, #5e6264 0%, #475569 100%);
+  --btn-success: linear-gradient(135deg, #2998d5 0%, #0ea5e9 100%);
+  --btn-success-hover: linear-gradient(135deg, #1b75bb 0%, #0284c7 100%);
   --btn-success-text: #fff;
-  --btn-active: #2998d5;
+  --btn-active: linear-gradient(135deg, #2998d5 0%, #0ea5e9 100%);
   --btn-active-text: #fff;
 
   /* Accent Colors */
@@ -100,7 +100,7 @@ body {
 }
 
 .btn {
-  background-color: var(--btn-bg);
+  background: var(--btn-bg);
   color: var(--btn-text);
   display: flex;
   align-items: center;
@@ -116,49 +116,49 @@ body {
 }
 
 .btn:hover {
-  background-color: var(--btn-hover);
+  background: var(--btn-hover);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .btn-primary {
-  background-color: var(--btn-primary);
+  background: var(--btn-primary);
   color: var(--text-inverse);
 }
 
 .btn-primary:hover {
-  background-color: var(--btn-primary-hover);
+  background: var(--btn-primary-hover);
 }
 
 .btn-danger {
-  background-color: var(--btn-danger);
+  background: var(--btn-danger);
   color: var(--text-inverse);
 }
 
 .btn-danger:hover {
-  background-color: var(--btn-danger-hover);
+  background: var(--btn-danger-hover);
 }
 
 .btn-secondary {
-  background-color: var(--btn-secondary);
+  background: var(--btn-secondary);
   color: var(--text-inverse);
 }
 
 .btn-secondary:hover {
-  background-color: var(--btn-secondary-hover);
+  background: var(--btn-secondary-hover);
 }
 
 .btn-success {
-  background-color: var(--btn-success);
+  background: var(--btn-success);
   color: var(--btn-success-text);
 }
 
 .btn-success:hover {
-  background-color: var(--btn-success-hover);
+  background: var(--btn-success-hover);
 }
 
 .btn-active {
-  background-color: var(--btn-active);
+  background: var(--btn-active);
   color: var(--btn-active-text);
 }
 
@@ -176,7 +176,7 @@ body {
 
 .app-container {
   min-height: 100vh;
-  background-color: var(--bg);
+  background: var(--bg);
   padding: 1rem;
 }
 
@@ -186,13 +186,13 @@ body {
 }
 
 .header-card {
-  background-color: var(--card-bg);
+  background: var(--card-bg);
   color: var(--text);
   border-radius: 0.5rem;
   box-shadow: var(--shadow-lg);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #bba88e;
+  border: 1px solid var(--border);
 }
 
 .header-subtitle {
@@ -223,7 +223,7 @@ body {
 }
 
 .card {
-  background-color: var(--card-bg);
+  background: var(--card-bg);
   color: var(--text);
   border-radius: 0.5rem;
   border: 1px solid var(--border);
@@ -377,11 +377,11 @@ body {
 }
 
 .transcript-entry {
-  border-left: 4px solid #bba88e;
+  border-left: 4px solid var(--border);
   padding-left: 1rem;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
-  background-color: var(--transcript-entry-bg);
+  background: var(--transcript-entry-bg);
   box-shadow: var(--shadow-sm);
   margin-bottom: 0.5rem;
   border-radius: 0.25rem;
@@ -471,7 +471,7 @@ body {
 }
 
 .meeting-info {
-  background-color: var(--bg);
+  background: var(--alt-bg);
   border-radius: 0.5rem;
   padding: 1rem;
 }
