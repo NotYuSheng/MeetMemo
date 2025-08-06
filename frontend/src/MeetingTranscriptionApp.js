@@ -402,6 +402,7 @@ const MeetingTranscriptionApp = () => {
             ? processTranscriptWithSpeakerIds(data.transcript)
             : [],
         );
+        setSelectedMeetingId(data.uuid); // Auto-select the processed meeting
         fetchSummary(data.uuid);
         fetchMeetingList();
         setSelectedFile(null); // Clear the selected file after processing
@@ -429,6 +430,7 @@ const MeetingTranscriptionApp = () => {
             ? processTranscriptWithSpeakerIds(data.transcript)
             : [],
         );
+        setSelectedMeetingId(data.uuid); // Auto-select the processed meeting
         fetchSummary(data.uuid);
         fetchMeetingList();
         setIsProcessing(false);
