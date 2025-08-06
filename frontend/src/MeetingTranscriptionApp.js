@@ -384,61 +384,119 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
-  const uploadFile = () => {
+  const pollJobStatus = async (uuid, maxAttempts = 30) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/jobs/${uuid}/status`);
+        const statusData = await response.json();
+        
+        if (statusData.status === 'completed') {
+          // Job completed, fetch transcript
+          const transcriptResponse = await fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`);
+          const transcriptData = await transcriptResponse.json();
+          
+          if (transcriptData.full_transcript) {
+            const parsed = JSON.parse(transcriptData.full_transcript || "[]");
+            setTranscript(processTranscriptWithSpeakerIds(parsed));
+            setSelectedMeetingId(uuid);
+            fetchSummary(uuid);
+            fetchMeetingList();
+            return true;
+          }
+        } else if (statusData.status === 'failed' || statusData.status === 'error') {
+          throw new Error(statusData.error_message || 'Job failed');
+        }
+        
+        // Job still processing, wait and retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        throw error;
+      }
+    }
+    throw new Error('Job polling timeout - processing took too long');
+  };
+
+  const uploadFile = async () => {
     if (!selectedFile) return;
     speakerColorMap.current = {};
     setLoading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-    fetch(`${API_BASE_URL}/jobs`, {
-      method: "POST",
-      body: formData,
-    })
-      .then((result) => result.json())
-      .then((data) => {
-        setTranscript(
-          Array.isArray(data.transcript)
-            ? processTranscriptWithSpeakerIds(data.transcript)
-            : [],
-        );
-        setSelectedMeetingId(data.uuid); // Auto-select the processed meeting
+      const response = await fetch(`${API_BASE_URL}/jobs`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      // Check if the response indicates success and has expected data
+      if (data.error || (!data.uuid && !data.transcript)) {
+        throw new Error(data.error || 'Invalid response from server');
+      }
+
+      // If we get a transcript immediately, use it
+      if (data.transcript && Array.isArray(data.transcript)) {
+        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
-        setSelectedFile(null); // Clear the selected file after processing
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch transcription.", err);
-        setLoading(false);
-      });
+      } else if (data.uuid) {
+        // Otherwise, poll for status
+        await pollJobStatus(data.uuid);
+      } else {
+        throw new Error('No transcript or job ID returned');
+      }
+      
+      setSelectedFile(null);
+    } catch (err) {
+      console.error("Failed to process uploaded file:", err);
+      alert(`Failed to process file: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const processAudio = async (audioBlob) => {
     setIsProcessing(true);
-    const formData = new FormData();
-    formData.append("file", audioBlob);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", audioBlob);
 
-    fetch(`${API_BASE_URL}/jobs`, {
-      method: "POST",
-      body: formData,
-    })
-      .then((result) => result.json())
-      .then((data) => {
-        setTranscript(
-          Array.isArray(data.transcript)
-            ? processTranscriptWithSpeakerIds(data.transcript)
-            : [],
-        );
-        setSelectedMeetingId(data.uuid); // Auto-select the processed meeting
+      const response = await fetch(`${API_BASE_URL}/jobs`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      // Check if the response indicates success and has expected data
+      if (data.error || (!data.uuid && !data.transcript)) {
+        throw new Error(data.error || 'Invalid response from server');
+      }
+
+      // If we get a transcript immediately, use it
+      if (data.transcript && Array.isArray(data.transcript)) {
+        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
-        setIsProcessing(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch transcription -", err);
-        setIsProcessing(false);
-      });
+      } else if (data.uuid) {
+        // Otherwise, poll for status
+        await pollJobStatus(data.uuid);
+      } else {
+        throw new Error('No transcript or job ID returned');
+      }
+    } catch (err) {
+      console.error("Failed to process recorded audio:", err);
+      alert(`Failed to process recording: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const fetchMeetingList = () => {
