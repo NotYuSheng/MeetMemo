@@ -129,7 +129,7 @@ Once running, access MeetMemo at: **http://localhost:3000/MeetMemo**
 #### 1. Upload or Record Audio
 - **Upload**: Click the `Upload Audio File` button and select your audio file
 - **Record**: Click the `Start Recording` button to start recording directly in the browser
-- **Starting the transcription**: CLick the `Start Transcription` button to start the transcription process
+- **Starting the transcription**: Click the `Start Transcription` button to start the transcription process
 
 #### 2. Monitor Processing
 - Obtain status updates to view when the transcription process is still ongoing or has been completed
