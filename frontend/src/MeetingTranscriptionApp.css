@@ -88,6 +88,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
 
+
 body {
   background-color: var(--bg);
   color: var(--text);
@@ -159,6 +160,18 @@ body {
 .btn-active {
   background-color: var(--btn-active);
   color: var(--btn-active-text);
+}
+
+.btn-disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-disabled:hover,
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .app-container {
