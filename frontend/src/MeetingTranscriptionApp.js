@@ -631,31 +631,32 @@ const MeetingTranscriptionApp = () => {
                 <div className="button-group">
                   <button
                     onClick={isRecording ? stopRecording : startRecording}
-                    className={`btn ${isRecording ? "btn-danger" : "btn-primary"}`}
+                    className={`btn ${isRecording ? "btn-discrete" : "btn-discrete"}`}
+                    title={isRecording ? "Stop Recording" : "Start Recording"}
                   >
                     {isRecording ? (
                       <MicOff className="btn-icon" />
                     ) : (
                       <Mic className="btn-icon" />
                     )}
-                    {isRecording ? "Stop Recording" : "Start Recording"}
                   </button>
 
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="btn btn-secondary"
+                    className="btn btn-discrete"
+                    title={selectedFile ? "Change Audio File" : "Upload Audio File"}
                   >
                     <Upload className="btn-icon" />
-                    {selectedFile ? "Change Audio File" : "Upload Audio File"}
                   </button>
 
                   <button
                     onClick={uploadFile}
                     disabled={!selectedFile || loading}
-                    className={`btn ${selectedFile ? "btn-primary" : "btn-disabled"}`}
+                    className={`btn ${selectedFile && !loading ? "btn-discrete-prominent" : "btn-discrete"}`}
+                    title={loading ? "Processing..." : "Process Audio"}
                   >
                     <Send className="btn-icon" />
-                    {loading ? "Transcribing..." : "Start Transcription"}
+                    {selectedFile && !loading ? "Process Audio" : ""}
                   </button>
                 </div>
 
