@@ -25,7 +25,8 @@ services:
               count: all
               capabilities: [gpu]
     networks:
-      - llm_calling
+      - shared-network
+      # - llm_calling
 
   frontend:
     build:
@@ -41,7 +42,9 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - llm_calling
+      - shared-network
+      # - llm_calling
+
 volumes:
   audiofiles:
   logs:
@@ -49,5 +52,10 @@ volumes:
   whisper_cache:
 
 networks:
-  llm_calling:
+  shared-network:
+    name: shared-network
     external: true
+
+# networks:
+  # llm_calling:
+  #   external: true

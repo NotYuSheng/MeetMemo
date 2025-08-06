@@ -11,22 +11,18 @@ from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pydub import AudioSegment
+from pydantic import BaseModel
 
 # Start up the app
 app = FastAPI()    
 
-origins = [
-    "http://localhost:3000",  # React dev server
-    "http://127.0.0.1:3000",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # or ["*"] to allow all
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000","http://localhost:3000/MeetMemo", "http://127.0.0.1:3000/MeetMemo"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +47,16 @@ CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0" 
 
+###################################### Classes ######################################
+class SpeakerNameMapping(BaseModel):
+    '''Pydantic model for mapping old speaker names to new ones.'''
+    mapping: dict[str, str]
+
+class SummarizeRequest(BaseModel):
+    '''Pydantic model for summarization requests with optional custom prompts.'''
+    custom_prompt: str = None
+    system_prompt: str = None
+
 ##################################### Functions #####################################
 def get_timestamp() -> str:
     '''
@@ -62,18 +68,19 @@ def get_timestamp() -> str:
 
 def format_result(diarized: list) -> list[dict]:
     """
-    Formats the diarized results into an array of
-    {speaker: text} entries.
+    Formats the diarized results into a list of dictionaries,
+    each with speaker, text, start, and end time.
     
     diarized: list of tuples (segment, speaker, utterance)
     """
     full_transcript = []
-
     for segment, speaker, utterance in diarized:
         full_transcript.append({
-            speaker: utterance.strip()
+            "speaker": speaker,
+            "text": utterance.strip(),
+            "start": f"{segment.start:.2f}",
+            "end": f"{segment.end:.2f}",
         })
-
     return full_transcript
 
 
@@ -164,31 +171,48 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str) -> str:
+def summarise_transcript(transcript: str, custom_prompt: str = None, system_prompt: str = None) -> str:
     """
     Summarises the transcript using a defined LLM.
+    
+    Args:
+        transcript: The transcript text to summarize
+        custom_prompt: Optional custom user prompt. If None, uses default prompt.
+        system_prompt: Optional custom system prompt. If None, uses default system prompt.
     """
 
     url = str(os.getenv("LLM_API_URL"))
     model_name = str(os.getenv("LLM_MODEL_NAME"))
+
+    # Default system prompt
+    default_system_prompt = "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."
+    
+    # Default user prompt
+    default_user_prompt = (
+        "Please provide a concise summary of the following meeting transcript, "
+        "highlighting participants, key points, action items & next steps."
+        "The summary should contain point forms phrased in concise standard English."
+        "You are to give the final summary in markdown format for easier visualisation."
+        "Do not give the output in an integrated code block i.e.: '```markdown ```"
+        "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself."
+    )
+
+    # Use custom prompts if provided, otherwise use defaults
+    final_system_prompt = system_prompt if system_prompt else default_system_prompt
+    
+    # Always append transcript to user prompt, whether custom or default
+    if custom_prompt:
+        final_user_prompt = custom_prompt + "\n\n" + transcript
+    else:
+        final_user_prompt = default_user_prompt + "\n\n" + transcript 
 
     payload = {
         "model": model_name,
         "temperature": 0.3,
         "max_tokens": 5000,
         "messages": [
-            {"role": "system",
-             "content": "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."},
-            {"role": "user",
-             "content": (
-                 "Please provide a concise summary of the following meeting transcript, "
-                 "highlighting participants, key points, action items & next steps."
-                 "The summary should contain point forms phrased in concise standard English."
-                 "You are to give the final summary in markdown format for easier visualisation."
-                 "Do not give the output in an integrated code block i.e.: '```markdown ```"
-                 "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself.\n\n"
-                 + transcript
-             )},
+            {"role": "system", "content": final_system_prompt},
+            {"role": "user", "content": final_user_prompt},
         ],
     }
 
@@ -286,14 +310,13 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         else:
             wav_file_name = file_name  # keep the original if already WAV
 
-        logging.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
         add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
         file_path = os.path.join(UPLOAD_DIR, wav_file_name)
-
-        # Log time & activity
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Processing file {wav_file_name} with model {model_name}")
 
@@ -313,12 +336,13 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         # Save results & log activity process
         timestamp = get_timestamp()
         os.makedirs("transcripts", exist_ok=True)
-        json_path = os.path.join("transcripts", f"{file_name}.json")
+        json_path = os.path.join("transcripts", f"{file_name}.wav.json")
         if not os.path.exists(json_path):
-            with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.json"), "w", encoding="utf-8") as f:
+            with open(os.path.join("transcripts", f"{file_name.split('.')[0]}.wav.json"), "w", encoding="utf-8") as f:
                 json.dump(full_transcript, f, indent=4)
-            
-        logging.info(f"{timestamp}: Successfully processed file {file_name}.wav with model {model_name}")
+
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Successfully processed file {file_name} with model {model_name}")
         update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     
@@ -361,13 +385,15 @@ def delete_job(uuid: str) -> dict:
     try:
         os.remove(os.path.join(UPLOAD_DIR, file_name))
     except FileNotFoundError:
-        logging.warning(f"File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
+        timestamp = get_timestamp()
+        logging.warning(f"{timestamp}: File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
     try:  
         os.remove(os.path.join("transcripts", f"{file_name}.json"))
     except FileNotFoundError:
-        logging.warning(f"Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
-    timestamp = get_timestamp()
+        timestamp = get_timestamp()
+        logging.warning(f"{timestamp}: Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
 
+    timestamp = get_timestamp()
     logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
     return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
@@ -443,59 +469,58 @@ def get_file_transcript(uuid: str) -> dict:
         uuid = uuid.zfill(4)
         file_name = get_file_name(uuid)["file_name"]
         file_path = f"transcripts/{file_name}.json"
-        logging.info(file_path)
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Retrieving transcript for UUID: {uuid}, file name: {file_name}")
         
         if os.path.exists(file_path):
             full_transcript = []
             with open(file_path, "r", encoding="utf-8") as f:
                 full_transcript = f.read()
             timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
+            logging.info(f"{timestamp}: Successfully retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
             return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript,"status_code":"200"}
         else:
+            timestamp = get_timestamp()
+            logging.error(f"{timestamp}: {file_name} transcript not found.")
             return {"uuid": uuid, "status": "not found", "status_code":"404"}
     except Exception as e: 
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error retrieving {file_name} transcript.")
         return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
 
-@app.get("/jobs/{uuid}/result")
-def get_job_result(uuid: str) -> dict:
-    """
-    Returns the  transcript with timestamps for the given UUID, separated by speakers.
-    """
-    uuid = uuid.zfill(4)
-    raw_transcript = get_file_transcript(uuid)["full_transcript"]
-    result = parse_transcript_with_times(raw_transcript)
-    full_result = ""
-    for speaker, entries in result.items():
-        full_result += f"{speaker}:\n"
-        for e in entries:
-            full_result += f"  {e['start']:.2f}–{e['end']:.2f} → {e['text']}\n"
-    timestamp = get_timestamp()
-    file_name = get_file_name(uuid)["file_name"]
-    logging.info(f"{timestamp}: Retrieved diarised transcript for UUID: {uuid}, file name: {file_name}")
-    return {"uuid": uuid, "status": "exists", "result": full_result}
-
 @app.post("/jobs/{uuid}/summarise")
-def summarise_job(uuid: str) -> dict[str, str]:
+def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]:
     """
     Summarises the transcript for the given UUID using a defined LLM.
+    
+    Args:
+        uuid: The job UUID to summarize
+        request: Optional SummarizeRequest containing custom_prompt and/or system_prompt
     """
     uuid = uuid.zfill(4)
     file_name = get_file_name(uuid)["file_name"]
     try:
         get_full_transcript_response = get_file_transcript(uuid)
         if get_full_transcript_response["status"] == "not found":
-            return {"error": f"Transcript not found for the given UUID: {uuid}."}
+            raise HTTPException(status_code=404, detail={"error": f"Transcript not found for the given UUID: {uuid}."})
         else:
             full_transcript = get_full_transcript_response["full_transcript"]
 
-        summary = summarise_transcript(full_transcript)
-        timestamp = get_timestamp()
+        # Extract custom prompts if provided
+        custom_prompt = None
+        system_prompt = None
+        if request:
+            custom_prompt = request.custom_prompt
+            system_prompt = request.system_prompt
+
+        summary = summarise_transcript(full_transcript, custom_prompt, system_prompt)
 
         if "Error" in summary:
+            timestamp = get_timestamp()
             logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
+            raise HTTPException(status_code=500, detail={"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary})
         else:
+            timestamp = get_timestamp()
             logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
             return {
             "uuid": uuid,
@@ -507,7 +532,118 @@ def summarise_job(uuid: str) -> dict[str, str]:
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""} # type: ignore
+        raise HTTPException(status_code=500, detail={"uuid": uuid, "file_name": file_name, "error": str(e), "summary": ""})
+
+@app.patch("/jobs/{uuid}/rename")
+def rename_job(uuid: str, new_name: str) -> dict:
+    """
+    Renames the job with the given UUID.
+    """
+    uuid = uuid.zfill(4)
+    
+    with CSV_LOCK:
+        rows = []
+        file_name_to_rename = None
+        if os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row["uuid"] == uuid:
+                        file_name_to_rename = row["file_name"]
+                        row["file_name"] = new_name
+                    rows.append(row)
+
+        if file_name_to_rename:
+            with open(CSV_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                writer.writeheader()
+                writer.writerows(rows)
+            
+            # Rename the audio file
+            old_audio_path = os.path.join(UPLOAD_DIR, file_name_to_rename)
+            new_audio_path = os.path.join(UPLOAD_DIR, new_name)
+            if os.path.exists(old_audio_path):
+                os.rename(old_audio_path, new_audio_path)
+
+            # Rename the transcript file
+            old_transcript_path = os.path.join("transcripts", f"{file_name_to_rename}.json")
+            new_transcript_path = os.path.join("transcripts", f"{new_name}.json")
+            if os.path.exists(old_transcript_path):
+                os.rename(old_transcript_path, new_transcript_path)
+            
+            return {"uuid": uuid, "status": "success", "new_name": new_name}
+        else:
+            return {"error": "UUID not found", "status_code": "404"}
+        
+@app.patch("/jobs/{uuid}/speakers")
+def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
+    """
+    Updates the speaker names in a transcript file based on a provided mapping.
+    
+    Expects a JSON body with a 'mapping' key, e.g.:
+    {
+        "mapping": {
+            "SPEAKER_00": "Alice",
+            "SPEAKER_01": "Bob"
+        }
+    }
+    """
+    try:
+        uuid = uuid.zfill(4)
+        timestamp = get_timestamp()
+        
+        # 1. Get the filename associated with the UUID
+        filename_response = get_file_name(uuid)
+        if "error" in filename_response:
+            logging.error(f"{timestamp}: No file found for UUID {uuid} during speaker rename attempt.")
+            return {"error": f"UUID {uuid} not found", "status_code": "404"}
+            
+        file_name = filename_response["file_name"]
+        transcript_path = os.path.join("transcripts", f"{file_name}.json")
+
+        # 2. Check if the transcript file exists
+        if not os.path.exists(transcript_path):
+            logging.error(f"{timestamp}: Transcript file not found at {transcript_path} for UUID {uuid}.")
+            return {"error": "Transcript file not found", "status_code": "404"}
+
+        # 3. Read, update, and write the transcript data
+        temp_file_path = transcript_path + ".tmp"
+        with open(transcript_path, "r", encoding="utf-8") as f_read, open(temp_file_path, "w", encoding="utf-8") as f_write:
+            transcript_data = json.load(f_read)
+            
+            # Create a copy of the mapping from the Pydantic model
+            name_map = speaker_map.mapping
+
+            # Iterate through each segment and update the speaker name if it's in the map
+            # Normalize None to placeholder
+            for segment in transcript_data:
+                original_speaker = (segment.get("speaker") or "SPEAKER_00").strip()
+
+                if original_speaker in name_map:
+                    segment["speaker"] = name_map[original_speaker].strip()
+            
+            json.dump(transcript_data, f_write, indent=4)
+
+        # Atomically replace the original file with the updated one
+        os.replace(temp_file_path, transcript_path)
+
+        logging.info(f"{timestamp}: Successfully renamed speakers for UUID {uuid}, file: {file_name}")
+        return {
+            "uuid": uuid, 
+            "status": "success", 
+            "message": "Speaker names updated successfully.",
+            "status_code": "200",
+            "transcript": transcript_data
+        }
+
+    except json.JSONDecodeError as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error decoding JSON for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": "Invalid transcript file format.", "status_code": "500"}
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################
 @app.get("/logs")
@@ -528,37 +664,15 @@ def health_check():
     try:
         logs = get_logs()
         error_msg = [i for i in logs['logs'] if "error" in i.lower()]
-        timestamp = get_timestamp()
         if error_msg:
+            timestamp = get_timestamp()
             logging.error(f"{timestamp}: Health check found errors: {error_msg}")
             return {"status": "error", "message": error_msg, "status_code": "500"}
         else:
+            timestamp = get_timestamp()
             logging.info(f"{timestamp}: Health check passed successfully.")
             return {"status": "ok", "status_code": "200"}
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e), "status_code": "500"}
-
-
-@app.post("/testingllm")
-def testingllm():
-    import requests
-
-    payload = {
-        "model": "Qwen2.5",
-        "messages": [
-            {"role": "system", "content": "You are a travel advisor."},
-            {"role": "user", "content": "What are the 3 Laws of Newton?"}
-        ],
-        "temperature": 0.8,
-        "max_tokens": 8000
-    }
-
-    r = requests.post(
-        "http://qwen2.5:8000/v1/chat/completions",
-        headers={"Content-Type": "application/json"},
-        json=payload, timeout=60
-    )
-    resp = r.json()
-    return(resp['choices'][0]['message']['content'])

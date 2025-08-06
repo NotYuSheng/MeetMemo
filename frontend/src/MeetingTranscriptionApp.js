@@ -1,14 +1,42 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Upload, Download, FileText, Hash } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  Upload,
+  Download,
+  FileText,
+  Hash,
+  Send,
+  MessagesSquare,
+} from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
 import { useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+
+const processTranscriptWithSpeakerIds = (transcriptData) => {
+  const speakerMap = {};
+  let speakerCounter = 1;
+  return transcriptData.map((entry, idx) => {
+    const speaker = entry.speaker ?? "SPEAKER_00";
+    if (!speakerMap[speaker]) {
+      speakerMap[speaker] = speakerCounter++;
+    }
+    return {
+      id: idx,
+      speaker: speaker,
+      speakerId: speakerMap[speaker],
+      text: entry.text,
+      start: entry.start,
+      end: entry.end,
+    };
+  });
+};
+
 const MeetingTranscriptionApp = () => {
-  /////////////////////////// All constants ///////////////////////////
-  // Constants for transcription function
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState([]);
@@ -23,12 +51,129 @@ const MeetingTranscriptionApp = () => {
   const [meetingList, setMeetingList] = useState([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [showPromptInputs, setShowPromptInputs] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState("turbo");
+  const [speakerNameMap, setSpeakerNameMap] = useState({});
+  const speakerNameMapRef = useRef(speakerNameMap);
+  useEffect(() => {
+    speakerNameMapRef.current = speakerNameMap;
+  }, [speakerNameMap]);
 
-  /////////////////////////// All funct6ions //////////////////////////
-  // Shortens transcripts with overly long file names
+  // Initialize particles.js
+  useEffect(() => {
+    if (window.particlesJS) {
+      window.particlesJS("particles-js", {
+        particles: {
+          number: {
+            value: 80,
+            density: {
+              enable: true,
+              value_area: 800,
+            },
+          },
+          color: {
+            value: "#FFFFFF",
+          },
+          shape: {
+            type: "circle",
+            stroke: {
+              width: 0,
+              color: "#000000",
+            },
+          },
+          opacity: {
+            value: 1,
+            random: false,
+            anim: {
+              enable: false,
+              speed: 1,
+              opacity_min: 0.7,
+              sync: false,
+            },
+          },
+          size: {
+            value: 3,
+            random: true,
+            anim: {
+              enable: false,
+              speed: 40,
+              size_min: 0.1,
+              sync: false,
+            },
+          },
+          line_linked: {
+            enable: true,
+            distance: 150,
+            color: "#FFFFFF",
+            opacity: 1,
+            width: 1.5,
+          },
+          move: {
+            enable: true,
+            speed: 6,
+            direction: "none",
+            random: false,
+            straight: false,
+            out_mode: "out",
+            bounce: false,
+            attract: {
+              enable: false,
+              rotateX: 600,
+              rotateY: 1200,
+            },
+          },
+        },
+        interactivity: {
+          detect_on: "canvas",
+          events: {
+            onhover: {
+              enable: true,
+              mode: "repulse",
+            },
+            onclick: {
+              enable: true,
+              mode: "push",
+            },
+            resize: true,
+          },
+          modes: {
+            grab: {
+              distance: 400,
+              line_linked: {
+                opacity: 1,
+              },
+            },
+            bubble: {
+              distance: 400,
+              size: 40,
+              duration: 2,
+              opacity: 8,
+              speed: 3,
+            },
+            repulse: {
+              distance: 200,
+              duration: 0.4,
+            },
+            push: {
+              particles_nb: 4,
+            },
+            remove: {
+              particles_nb: 2,
+            },
+          },
+        },
+        retina_detect: true,
+      });
+    }
+  }, [isDarkMode]);
+  const [editingSpeaker, setEditingSpeaker] = useState(null);
+  const [_, setIsSavingNames] = useState(false);
+
   const truncateFileName = (name, maxLength = 20) => {
     if (!name) return "";
     return name.length > maxLength
@@ -36,7 +181,49 @@ const MeetingTranscriptionApp = () => {
       : name;
   };
 
-  // Allows user to switch between light & dark modes
+  const handleSpeakerNameChange = (oldName, newName) => {
+    if (!newName || oldName === newName) return;
+    setTranscript((prevTranscript) =>
+      prevTranscript.map((entry) =>
+        entry.speaker === oldName ? { ...entry, speaker: newName } : entry,
+      ),
+    );
+    setSpeakerNameMap((prev) => ({
+      ...prev,
+      [oldName]: newName,
+    }));
+    handleSubmitSpeakerNames();
+  };
+
+  const handleSubmitSpeakerNames = () => {
+    if (!selectedMeetingId) {
+      alert("No meeting is selected.");
+      return;
+    }
+    setIsSavingNames(true);
+    const currentSpeakerNameMap = speakerNameMapRef.current;
+
+    fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/speakers`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mapping: currentSpeakerNameMap }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to update speaker names");
+        return res.json();
+      })
+      .then(() => {
+        setIsRenaming(false);
+      })
+      .catch((err) => {
+        console.error("Failed to save speaker names:", err);
+        alert("An error occurred while saving the new names.");
+      })
+      .finally(() => {
+        setIsSavingNames(false);
+      });
+  };
+
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
     document.documentElement.setAttribute(
@@ -45,21 +232,21 @@ const MeetingTranscriptionApp = () => {
     );
   };
 
-  // Loads data & summary of past meeting that's selected by user
   const loadPastMeeting = (uuid) => {
-    getSpeakerColor.speakerMap = {};
-    fetch(`/jobs/${uuid}/transcript`)
+    setTranscript([]);
+    setSummary(null);
+    setSelectedMeetingId(uuid);
+    speakerColorMap.current = {};
+    setSummaryLoading(true);
+
+    fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
       .then((res) => res.json())
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
-        setTranscript(
-          parsed.map((entry, idx) => {
-            const speaker = Object.keys(entry)[0];
-            const text = entry[speaker];
-            return { id: idx, speaker, text };
-          }),
-        );
-        return fetch(`/jobs/${uuid}/summarise`, { method: "POST" });
+        setTranscript(processTranscriptWithSpeakerIds(parsed));
+        return fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, {
+          method: "POST",
+        });
       })
       .then((res) => res.json())
       .then((data) => {
@@ -67,12 +254,32 @@ const MeetingTranscriptionApp = () => {
           meetingTitle: data.fileName,
           summary: data.summary,
         });
-        setSelectedMeetingId(uuid);
       })
-      .catch((err) => console.error("Failed to load past meeting", err));
+      .catch((err) => console.error("Failed to load past meeting", err))
+      .finally(() => setSummaryLoading(false));
   };
 
-  // Helps with recording functionality when user chooses to record audio directly from site
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const handleRename = () => {
+    if (!selectedMeetingId) return;
+
+    fetch(
+      `${API_BASE_URL}/jobs/${selectedMeetingId}/rename?new_name=${newName}`,
+      { method: "PATCH" },
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          setSummary((prev) => ({ ...prev, meetingTitle: newName }));
+          fetchMeetingList();
+          setIsRenaming(false);
+        }
+      })
+      .catch((err) => console.error("Failed to rename meeting", err));
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -98,7 +305,6 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
-  // To stop audio recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -109,15 +315,14 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
-  // Uploads file to the back-end via the /jobs post method
   const uploadFile = () => {
     if (!selectedFile) return;
-    getSpeakerColor.speakerMap = {}; // Reset color cache
+    speakerColorMap.current = {};
     setLoading(true);
     const formData = new FormData();
     formData.append("file", selectedFile);
 
-    fetch("/jobs", {
+    fetch(`${API_BASE_URL}/jobs`, {
       method: "POST",
       body: formData,
     })
@@ -125,11 +330,7 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         setTranscript(
           Array.isArray(data.transcript)
-            ? data.transcript.map((entry, idx) => {
-                const speaker = Object.keys(entry)[0];
-                const text = entry[speaker];
-                return { id: idx, speaker, text };
-              })
+            ? processTranscriptWithSpeakerIds(data.transcript)
             : [],
         );
         fetchSummary(data.uuid);
@@ -142,13 +343,12 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
-  // Transcribes submitted audio file, & generates a meeting summary for the user.
   const processAudio = async (audioBlob) => {
     setIsProcessing(true);
     const formData = new FormData();
     formData.append("file", audioBlob);
 
-    fetch("/jobs", {
+    fetch(`${API_BASE_URL}/jobs`, {
       method: "POST",
       body: formData,
     })
@@ -156,11 +356,7 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         setTranscript(
           Array.isArray(data.transcript)
-            ? data.transcript.map((entry, idx) => {
-                const speaker = Object.keys(entry)[0];
-                const text = entry[speaker];
-                return { id: idx, speaker, text };
-              })
+            ? processTranscriptWithSpeakerIds(data.transcript)
             : [],
         );
         fetchSummary(data.uuid);
@@ -173,9 +369,8 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
-  // Fetches a list of all past meetings to be displayed in side bar
-  const fetchMeetingList = useCallback(() => {
-    fetch("/jobs")
+  const fetchMeetingList = () => {
+    fetch(`${API_BASE_URL}/jobs`)
       .then((res) => res.json())
       .then((data) => {
         const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
@@ -185,15 +380,36 @@ const MeetingTranscriptionApp = () => {
         setMeetingList(list);
       })
       .catch((err) => console.error("Failed to fetch meeting list", err));
-  }, []);
+  };
 
-  // Feeds the transcript into desired LLM for AI-generated summary
   const fetchSummary = (uuid) => {
     setSummaryLoading(true);
-    fetch(`/jobs/${uuid}/summarise`, { method: "POST" })
+
+    // Prepare request body with custom prompts if provided
+    const requestBody = {};
+    if (customPrompt.trim()) {
+      requestBody.custom_prompt = customPrompt.trim();
+    }
+    if (systemPrompt.trim()) {
+      requestBody.system_prompt = systemPrompt.trim();
+    }
+
+    const requestOptions = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    // Only add body if we have custom prompts
+    if (Object.keys(requestBody).length > 0) {
+      requestOptions.body = JSON.stringify(requestBody);
+    }
+
+    fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, requestOptions)
       .then((res) => res.json())
       .then((data) => {
-        if (data) {
+        if (data && data.summary) {
           setSummary({
             meetingTitle: data.fileName,
             summary: data.summary,
@@ -204,17 +420,13 @@ const MeetingTranscriptionApp = () => {
       .finally(() => setSummaryLoading(false));
   };
 
-  // Handles deletion of past meeting by user
   const handleDeleteMeeting = (uuid) => {
     if (!window.confirm("Are you sure you want to delete this meeting?"))
       return;
 
-    fetch(`/jobs/${uuid}`, {
-      method: "DELETE",
-    })
+    fetch(`${API_BASE_URL}/jobs/${uuid}`, { method: "DELETE" })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to delete meeting");
-        // Update UI state
         setMeetingList((prev) => prev.filter((m) => m.uuid !== uuid));
         if (selectedMeetingId === uuid) {
           setTranscript([]);
@@ -225,21 +437,17 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Delete failed:", err));
   };
 
-  // Exports summary to user in PDF format
   const exportToPDF = () => {
     if (!summary) return;
-
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 40; // uniform page margin
+    const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const lineHeight = 14;
     let y = margin;
-
-    /* ---------- helpers ---------- */
-
-    // writes text, adding new page when needed
-    const addLine = (text, indent = margin) => {
+    const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont(undefined, isBold ? "bold" : "normal");
       const wrapped = doc.splitTextToSize(text, pageWidth - indent - margin);
       wrapped.forEach((line) => {
         if (y + lineHeight > pageHeight - margin) {
@@ -250,54 +458,56 @@ const MeetingTranscriptionApp = () => {
         y += lineHeight;
       });
     };
-
-    // bullet-list or paragraph
-    const addList = (title, items, bullet = "•") => {
-      if (!items || (Array.isArray(items) && items.length === 0)) return;
-
-      addLine(""); // blank line
-      addLine(`${title}:`);
-
-      const listItems = Array.isArray(items)
-        ? items
-        : String(items).split("\n"); // treat plain string as paragraph
-
-      listItems.forEach((item) => addLine(`${bullet} ${item}`, margin + 14));
-    };
-
-    /* ---------- document body ---------- */
-
     doc.setFontSize(18);
-    addLine("Meeting Summary");
-
+    addLine("Meeting Summary", margin, 18, true);
+    y += lineHeight;
     doc.setFontSize(12);
-    addLine(`Title: ${summary.meetingTitle || "N/A"}`);
-    addLine(
-      `Participants: ${(summary.participants || []).join(", ") || "N/A"}`,
-    );
-
-    addList("Summary", summary.summary); // plain string ok
-    addList("Key Discussion Points", summary.keyPoints);
-    addList("Action Items", summary.actionItems);
-    addList("Next Steps", summary.nextSteps);
-
+    addLine(`Title: ${summary.meetingTitle || "N/A"}`, margin, 12, true);
+    y += lineHeight;
+    const lines = summary.summary.split("\n");
+    lines.forEach((line) => {
+      if (line.startsWith("### ")) {
+        addLine(line.substring(4), margin, 14, true);
+      } else if (line.startsWith("- ")) {
+        addLine(line.substring(2), margin + 15);
+      } else {
+        addLine(line, margin);
+      }
+    });
     doc.save("meeting-summary.pdf");
   };
 
-  // Formats time to be displayed (works with display of meeting recording duration)
+  const exportTranscriptToTxt = () => {
+    if (transcript.length === 0) return;
+    let textContent = "Meeting Transcript\n\n";
+    transcript.forEach((entry) => {
+      const speaker = speakerNameMap[entry.speaker] ?? entry.speaker;
+      textContent += `${speaker}: ${entry.text}\n\n`;
+    });
+
+    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "meeting-transcript.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Alternates speaker colors for more vibrant front-end display
   const getSpeakerColor = useCallback((speaker) => {
     const colors = [
-      "speaker-blue",
-      "speaker-green",
-      "speaker-purple",
-      "speaker-orange",
+      "speaker-afblue",
+      "speaker-poisedgold",
+      "speaker-navyblue",
+      "speaker-armyred",
     ];
     if (!(speaker in speakerColorMap.current)) {
       const newColorIndex =
@@ -307,8 +517,6 @@ const MeetingTranscriptionApp = () => {
     return speakerColorMap.current[speaker];
   }, []);
 
-  /////////////////////////// All use effects //////////////////////////
-  // Checks based on user's web settings if they prefer light or dark mode by default
   useEffect(() => {
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)",
@@ -320,9 +528,8 @@ const MeetingTranscriptionApp = () => {
     );
   }, []);
 
-  // Converts past meeting data fetched from the back-end into compatible format to feed into the display card
   useEffect(() => {
-    fetch("/jobs")
+    fetch(`${API_BASE_URL}/jobs`)
       .then((res) => res.json())
       .then((data) => {
         const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
@@ -334,7 +541,6 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Failed to fetch meeting list", err));
   }, []);
 
-  // Records the duration of the meeting, if the record button is toggled directly on the app
   useEffect(() => {
     if (isRecording) {
       timerRef.current = setInterval(() => {
@@ -346,17 +552,18 @@ const MeetingTranscriptionApp = () => {
     return () => clearInterval(timerRef.current);
   }, [isRecording]);
 
-  // Automatically loads past meetings from server side
   useEffect(() => {
     fetchMeetingList();
-  }, [fetchMeetingList]);
+  }, []);
 
   return (
     <div className="app-container">
       <div className="max-width-container">
         {/* Header */}
         <div className="header-card">
-          <h1 className="header-title">🧠 MeetMemo</h1>
+          <h1 className="header-title">
+            <MessagesSquare className="header-icon" /> MeetMemo
+          </h1>
           <button
             className="btn btn-small"
             onClick={toggleDarkMode}
@@ -371,7 +578,7 @@ const MeetingTranscriptionApp = () => {
         </div>
 
         <div className="main-grid">
-          {/* Left Column - Recording Controls and Transcript */}
+          {/* Left Column */}
           <div className="left-column">
             {/* Recording Controls */}
             <div className="card">
@@ -381,7 +588,7 @@ const MeetingTranscriptionApp = () => {
               </h2>
 
               <div className="controls-container">
-                {/* Select model for transcription */}
+                {/* Model select */}
                 <label className="model-select-wrapper">
                   <span className="model-select-label">Model:</span>
                   <select
@@ -389,13 +596,11 @@ const MeetingTranscriptionApp = () => {
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="model-select"
                   >
-                    {["tiny", "base", "small", "medium", "large", "turbo"].map(
-                      (m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ),
-                    )}
+                    {["tiny", "medium", "turbo"].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
@@ -417,7 +622,7 @@ const MeetingTranscriptionApp = () => {
                     className="btn btn-secondary"
                   >
                     <Upload className="btn-icon" />
-                    {selectedFile ? "Change Audio File" : "Choose Audio File"}
+                    {selectedFile ? "Change Audio File" : "Upload Audio File"}
                   </button>
 
                   <button
@@ -425,12 +630,8 @@ const MeetingTranscriptionApp = () => {
                     disabled={!selectedFile || loading}
                     className={`btn ${selectedFile ? "btn-primary" : "btn-disabled"}`}
                   >
-                    <Upload className="btn-icon" />
-                    {loading
-                      ? "Uploading..."
-                      : selectedFile
-                        ? "Upload Selected File"
-                        : "Upload Audio"}
+                    <Send className="btn-icon" />
+                    {loading ? "Transcribing..." : "Start Transcription"}
                   </button>
                 </div>
 
@@ -452,15 +653,7 @@ const MeetingTranscriptionApp = () => {
                 className="file-input"
               />
 
-              {/* Uploading progress indicator */}
-              {loading && (
-                <div className="processing-indicator">
-                  <div className="spinner"></div>
-                  <span>Processing audio with AI...</span>
-                </div>
-              )}
-
-              {isProcessing && (
+              {(loading || isProcessing) && (
                 <div className="processing-indicator">
                   <div className="spinner"></div>
                   <span>Processing audio with AI...</span>
@@ -468,67 +661,249 @@ const MeetingTranscriptionApp = () => {
               )}
             </div>
 
-            {/* Transcript Section */}
+            {/* Transcript & Summary */}
             <div className="card">
-              <h2 className="section-title">
-                <FileText className="section-icon" />
-                Live Transcript
-              </h2>
-
-              <div className="transcript-container">
-                {transcript.length > 0 ? (
-                  transcript.map((entry) => (
-                    <div key={entry.id} className="transcript-entry">
-                      <div className="transcript-header">
-                        <span
-                          className={`speaker-badge ${getSpeakerColor(entry.speaker)}`}
-                        >
-                          {entry.speaker}
-                        </span>
-                      </div>
-                      <p className="transcript-text">{entry.text}</p>
+              <div className="transcript-summary-header">
+                <div className="tabs">
+                  <button
+                    className={`tab-button ${!showSummary ? "active" : ""}`}
+                    onClick={() => setShowSummary(false)}
+                  >
+                    <FileText className="section-icon" />
+                    Transcript
+                  </button>
+                  <button
+                    className={`tab-button ${showSummary ? "active" : ""}`}
+                    onClick={() => setShowSummary(true)}
+                  >
+                    <Hash className="section-icon" />
+                    Summary
+                  </button>
+                </div>
+                <div className="actions-group">
+                  {!showSummary && (
+                    <button
+                      onClick={exportTranscriptToTxt}
+                      className="btn btn-success btn-small"
+                    >
+                      <Download className="btn-icon" />
+                      Export TXT
+                    </button>
+                  )}
+                  {showSummary && (
+                    <div className="summary-actions-group">
+                      <button
+                        onClick={() => setShowPromptInputs(!showPromptInputs)}
+                        className="btn btn-secondary btn-small"
+                      >
+                        {showPromptInputs ? "Hide Prompts" : "Custom Prompts"}
+                      </button>
+                      <button
+                        onClick={exportToPDF}
+                        className="btn btn-success btn-small"
+                      >
+                        <Download className="btn-icon" />
+                        Export PDF
+                      </button>
                     </div>
-                  ))
+                  )}
+                </div>
+              </div>
+
+              {/* Custom Prompts Section */}
+              {showSummary && showPromptInputs && (
+                <div className="custom-prompts-section">
+                  <div className="prompt-input-group">
+                    <label htmlFor="system-prompt">
+                      System Prompt (Optional):
+                    </label>
+                    <textarea
+                      id="system-prompt"
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      placeholder="e.g., You are a helpful assistant that summarizes meeting transcripts with focus on technical decisions..."
+                      className="prompt-textarea"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="prompt-input-group">
+                    <label htmlFor="custom-prompt">
+                      Custom User Prompt (Optional):
+                    </label>
+                    <textarea
+                      id="custom-prompt"
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="e.g., Please summarize this meeting focusing on action items and deadlines..."
+                      className="prompt-textarea"
+                      rows={3}
+                    />
+                  </div>
+                  <button
+                    onClick={() =>
+                      selectedMeetingId && fetchSummary(selectedMeetingId)
+                    }
+                    className="btn btn-primary btn-small"
+                    disabled={!selectedMeetingId}
+                  >
+                    Regenerate Summary
+                  </button>
+                </div>
+              )}
+              {showSummary ? (
+                summaryLoading ? (
+                  <div className="processing-indicator">
+                    <div className="spinner"></div>
+                    <span>Generating summary with AI…</span>
+                  </div>
+                ) : summary && summary.summary ? (
+                  <div className="summary-content">
+                    {isRenaming ? (
+                      <div className="rename-container">
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="rename-input"
+                        />
+                        <div className="rename-buttons-group">
+                          <button
+                            onClick={handleRename}
+                            className="btn btn-success btn-small"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setIsRenaming(false)}
+                            className="btn btn-secondary btn-small"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p>
+                        <strong>Title:</strong> {summary.meetingTitle}
+                        <button
+                          onClick={() => {
+                            setIsRenaming(true);
+                            setNewName(summary.meetingTitle);
+                          }}
+                          className="btn btn-secondary btn-small rename-btn"
+                        >
+                          Rename
+                        </button>
+                      </p>
+                    )}
+                    <div className="summary-text">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {summary.summary}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
                 ) : (
                   <div className="empty-state">
-                    <Mic className="empty-icon" />
-                    <p className="empty-title">No transcript available</p>
+                    <Hash className="empty-icon" />
+                    <p className="empty-title">No summary available</p>
                     <p className="empty-subtitle">
-                      Start recording or upload an audio file to begin
+                      Summary will appear after processing audio
                     </p>
                   </div>
-                )}
-              </div>
+                )
+              ) : (
+                <div className="transcript-container">
+                  {transcript.length > 0 ? (
+                    transcript.map((entry) => (
+                      <div key={entry.id} className="transcript-entry">
+                        <div className="transcript-header">
+                          {editingSpeaker === entry.speaker ? (
+                            <div className="speaker-edit-container">
+                              <input
+                                type="text"
+                                defaultValue={entry.speaker ?? "SPEAKER_00"}
+                                onBlur={(e) => {
+                                  handleSpeakerNameChange(
+                                    entry.speaker,
+                                    e.target.value,
+                                  );
+                                  setEditingSpeaker(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleSpeakerNameChange(
+                                      entry.speaker,
+                                      e.target.value,
+                                    );
+                                    setEditingSpeaker(null);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => setEditingSpeaker(null)}
+                                className="btn btn-success btn-small"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="speaker-container">
+                              <span
+                                className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
+                              >
+                                {speakerNameMap[entry.speaker] ?? entry.speaker}
+                              </span>
+                              <button
+                                onClick={() => setEditingSpeaker(entry.speaker)}
+                                className="btn btn-secondary btn-small rename-speaker-btn"
+                              >
+                                Rename
+                              </button>
+                            </div>
+                          )}
+                          <span className="timestamp">
+                            {entry.start}s - {entry.end}s
+                          </span>
+                        </div>
+                        <p className="transcript-text">{entry.text}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-state">
+                      <Mic className="empty-icon" />
+                      <p className="empty-title">No transcript available</p>
+                      <p className="empty-subtitle">
+                        Start recording or upload an audio file to begin
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Column – Past Meetings & AI Summary */}
+          {/* Right Column – Past Meetings */}
           <div className="right-column">
-            {/* Past Meetings */}
-            <div className="card">
+            <div className="card meetings-card">
               <h2 className="section-title">
                 <FileText className="section-icon" />
                 Meetings
               </h2>
-
               <div className="meetings-scroll-wrapper">
                 {meetingList.map((meeting, index) => {
                   const colorClass = `btn-past-${(index % 4) + 1}`;
                   return (
                     <div key={meeting.uuid} className="meeting-entry">
-                      {/* Past meeting button */}
                       <button
-                        className={`space btn btn-small ${colorClass} ${selectedMeetingId === meeting.uuid ? "btn-active" : ""}`}
+                        className={`space btn btn-small ${colorClass} ${
+                          selectedMeetingId === meeting.uuid ? "btn-active" : ""
+                        }`}
                         onClick={() => loadPastMeeting(meeting.uuid)}
                       >
                         {truncateFileName(meeting.name)}
                       </button>
-
-                      {/* Delete button */}
                       <button
-                        className="btn btn-danger btn-small"
-                        onClick={() => handleDeleteMeeting(meeting.uuid)}
                         className="btn btn-danger btn-small delete-meeting-btn"
+                        onClick={() => handleDeleteMeeting(meeting.uuid)}
                       >
                         🗑️
                       </button>
@@ -536,49 +911,6 @@ const MeetingTranscriptionApp = () => {
                   );
                 })}
               </div>
-            </div>
-
-            {/* AI Summary */}
-            <div className="card">
-              <div className="summary-header">
-                <h2 className="section-title">
-                  <Hash className="section-icon" />
-                  AI Summary
-                </h2>
-                <button
-                  onClick={exportToPDF}
-                  className="btn btn-success btn-small"
-                >
-                  <Download className="btn-icon" />
-                  Export PDF
-                </button>
-              </div>
-
-              {summaryLoading ? (
-                <div className="processing-indicator">
-                  <div className="spinner"></div>
-                  <span>Generating summary with AI…</span>
-                </div>
-              ) : summary && summary.summary ? (
-                <div className="summary-content">
-                  <p>
-                    <strong>Title:</strong> {summary.meetingTitle}
-                  </p>
-                  <div className="summary-text">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {summary.summary}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <Hash className="empty-icon" />
-                  <p className="empty-title">No summary available</p>
-                  <p className="empty-subtitle">
-                    Summary will appear after processing audio
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
