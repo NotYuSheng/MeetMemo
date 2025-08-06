@@ -43,8 +43,12 @@ const MeetingTranscriptionApp = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [isPlayingRecording, setIsPlayingRecording] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [isPlayingUpload, setIsPlayingUpload] = useState(false);
   const audioPlayerRef = useRef(null);
+  const uploadPlayerRef = useRef(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -179,7 +183,7 @@ const MeetingTranscriptionApp = () => {
     }
   }, [isDarkMode]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
-  const [_, setIsSavingNames] = useState(false);
+  const [, setIsSavingNames] = useState(false);
 
   const truncateFileName = (name, maxLength = 20) => {
     if (!name) return "";
@@ -349,13 +353,17 @@ const MeetingTranscriptionApp = () => {
     }
   }, [recordedAudio]);
 
-  const stopPlayback = () => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current.currentTime = 0;
-      setIsPlayingRecording(false);
+  // Set audio source when selectedFile changes
+  useEffect(() => {
+    if (selectedFile && uploadPlayerRef.current) {
+      const audioUrl = URL.createObjectURL(selectedFile);
+      uploadPlayerRef.current.src = audioUrl;
+      
+      return () => {
+        URL.revokeObjectURL(audioUrl);
+      };
     }
-  };
+  }, [selectedFile]);
 
   const processRecordedAudio = () => {
     if (recordedAudio) {
@@ -367,6 +375,13 @@ const MeetingTranscriptionApp = () => {
   const discardRecording = () => {
     setRecordedAudio(null);
     setRecordingTime(0);
+  };
+
+  const discardUpload = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const uploadFile = () => {
@@ -389,6 +404,7 @@ const MeetingTranscriptionApp = () => {
         );
         fetchSummary(data.uuid);
         fetchMeetingList();
+        setSelectedFile(null); // Clear the selected file after processing
         setLoading(false);
       })
       .catch((err) => {
@@ -683,7 +699,7 @@ const MeetingTranscriptionApp = () => {
                 </label>
 
                 <div className="button-group">
-                  {!isRecording && !recordedAudio ? (
+                  {!isRecording && !recordedAudio && !selectedFile ? (
                     <>
                       <button
                         onClick={startRecording}
@@ -696,7 +712,7 @@ const MeetingTranscriptionApp = () => {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="btn btn-discrete"
-                        title={selectedFile ? "Change Audio File" : "Upload Audio File"}
+                        title="Upload Audio File"
                       >
                         <Upload className="btn-icon" />
                       </button>
@@ -736,9 +752,27 @@ const MeetingTranscriptionApp = () => {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="btn btn-discrete"
-                        title={selectedFile ? "Change Audio File" : "Upload Audio File"}
+                        title="Upload Audio File"
                       >
                         <Upload className="btn-icon" />
+                      </button>
+                    </>
+                  ) : selectedFile ? (
+                    <>
+                      <button
+                        onClick={discardUpload}
+                        className="btn btn-discrete"
+                        title="Discard Upload"
+                      >
+                        <Trash2 className="btn-icon" />
+                      </button>
+
+                      <button
+                        onClick={startRecording}
+                        className="btn btn-discrete"
+                        title="Start Recording"
+                      >
+                        <Mic className="btn-icon" />
                       </button>
                     </>
                   ) : null}
@@ -771,6 +805,20 @@ const MeetingTranscriptionApp = () => {
                 onChange={(e) => setSelectedFile(e.target.files[0])}
                 className="file-input"
               />
+
+              {selectedFile && (
+                <div className="audio-preview">
+                  <h3 className="audio-preview-title">Upload Preview - {selectedFile.name}</h3>
+                  <audio 
+                    ref={uploadPlayerRef} 
+                    controls 
+                    className="audio-player"
+                    onPlay={() => setIsPlayingUpload(true)}
+                    onPause={() => setIsPlayingUpload(false)}
+                    onEnded={() => setIsPlayingUpload(false)}
+                  />
+                </div>
+              )}
 
               {recordedAudio && (
                 <div className="audio-preview">
