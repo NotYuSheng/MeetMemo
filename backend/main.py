@@ -11,7 +11,7 @@ from collections import defaultdict
 from pyannote.audio import Pipeline
 from pyannote_whisper.utils import diarize_text
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pydub import AudioSegment
@@ -502,7 +502,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
     try:
         get_full_transcript_response = get_file_transcript(uuid)
         if get_full_transcript_response["status"] == "not found":
-            return {"error": f"Transcript not found for the given UUID: {uuid}."}
+            raise HTTPException(status_code=404, detail={"error": f"Transcript not found for the given UUID: {uuid}."})
         else:
             full_transcript = get_full_transcript_response["full_transcript"]
 
@@ -518,7 +518,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
         if "Error" in summary:
             timestamp = get_timestamp()
             logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
+            raise HTTPException(status_code=500, detail={"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary})
         else:
             timestamp = get_timestamp()
             logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
@@ -532,7 +532,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""} # type: ignore
+        raise HTTPException(status_code=500, detail={"uuid": uuid, "file_name": file_name, "error": str(e), "summary": ""})
 
 @app.patch("/jobs/{uuid}/rename")
 def rename_job(uuid: str, new_name: str) -> dict:
