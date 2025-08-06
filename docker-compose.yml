@@ -8,6 +8,7 @@ services:
       - .env
     environment:
       - USE_AUTH_TOKEN=${USE_AUTH_TOKEN}
+      - PYTHONUNBUFFERED=1
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs

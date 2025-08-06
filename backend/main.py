@@ -718,16 +718,6 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
         return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################
-@app.get("/logs")
-def get_logs() -> dict:
-    """
-    Get logs.
-    """
-    with open("logs/app.log", "r") as f:
-        logs = f.readlines()
-    return {"logs": logs}
-
-
 @app.get("/health")
 def health_check():
     """
