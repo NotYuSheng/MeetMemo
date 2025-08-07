@@ -43,8 +43,6 @@ const MeetingTranscriptionApp = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState(null);
-  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
-  const [isPlayingUpload, setIsPlayingUpload] = useState(false);
   const audioPlayerRef = useRef(null);
   const uploadPlayerRef = useRef(null);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -363,13 +361,6 @@ const MeetingTranscriptionApp = () => {
     }
   }, [selectedFile]);
 
-  const stopPlayback = () => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current.currentTime = 0;
-      setIsPlayingRecording(false);
-    }
-  };
 
   const processRecordedAudio = () => {
     if (recordedAudio) {
@@ -843,7 +834,7 @@ const MeetingTranscriptionApp = () => {
                         <Mic className="btn-icon" />
                       </button>
                     </>
-                  ) : null
+                  ) : null}
 
                   <button
                     onClick={recordedAudio ? processRecordedAudio : uploadFile}
@@ -885,9 +876,6 @@ const MeetingTranscriptionApp = () => {
                     ref={uploadPlayerRef} 
                     controls 
                     className="audio-player"
-                    onPlay={() => setIsPlayingUpload(true)}
-                    onPause={() => setIsPlayingUpload(false)}
-                    onEnded={() => setIsPlayingUpload(false)}
                   />
                 </div>
               )}
@@ -899,9 +887,6 @@ const MeetingTranscriptionApp = () => {
                     ref={audioPlayerRef}
                     controls
                     className="audio-player"
-                    onPlay={() => setIsPlayingRecording(true)}
-                    onPause={() => setIsPlayingRecording(false)}
-                    onEnded={() => setIsPlayingRecording(false)}
                   />
                 </div>
               )}
