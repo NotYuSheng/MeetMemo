@@ -99,7 +99,7 @@ Before downloading models, you must accept the licenses for the required PyAnnot
 2. **Configure the `.env` file**:
    ```env
    # Hugging Face authentication token
-   USE_AUTH_TOKEN=your_huggingface_token_here
+   HF_TOKEN=your_huggingface_token_here
    
    # LLM API configuration for summarization
    LLM_API_URL=your_llm_url
