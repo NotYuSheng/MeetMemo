@@ -653,7 +653,7 @@ const MeetingTranscriptionApp = () => {
 
                   <button
                     onClick={uploadFile}
-                    disabled={!selectedFile || loading}
+                    disabled={loading}
                     className={`btn ${selectedFile ? "btn-primary" : "btn-disabled"}`}
                   >
                     <Send className="btn-icon" />
