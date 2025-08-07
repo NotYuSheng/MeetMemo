@@ -4,10 +4,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: backend
-    env_file:
-      - .env
     environment:
-      - USE_AUTH_TOKEN=${USE_AUTH_TOKEN}
+      - HF_TOKEN=${HF_TOKEN:-CHANGEME}
+      - LLM_API_URL=${LLM_API_URL:-CHANGEME}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
+      - PYTHONUNBUFFERED=1
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
@@ -34,8 +35,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
-    env_file:
-      - .env
     ports:
       - "3000:80"
     networks:
