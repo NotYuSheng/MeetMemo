@@ -1101,7 +1101,9 @@ input:checked + .toggle-slider::after {
 
 [data-theme="dark"] .model-select:hover {
   border-color: #bba88e;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 10%),
+    0 2px 4px -1px rgb(0 0 0 / 6%);
 }
 
 [data-theme="dark"] .model-select:focus {
