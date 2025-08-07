@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Mic,
-  MicOff,
+  Square,
+  Pause,
+  Play,
   Upload,
   Download,
   FileText,
   Hash,
   Send,
   MessagesSquare,
+  Trash2,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
@@ -38,6 +41,14 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
 
 const MeetingTranscriptionApp = () => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [isPlayingUpload, setIsPlayingUpload] = useState(false);
+  const audioPlayerRef = useRef(null);
+  const uploadPlayerRef = useRef(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -77,7 +88,7 @@ const MeetingTranscriptionApp = () => {
             },
           },
           color: {
-            value: "#FFFFFF",
+            value: ["#2998D5", "#265289", "#75797C", "#bba88e", "#FFFFFF"],
           },
           shape: {
             type: "circle",
@@ -87,7 +98,7 @@ const MeetingTranscriptionApp = () => {
             },
           },
           opacity: {
-            value: 1,
+            value: 0.9,
             random: false,
             anim: {
               enable: false,
@@ -109,13 +120,13 @@ const MeetingTranscriptionApp = () => {
           line_linked: {
             enable: true,
             distance: 150,
-            color: "#FFFFFF",
-            opacity: 1,
-            width: 1.5,
+            color: "#8a7c6b",
+            opacity: 0.8,
+            width: 2.5,
           },
           move: {
             enable: true,
-            speed: 6,
+            speed: 2,
             direction: "none",
             random: false,
             straight: false,
@@ -172,9 +183,9 @@ const MeetingTranscriptionApp = () => {
     }
   }, [isDarkMode]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
-  const [_, setIsSavingNames] = useState(false);
+  const [, setIsSavingNames] = useState(false);
 
-  const truncateFileName = (name, maxLength = 20) => {
+  const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
     return name.length > maxLength
       ? name.slice(0, maxLength).trim() + "..."
@@ -294,7 +305,7 @@ const MeetingTranscriptionApp = () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/wav",
         });
-        processAudio(audioBlob);
+        setRecordedAudio(audioBlob);
       };
 
       mediaRecorderRef.current.start();
@@ -305,68 +316,187 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && isRecording && isPaused) {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsPaused(false);
       mediaRecorderRef.current.stream
         .getTracks()
         .forEach((track) => track.stop());
     }
   };
 
-  const uploadFile = () => {
+  // Set audio source when recordedAudio changes
+  useEffect(() => {
+    if (recordedAudio && audioPlayerRef.current) {
+      const audioUrl = URL.createObjectURL(recordedAudio);
+      audioPlayerRef.current.src = audioUrl;
+      
+      return () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+    }
+  }, [recordedAudio]);
+
+  // Set audio source when selectedFile changes
+  useEffect(() => {
+    if (selectedFile && uploadPlayerRef.current) {
+      const audioUrl = URL.createObjectURL(selectedFile);
+      uploadPlayerRef.current.src = audioUrl;
+      
+      return () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+    }
+  }, [selectedFile]);
+
+  const processRecordedAudio = () => {
+    if (recordedAudio) {
+      processAudio(recordedAudio);
+      setRecordedAudio(null); // Clear the recorded audio after processing
+    }
+  };
+
+  const discardRecording = () => {
+    setRecordedAudio(null);
+    setRecordingTime(0);
+  };
+
+  const discardUpload = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const pollJobStatus = async (uuid, maxAttempts = 30) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/jobs/${uuid}/status`);
+        const statusData = await response.json();
+        
+        if (statusData.status === 'completed') {
+          // Job completed, fetch transcript
+          const transcriptResponse = await fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`);
+          const transcriptData = await transcriptResponse.json();
+          
+          if (transcriptData.full_transcript) {
+            const parsed = JSON.parse(transcriptData.full_transcript || "[]");
+            setTranscript(processTranscriptWithSpeakerIds(parsed));
+            setSelectedMeetingId(uuid);
+            fetchSummary(uuid);
+            fetchMeetingList();
+            return true;
+          }
+        } else if (statusData.status === 'failed' || statusData.status === 'error') {
+          throw new Error(statusData.error_message || 'Job failed');
+        }
+        
+        // Job still processing, wait and retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        throw error;
+      }
+    }
+    throw new Error('Job polling timeout - processing took too long');
+  };
+
+  const uploadFile = async () => {
     if (!selectedFile) return;
     speakerColorMap.current = {};
     setLoading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-    fetch(`${API_BASE_URL}/jobs`, {
-      method: "POST",
-      body: formData,
-    })
-      .then((result) => result.json())
-      .then((data) => {
-        setTranscript(
-          Array.isArray(data.transcript)
-            ? processTranscriptWithSpeakerIds(data.transcript)
-            : [],
-        );
+      const response = await fetch(`${API_BASE_URL}/jobs`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      // Check if the response indicates success and has expected data
+      if (data.error || (!data.uuid && !data.transcript)) {
+        throw new Error(data.error || 'Invalid response from server');
+      }
+
+      // If we get a transcript immediately, use it
+      if (data.transcript && Array.isArray(data.transcript)) {
+        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch transcription.", err);
-        setLoading(false);
-      });
+      } else if (data.uuid) {
+        // Otherwise, poll for status
+        await pollJobStatus(data.uuid);
+      } else {
+        throw new Error('No transcript or job ID returned');
+      }
+      
+      setSelectedFile(null);
+    } catch (err) {
+      console.error("Failed to process uploaded file:", err);
+      alert(`Failed to process file: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const processAudio = async (audioBlob) => {
     setIsProcessing(true);
-    const formData = new FormData();
-    formData.append("file", audioBlob);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", audioBlob);
 
-    fetch(`${API_BASE_URL}/jobs`, {
-      method: "POST",
-      body: formData,
-    })
-      .then((result) => result.json())
-      .then((data) => {
-        setTranscript(
-          Array.isArray(data.transcript)
-            ? processTranscriptWithSpeakerIds(data.transcript)
-            : [],
-        );
+      const response = await fetch(`${API_BASE_URL}/jobs`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      // Check if the response indicates success and has expected data
+      if (data.error || (!data.uuid && !data.transcript)) {
+        throw new Error(data.error || 'Invalid response from server');
+      }
+
+      // If we get a transcript immediately, use it
+      if (data.transcript && Array.isArray(data.transcript)) {
+        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
-        setIsProcessing(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch transcription -", err);
-        setIsProcessing(false);
-      });
+      } else if (data.uuid) {
+        // Otherwise, poll for status
+        await pollJobStatus(data.uuid);
+      } else {
+        throw new Error('No transcript or job ID returned');
+      }
+    } catch (err) {
+      console.error("Failed to process recorded audio:", err);
+      alert(`Failed to process recording: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const fetchMeetingList = () => {
@@ -565,7 +695,7 @@ const MeetingTranscriptionApp = () => {
   }, []);
 
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording && !isPaused) {
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
@@ -573,7 +703,7 @@ const MeetingTranscriptionApp = () => {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [isRecording]);
+  }, [isRecording, isPaused]);
 
   useEffect(() => {
     fetchMeetingList();
@@ -587,13 +717,14 @@ const MeetingTranscriptionApp = () => {
           <h1 className="header-title">
             <MessagesSquare className="header-icon" /> MeetMemo
           </h1>
-          <button
-            className="btn btn-small"
-            onClick={toggleDarkMode}
-            style={{ float: "right" }}
-          >
-            {isDarkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
-          </button>
+          <label className="theme-toggle" style={{ float: "right" }}>
+            <input
+              type="checkbox"
+              checked={isDarkMode}
+              onChange={toggleDarkMode}
+            />
+            <span className="toggle-slider"></span>
+          </label>
           <p className="header-subtitle">
             Record, transcribe, and summarize your meetings with AI-powered
             insights
@@ -628,44 +759,103 @@ const MeetingTranscriptionApp = () => {
                 </label>
 
                 <div className="button-group">
-                  <button
-                    onClick={isRecording ? stopRecording : startRecording}
-                    className={`btn ${isRecording ? "btn-danger" : "btn-primary"}`}
-                  >
-                    {isRecording ? (
-                      <MicOff className="btn-icon" />
-                    ) : (
-                      <Mic className="btn-icon" />
-                    )}
-                    {isRecording ? "Stop Recording" : "Start Recording"}
-                  </button>
+                  {!isRecording && !recordedAudio && !selectedFile ? (
+                    <>
+                      <button
+                        onClick={startRecording}
+                        className="btn btn-discrete"
+                        title="Start Recording"
+                      >
+                        <Mic className="btn-icon" />
+                      </button>
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn btn-discrete"
+                        title="Upload Audio File"
+                      >
+                        <Upload className="btn-icon" />
+                      </button>
+                    </>
+                  ) : isRecording ? (
+                    <>
+                      <button
+                        onClick={isPaused ? resumeRecording : pauseRecording}
+                        className="btn btn-discrete"
+                        title={isPaused ? "Resume Recording" : "Pause Recording"}
+                      >
+                        {isPaused ? (
+                          <Play className="btn-icon" />
+                        ) : (
+                          <Pause className="btn-icon" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={stopRecording}
+                        className="btn btn-discrete"
+                        title="Stop Recording"
+                      >
+                        <Square className="btn-icon" />
+                      </button>
+                    </>
+                  ) : recordedAudio ? (
+                    <>
+                      <button
+                        onClick={discardRecording}
+                        className="btn btn-discrete"
+                        title="Discard Recording"
+                      >
+                        <Trash2 className="btn-icon" />
+                      </button>
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn btn-discrete"
+                        title="Upload Audio File"
+                      >
+                        <Upload className="btn-icon" />
+                      </button>
+                    </>
+                  ) : selectedFile ? (
+                    <>
+                      <button
+                        onClick={discardUpload}
+                        className="btn btn-discrete"
+                        title="Discard Upload"
+                      >
+                        <Trash2 className="btn-icon" />
+                      </button>
+
+                      <button
+                        onClick={startRecording}
+                        className="btn btn-discrete"
+                        title="Start Recording"
+                      >
+                        <Mic className="btn-icon" />
+                      </button>
+                    </>
+                  ) : null}
 
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn btn-secondary"
-                  >
-                    <Upload className="btn-icon" />
-                    {selectedFile ? "Change Audio File" : "Upload Audio File"}
-                  </button>
-
-                  <button
-                    onClick={uploadFile}
-                    disabled={!selectedFile || loading}
-                    className={`btn ${selectedFile ? "btn-primary" : "btn-disabled"}`}
+                    onClick={recordedAudio ? processRecordedAudio : uploadFile}
+                    disabled={(!selectedFile && !recordedAudio) || loading}
+                    className={`btn ${(selectedFile || recordedAudio) && !loading ? "btn-discrete-prominent" : "btn-discrete"}`}
+                    title={loading ? "Processing..." : "Process Audio"}
                   >
                     <Send className="btn-icon" />
-                    {loading ? "Transcribing..." : "Start Transcription"}
+                    {((selectedFile || recordedAudio) && !loading) ? "Process Audio" : ""}
                   </button>
-                </div>
 
-                {isRecording && (
-                  <div className="recording-indicator">
-                    <div className="recording-dot"></div>
-                    <span className="recording-time">
-                      {formatTime(recordingTime)}
-                    </span>
-                  </div>
-                )}
+                  {isRecording && (
+                    <div className="recording-indicator">
+                      <div className={`recording-dot ${isPaused ? 'paused' : ''}`}></div>
+                      <span className="recording-time">
+                        {formatTime(recordingTime)} {isPaused ? '(Paused)' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <input
@@ -675,6 +865,34 @@ const MeetingTranscriptionApp = () => {
                 onChange={(e) => setSelectedFile(e.target.files[0])}
                 className="file-input"
               />
+
+              {selectedFile && (
+                <div className="audio-preview">
+                  <h3 className="audio-preview-title">Upload Preview - {selectedFile.name}</h3>
+                  <audio 
+                    ref={uploadPlayerRef} 
+                    controls 
+                    className="audio-player"
+                    onPlay={() => setIsPlayingUpload(true)}
+                    onPause={() => setIsPlayingUpload(false)}
+                    onEnded={() => setIsPlayingUpload(false)}
+                  />
+                </div>
+              )}
+
+              {recordedAudio && (
+                <div className="audio-preview">
+                  <h3 className="audio-preview-title">Recording Preview</h3>
+                  <audio 
+                    ref={audioPlayerRef} 
+                    controls 
+                    className="audio-player"
+                    onPlay={() => setIsPlayingRecording(true)}
+                    onPause={() => setIsPlayingRecording(false)}
+                    onEnded={() => setIsPlayingRecording(false)}
+                  />
+                </div>
+              )}
 
               {(loading || isProcessing) && (
                 <div className="processing-indicator">
@@ -913,7 +1131,9 @@ const MeetingTranscriptionApp = () => {
               </h2>
               <div className="meetings-scroll-wrapper">
                 {meetingList.map((meeting, index) => {
-                  const colorClass = `btn-past-${(index % 4) + 1}`;
+                  // Create gradient pattern: 1-2-3-4-3-2-1-2-3-4-3-2...
+                  const pattern = [1, 2, 3, 4, 3, 2];
+                  const colorClass = `btn-past-${pattern[index % pattern.length]}`;
                   return (
                     <div key={meeting.uuid} className="meeting-entry">
                       <button
@@ -925,10 +1145,11 @@ const MeetingTranscriptionApp = () => {
                         {truncateFileName(meeting.name)}
                       </button>
                       <button
-                        className="btn btn-danger btn-small delete-meeting-btn"
+                        className="btn btn-discrete btn-small delete-meeting-btn"
                         onClick={() => handleDeleteMeeting(meeting.uuid)}
+                        title="Delete Meeting"
                       >
-                        🗑️
+                        <Trash2 className="btn-icon" />
                       </button>
                     </div>
                   );

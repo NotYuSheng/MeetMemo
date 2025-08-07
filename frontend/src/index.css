@@ -20,11 +20,11 @@ code {
   width: 100%;
   height: 100%;
   z-index: -1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #263238 0%, #37474f 100%);
 }
 
 [data-theme="dark"] #particles-js {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
 }
 
 #root {

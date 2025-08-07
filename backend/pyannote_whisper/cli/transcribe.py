@@ -106,7 +106,7 @@ def cli():
     if diarization:
         from pyannote.audio import Pipeline
         pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization",
-                                            use_auth_token=os.getenv("USE_AUTH_TOKEN"))
+                                            use_auth_token=os.getenv("HF_TOKEN"))
 
     for audio_path in args.pop("audio"):
         result = transcribe(model, audio_path, temperature=temperature,**args)

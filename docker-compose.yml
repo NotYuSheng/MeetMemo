@@ -4,10 +4,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: backend
-    env_file:
-      - .env
     environment:
-      - USE_AUTH_TOKEN=${USE_AUTH_TOKEN}
+      - HF_TOKEN=${HF_TOKEN:-CHANGEME}
+      - LLM_API_URL=${LLM_API_URL:-CHANGEME}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
+      - PYTHONUNBUFFERED=1
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
@@ -18,13 +19,13 @@ services:
       - "8000:8000"
     depends_on:
       - frontend
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     networks:
       - shared-network
       # - llm_calling
@@ -34,16 +35,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
-    env_file:
-      - .env
-    volumes:
-      - audiofiles:/app/audiofiles
-      - logs:/app/logs
-      - transcripts:/app/transcripts
-      - summary:/app/summary
-
     ports:
-      - "3000:3000"
+      - "3000:80"
     networks:
       - shared-network
       # - llm_calling
