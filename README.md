@@ -42,10 +42,10 @@ Before you begin, ensure you have the following installed:
       cp example.env .env
       ```
 
-    - Open the `.env` file and update the `USE_AUTH_TOKEN` variable with your newly generated Hugging Face token:
+    - Open the `.env` file and update the `HF_TOKEN` variable with your newly generated Hugging Face token:
 
       ```env
-      USE_AUTH_TOKEN=your_huggingface_token_here
+      HF_TOKEN=your_huggingface_token_here
       ```
     - Update the `LLM_API_URL` and `LLM_MODEL_NAME` variables to allow the backend to communicate with the LLM model you are using for summarisation of the transcripts.
         ```env
