@@ -316,7 +316,10 @@ const MeetingTranscriptionApp = () => {
   };
 
   const uploadFile = () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      alert("Please upload an audio file first before starting the transcription.");
+      return;
+    }
     speakerColorMap.current = {};
     setLoading(true);
     const formData = new FormData();
