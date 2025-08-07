@@ -19,16 +19,15 @@ services:
       - "8000:8000"
     depends_on:
       - frontend
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     networks:
       - shared-network
-      # - llm_calling
 
   frontend:
     build:
@@ -39,7 +38,6 @@ services:
       - "3000:80"
     networks:
       - shared-network
-      # - llm_calling
 
 volumes:
   audiofiles:
@@ -52,7 +50,4 @@ networks:
   shared-network:
     name: shared-network
     external: true
-
-# networks:
-  # llm_calling:
-  #   external: true
+    # driver: bridge
