@@ -1,0 +1,13 @@
+# Build output
+build/
+dist/
+
+# Node modules
+node_modules/
+
+# Coverage reports
+coverage/
+
+# Temporary folders
+tmp/
+temp/

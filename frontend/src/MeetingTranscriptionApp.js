@@ -43,6 +43,7 @@ const MeetingTranscriptionApp = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [isPlayingRecording, setIsPlayingRecording] = useState(false);
   const audioPlayerRef = useRef(null);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -179,6 +180,7 @@ const MeetingTranscriptionApp = () => {
     }
   }, [isDarkMode]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [_, setIsSavingNames] = useState(false);
 
   const truncateFileName = (name, maxLength = 20) => {
@@ -342,13 +344,14 @@ const MeetingTranscriptionApp = () => {
     if (recordedAudio && audioPlayerRef.current) {
       const audioUrl = URL.createObjectURL(recordedAudio);
       audioPlayerRef.current.src = audioUrl;
-      
+
       return () => {
         URL.revokeObjectURL(audioUrl);
       };
     }
   }, [recordedAudio]);
 
+  // eslint-disable-next-line no-unused-vars
   const stopPlayback = () => {
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
@@ -696,7 +699,11 @@ const MeetingTranscriptionApp = () => {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="btn btn-discrete"
-                        title={selectedFile ? "Change Audio File" : "Upload Audio File"}
+                        title={
+                          selectedFile
+                            ? "Change Audio File"
+                            : "Upload Audio File"
+                        }
                       >
                         <Upload className="btn-icon" />
                       </button>
@@ -706,7 +713,9 @@ const MeetingTranscriptionApp = () => {
                       <button
                         onClick={isPaused ? resumeRecording : pauseRecording}
                         className="btn btn-discrete"
-                        title={isPaused ? "Resume Recording" : "Pause Recording"}
+                        title={
+                          isPaused ? "Resume Recording" : "Pause Recording"
+                        }
                       >
                         {isPaused ? (
                           <Play className="btn-icon" />
@@ -736,7 +745,11 @@ const MeetingTranscriptionApp = () => {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="btn btn-discrete"
-                        title={selectedFile ? "Change Audio File" : "Upload Audio File"}
+                        title={
+                          selectedFile
+                            ? "Change Audio File"
+                            : "Upload Audio File"
+                        }
                       >
                         <Upload className="btn-icon" />
                       </button>
@@ -750,14 +763,18 @@ const MeetingTranscriptionApp = () => {
                     title={loading ? "Processing..." : "Process Audio"}
                   >
                     <Send className="btn-icon" />
-                    {((selectedFile || recordedAudio) && !loading) ? "Process Audio" : ""}
+                    {(selectedFile || recordedAudio) && !loading
+                      ? "Process Audio"
+                      : ""}
                   </button>
 
                   {isRecording && (
                     <div className="recording-indicator">
-                      <div className={`recording-dot ${isPaused ? 'paused' : ''}`}></div>
+                      <div
+                        className={`recording-dot ${isPaused ? "paused" : ""}`}
+                      ></div>
                       <span className="recording-time">
-                        {formatTime(recordingTime)} {isPaused ? '(Paused)' : ''}
+                        {formatTime(recordingTime)} {isPaused ? "(Paused)" : ""}
                       </span>
                     </div>
                   )}
@@ -775,9 +792,9 @@ const MeetingTranscriptionApp = () => {
               {recordedAudio && (
                 <div className="audio-preview">
                   <h3 className="audio-preview-title">Recording Preview</h3>
-                  <audio 
-                    ref={audioPlayerRef} 
-                    controls 
+                  <audio
+                    ref={audioPlayerRef}
+                    controls
                     className="audio-player"
                     onPlay={() => setIsPlayingRecording(true)}
                     onPause={() => setIsPlayingRecording(false)}
