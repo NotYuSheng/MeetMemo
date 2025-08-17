@@ -1,0 +1,15 @@
+{
+  "short_name": "MeetMemo",
+  "name": "MeetMemo - AI Meeting Transcription",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2998D5",
+  "background_color": "#ffffff"
+}
