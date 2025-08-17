@@ -1040,12 +1040,18 @@ body {
   content: "☀️";
   position: absolute;
   top: 50%;
-  left: 8px;
+  left: 6px;
   transform: translateY(-50%);
   color: #fff;
-  font-size: 14px;
+  font-size: 12px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
 }
 
 /* Checked = dark mode styles */
@@ -1060,7 +1066,7 @@ input:checked + .toggle-slider::before {
 /* Moon icon (checked = dark mode) */
 input:checked + .toggle-slider::after {
   content: "🌙";
-  left: 38px;
+  left: 34px;
   opacity: 1;
 }
 
