@@ -38,7 +38,11 @@ jobs:
       run: |
         cd frontend
         npm run build
-        
+      
+    - name: Create environment file
+      run: |
+        cp example.env .env
+      
     - name: Setup Pages
       uses: actions/configure-pages@v4
       
