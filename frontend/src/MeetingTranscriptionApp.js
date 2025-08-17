@@ -716,7 +716,8 @@ const MeetingTranscriptionApp = () => {
         {/* Header */}
         <div className="header-card">
           <h1 className="header-title">
-            <img src="/logo.svg" alt="MeetMemo Logo" className="header-logo" /> MeetMemo
+            <img src="/logo.svg" alt="MeetMemo Logo" className="header-logo" />{" "}
+            MeetMemo
           </h1>
           <label className="theme-toggle" style={{ float: "right" }}>
             <input
