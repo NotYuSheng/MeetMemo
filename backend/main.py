@@ -1,22 +1,25 @@
-from datetime import datetime, timezone, timedelta
+"""FastAPI application for audio transcription and speaker diarization."""
+import csv
+import json
 import logging
 import os
-import whisper
-import csv
-from threading import Lock
 import re
-import requests
 import tempfile
 from collections import defaultdict
-from pyannote.audio import Pipeline
-from pyannote_whisper.utils import diarize_text
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+from threading import Lock
+
+import requests
+import whisper
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import json
-from pydub import AudioSegment
+from pyannote.audio import Pipeline
 from pydantic import BaseModel
-from pathlib import Path
+from pydub import AudioSegment
+
+from pyannote_whisper.utils import diarize_text
 
 # Start up the app
 app = FastAPI()    
@@ -739,3 +742,8 @@ def health_check():
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Health check failed: {e}")
         return {"status": "error", "error": str(e), "status_code": "500"}
+
+
+def get_logs():
+    """Placeholder function for getting logs."""
+    return {"logs": []}
