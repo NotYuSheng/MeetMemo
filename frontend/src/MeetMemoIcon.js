@@ -10,6 +10,7 @@ const MeetMemoIcon = ({ size = 24, className = "" }) => {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
+      <title>MeetMemo Icon</title>
       {/* Background circle */}
       <circle cx="16" cy="16" r="15" fill="currentColor" opacity="0.1" />
 
