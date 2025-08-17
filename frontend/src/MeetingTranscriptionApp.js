@@ -9,7 +9,6 @@ import {
   FileText,
   Hash,
   Send,
-  MessagesSquare,
   Trash2,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
@@ -17,6 +16,7 @@ import jsPDF from "jspdf";
 import { useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import MeetMemoIcon from "./MeetMemoIcon";
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
@@ -716,7 +716,7 @@ const MeetingTranscriptionApp = () => {
         {/* Header */}
         <div className="header-card">
           <h1 className="header-title">
-            <MessagesSquare className="header-icon" /> MeetMemo
+            <img src="/logo.svg" alt="MeetMemo Logo" className="header-logo" /> MeetMemo
           </h1>
           <label className="theme-toggle" style={{ float: "right" }}>
             <input
