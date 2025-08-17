@@ -16,7 +16,6 @@ import jsPDF from "jspdf";
 import { useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import MeetMemoIcon from "./MeetMemoIcon";
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
