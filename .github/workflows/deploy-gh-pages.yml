@@ -25,7 +25,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
         
@@ -34,14 +34,17 @@ jobs:
         cd frontend
         npm ci
         
-    - name: Build project
-      run: |
-        cd frontend
-        npm run build
-      
     - name: Create environment file
       run: |
         cp example.env .env
+        
+    - name: Build project
+      env:
+        CI: false
+        GENERATE_SOURCEMAP: false
+      run: |
+        cd frontend
+        npm run build
       
     - name: Setup Pages
       uses: actions/configure-pages@v4
