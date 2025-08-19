@@ -3,9 +3,9 @@
   "name": "MeetMemo - AI Meeting Transcription",
   "icons": [
     {
-      "src": "favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "favicon.png",
+      "sizes": "87x87",
+      "type": "image/png"
     }
   ],
   "start_url": ".",
