@@ -730,8 +730,574 @@ body {
   min-width: 180px;
 }
 
+/* Enhanced Summary Typography */
 .summary-text {
   color: var(--text);
+  font-family: Barlow, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+/* Summary Heading Hierarchy */
+.summary-text h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--btn-primary);
+  font-family: Barlow, sans-serif;
+}
+
+.summary-text h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 1.75rem 0 0.75rem 0;
+  padding-left: 0.75rem;
+  border-left: 4px solid var(--btn-primary);
+  font-family: Barlow, sans-serif;
+}
+
+.summary-text h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--btn-primary);
+  margin: 1.5rem 0 0.5rem 0;
+  font-family: Barlow, sans-serif;
+}
+
+.summary-text h4 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 1.25rem 0 0.5rem 0;
+  font-family: Barlow, sans-serif;
+}
+
+.summary-text h5, .summary-text h6 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 1rem 0 0.5rem 0;
+  font-family: Barlow, sans-serif;
+}
+
+/* Paragraph and spacing improvements */
+.summary-text p {
+  margin: 0.75rem 0;
+  text-align: justify;
+}
+
+.summary-text p:first-of-type {
+  margin-top: 0;
+}
+
+.summary-text p:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Enhanced List Styling */
+.summary-text ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.summary-text ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.summary-text li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+  position: relative;
+}
+
+.summary-text ul li {
+  list-style: none;
+}
+
+.summary-text ul li::before {
+  content: "•";
+  color: var(--btn-primary);
+  font-weight: bold;
+  position: absolute;
+  left: -1.2rem;
+  font-size: 1.2rem;
+}
+
+.summary-text ol li {
+  list-style: none;
+  counter-increment: item;
+}
+
+.summary-text ol {
+  counter-reset: item;
+}
+
+.summary-text ol li::before {
+  content: counter(item) ".";
+  color: var(--btn-primary);
+  font-weight: 600;
+  position: absolute;
+  left: -1.5rem;
+  font-family: Barlow, sans-serif;
+}
+
+/* Nested lists */
+.summary-text ul ul, .summary-text ol ol, .summary-text ul ol, .summary-text ol ul {
+  margin: 0.25rem 0;
+}
+
+.summary-text ul ul li::before {
+  content: "◦";
+  font-size: 1rem;
+  left: -1rem;
+}
+
+/* Code styling */
+.summary-text code {
+  background-color: var(--alt-bg);
+  color: var(--btn-primary);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+.summary-text pre {
+  background-color: var(--alt-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.summary-text pre code {
+  background-color: transparent;
+  padding: 0;
+  color: var(--text);
+}
+
+/* Blockquotes */
+.summary-text blockquote {
+  border-left: 4px solid var(--btn-primary);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background-color: rgba(41, 152, 213, 0.05);
+  border-radius: 0 0.375rem 0.375rem 0;
+  font-style: italic;
+}
+
+/* Strong and emphasis */
+.summary-text strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.summary-text em {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* Enhanced Title Section Styling */
+.summary-content > p:first-of-type {
+  background: linear-gradient(135deg, rgba(41, 152, 213, 0.08) 0%, rgba(41, 152, 213, 0.03) 100%);
+  border: 1px solid rgba(41, 152, 213, 0.15);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(41, 152, 213, 0.05);
+}
+
+.summary-content > p:first-of-type strong {
+  font-size: 1.1rem;
+  color: var(--btn-primary);
+  margin-right: 1rem;
+  font-family: Barlow, sans-serif;
+  font-weight: 600;
+}
+
+.rename-btn {
+  margin-left: auto;
+  transition: all 0.2s ease;
+  border: 1px solid var(--btn-primary) !important;
+  color: var(--btn-primary) !important;
+}
+
+.rename-btn:hover {
+  background-color: var(--btn-primary) !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(41, 152, 213, 0.2);
+}
+
+/* Summary Content Container Enhancements */
+.summary-content {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .summary-content {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Section Dividers */
+.summary-text h2 + p,
+.summary-text h2 + ul,
+.summary-text h2 + ol {
+  margin-top: 0.5rem;
+}
+
+.summary-text h3 + p,
+.summary-text h3 + ul, 
+.summary-text h3 + ol {
+  margin-top: 0.25rem;
+}
+
+/* Visual hierarchy enhancements */
+.summary-text h2:not(:first-child) {
+  margin-top: 2.5rem;
+  position: relative;
+}
+
+.summary-text h2:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: -1.25rem;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, var(--btn-primary), transparent);
+  opacity: 0.3;
+}
+
+/* Link styling */
+.summary-text a {
+  color: var(--btn-primary);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.summary-text a:hover {
+  border-bottom-color: var(--btn-primary);
+  color: var(--text);
+}
+
+/* Color-coded section styling */
+.summary-section-actions {
+  color: #22c55e !important; /* Green for actions/tasks */
+  position: relative;
+}
+
+.summary-section-actions::after {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  right: -1rem;
+  bottom: -0.5rem;
+  height: 2px;
+  background: linear-gradient(to right, #22c55e, transparent);
+  opacity: 0.3;
+}
+
+.summary-section-decisions {
+  color: #3b82f6 !important; /* Blue for decisions */
+  position: relative;
+}
+
+.summary-section-decisions::after {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  right: -1rem;
+  bottom: -0.5rem;
+  height: 2px;
+  background: linear-gradient(to right, #3b82f6, transparent);
+  opacity: 0.3;
+}
+
+.summary-section-issues {
+  color: #ef4444 !important; /* Red for issues/concerns */
+  position: relative;
+}
+
+.summary-section-issues::after {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  right: -1rem;
+  bottom: -0.5rem;
+  height: 2px;
+  background: linear-gradient(to right, #ef4444, transparent);
+  opacity: 0.3;
+}
+
+.summary-section-highlights {
+  color: #f59e0b !important; /* Amber for highlights */
+  position: relative;
+}
+
+.summary-section-highlights::after {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  right: -1rem;
+  bottom: -0.5rem;
+  height: 2px;
+  background: linear-gradient(to right, #f59e0b, transparent);
+  opacity: 0.3;
+}
+
+.summary-section-next-steps {
+  color: #8b5cf6 !important; /* Purple for next steps */
+  position: relative;
+}
+
+.summary-section-next-steps::after {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  right: -1rem;
+  bottom: -0.5rem;
+  height: 2px;
+  background: linear-gradient(to right, #8b5cf6, transparent);
+  opacity: 0.3;
+}
+
+.summary-section-participants {
+  color: #06b6d4 !important; /* Cyan for participants */
+  position: relative;
+}
+
+.summary-section-participants::after {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  right: -1rem;
+  bottom: -0.5rem;
+  height: 2px;
+  background: linear-gradient(to right, #06b6d4, transparent);
+  opacity: 0.3;
+}
+
+/* Enhanced section separation with subtle backgrounds */
+.summary-text h2.summary-section-actions + p,
+.summary-text h2.summary-section-actions + ul,
+.summary-text h2.summary-section-actions + ol {
+  background: rgba(34, 197, 94, 0.02);
+  border-left: 3px solid rgba(34, 197, 94, 0.2);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.summary-text h2.summary-section-decisions + p,
+.summary-text h2.summary-section-decisions + ul,
+.summary-text h2.summary-section-decisions + ol {
+  background: rgba(59, 130, 246, 0.02);
+  border-left: 3px solid rgba(59, 130, 246, 0.2);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.summary-text h2.summary-section-issues + p,
+.summary-text h2.summary-section-issues + ul,
+.summary-text h2.summary-section-issues + ol {
+  background: rgba(239, 68, 68, 0.02);
+  border-left: 3px solid rgba(239, 68, 68, 0.2);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.summary-text h2.summary-section-highlights + p,
+.summary-text h2.summary-section-highlights + ul,
+.summary-text h2.summary-section-highlights + ol {
+  background: rgba(245, 158, 11, 0.02);
+  border-left: 3px solid rgba(245, 158, 11, 0.2);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.summary-text h2.summary-section-next-steps + p,
+.summary-text h2.summary-section-next-steps + ul,
+.summary-text h2.summary-section-next-steps + ol {
+  background: rgba(139, 92, 246, 0.02);
+  border-left: 3px solid rgba(139, 92, 246, 0.2);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.summary-text h2.summary-section-participants + p,
+.summary-text h2.summary-section-participants + ul,
+.summary-text h2.summary-section-participants + ol {
+  background: rgba(6, 182, 212, 0.02);
+  border-left: 3px solid rgba(6, 182, 212, 0.2);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+/* Section containers with subtle shadows */
+.summary-text h2:not(.summary-section-default) {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin: 2rem 0 1rem 0;
+}
+
+[data-theme="dark"] .summary-text h2:not(.summary-section-default) {
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Collapsible Section Functionality */
+.collapse-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-toggle:hover {
+  background-color: var(--btn-primary);
+  color: white;
+  transform: scale(1.1);
+}
+
+.copy-section-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.collapsible-heading:hover .copy-section-btn {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.copy-section-btn:hover {
+  background-color: var(--btn-primary);
+  color: white;
+  transform: scale(1.1);
+}
+
+.copy-section-btn:active {
+  background-color: var(--btn-primary);
+  color: white;
+  transform: scale(0.95);
+}
+
+/* Collapsible section transitions */
+.collapsible-section {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapsible-section.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.collapsible-section.expanded {
+  max-height: none;
+  opacity: 1;
+}
+
+/* Enhanced collapsible heading hover effects */
+.collapsible-heading {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.collapsible-heading:hover {
+  background-color: rgba(41, 152, 213, 0.05) !important;
+  transform: translateX(4px);
+}
+
+.collapsible-heading:hover::before {
+  opacity: 0.6 !important;
+}
+
+/* Smooth collapse animation for content */
+.summary-text h2.collapsible-heading + p,
+.summary-text h2.collapsible-heading + ul,
+.summary-text h2.collapsible-heading + ol,
+.summary-text h2.collapsible-heading ~ p,
+.summary-text h2.collapsible-heading ~ ul,
+.summary-text h2.collapsible-heading ~ ol {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+/* Copy success feedback (you could add a toast notification instead) */
+.copy-section-btn.copied {
+  background-color: #22c55e !important;
+  color: white !important;
+}
+
+/* Responsive improvements for mobile */
+@media (max-width: 768px) {
+  .collapse-toggle {
+    padding: 0.5rem;
+  }
+  
+  .copy-section-btn {
+    opacity: 1;
+    transform: none;
+    padding: 0.5rem;
+  }
+  
+  .collapsible-heading {
+    gap: 0.75rem;
+  }
+  
+  .custom-heading {
+    font-size: 0.95rem;
+  }
+  
+  .summary-text h1 {
+    font-size: 1.5rem;
+  }
+  
+  .summary-text h2 {
+    font-size: 1.2rem;
+  }
+  
+  .summary-text h3 {
+    font-size: 1.1rem;
+  }
 }
 
 .btn.btn-past-1 {

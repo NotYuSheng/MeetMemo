@@ -10,6 +10,18 @@ import {
   Hash,
   Send,
   Trash2,
+  CheckCircle,
+  Users,
+  Clock,
+  Target,
+  AlertCircle,
+  Lightbulb,
+  Star,
+  Calendar,
+  MessageSquare,
+  ChevronDown,
+  ChevronRight,
+  Copy,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
@@ -36,6 +48,163 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
       end: entry.end,
     };
   });
+};
+
+// Custom ReactMarkdown components with icons
+const getHeadingIcon = (children, level) => {
+  const text = String(children).toLowerCase();
+  
+  // Level 1 headings (main sections)
+  if (level === 1) {
+    if (text.includes('summary') || text.includes('overview')) return FileText;
+    if (text.includes('agenda')) return Calendar;
+    return Hash;
+  }
+  
+  // Level 2 headings (subsections)  
+  if (level === 2) {
+    if (text.includes('action') || text.includes('tasks') || text.includes('todo')) return CheckCircle;
+    if (text.includes('decision') || text.includes('outcome')) return Target;
+    if (text.includes('participant') || text.includes('attendee')) return Users;
+    if (text.includes('discussion') || text.includes('topic')) return MessageSquare;
+    if (text.includes('key point') || text.includes('highlight')) return Star;
+    if (text.includes('next step') || text.includes('follow up')) return Clock;
+    if (text.includes('issue') || text.includes('concern') || text.includes('risk')) return AlertCircle;
+    if (text.includes('idea') || text.includes('suggestion') || text.includes('insight')) return Lightbulb;
+    return Hash;
+  }
+  
+  // Level 3+ headings
+  return Hash;
+};
+
+const getSectionStyle = (children, level) => {
+  const text = String(children).toLowerCase();
+  
+  if (level === 2) {
+    if (text.includes('action') || text.includes('tasks') || text.includes('todo')) {
+      return 'summary-section-actions';
+    }
+    if (text.includes('decision') || text.includes('outcome')) {
+      return 'summary-section-decisions';
+    }
+    if (text.includes('participant') || text.includes('attendee')) {
+      return 'summary-section-participants';
+    }
+    if (text.includes('key point') || text.includes('highlight')) {
+      return 'summary-section-highlights';
+    }
+    if (text.includes('issue') || text.includes('concern') || text.includes('risk')) {
+      return 'summary-section-issues';
+    }
+    if (text.includes('next step') || text.includes('follow up')) {
+      return 'summary-section-next-steps';
+    }
+  }
+  
+  return 'summary-section-default';
+};
+
+// Collapsible Section Component
+const CollapsibleSection = ({ isCollapsed, onToggle, children }) => {
+  return (
+    <div className={`collapsible-section ${isCollapsed ? 'collapsed' : 'expanded'}`}>
+      {children}
+    </div>
+  );
+};
+
+const CustomHeading = ({ level, children, ...props }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const HeadingTag = `h${level}`;
+  const IconComponent = getHeadingIcon(children, level);
+  const sectionClass = getSectionStyle(children, level);
+  const headingId = `heading-${String(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}`;
+  
+  const toggleCollapse = () => {
+    if (level === 2) { // Only make H2 sections collapsible
+      setIsCollapsed(!isCollapsed);
+      
+      // Find and toggle the next sibling elements until the next heading
+      const heading = document.getElementById(headingId);
+      if (heading) {
+        let nextElement = heading.nextElementSibling;
+        while (nextElement && !nextElement.tagName.match(/^H[1-6]$/)) {
+          nextElement.style.display = isCollapsed ? 'block' : 'none';
+          nextElement = nextElement.nextElementSibling;
+        }
+      }
+    }
+  };
+
+  const copySection = async () => {
+    const heading = document.getElementById(headingId);
+    if (heading) {
+      let sectionText = heading.textContent + '\n\n';
+      let nextElement = heading.nextElementSibling;
+      
+      while (nextElement && !nextElement.tagName.match(/^H[1-6]$/)) {
+        if (nextElement.style.display !== 'none') {
+          sectionText += nextElement.textContent + '\n';
+        }
+        nextElement = nextElement.nextElementSibling;
+      }
+      
+      try {
+        await navigator.clipboard.writeText(sectionText.trim());
+        // You could add a toast notification here
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
+    }
+  };
+  
+  return (
+    <HeadingTag 
+      {...props} 
+      id={headingId}
+      className={`custom-heading ${sectionClass} ${level === 2 ? 'collapsible-heading' : ''}`}
+      style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '0.5rem',
+        cursor: level === 2 ? 'pointer' : 'default'
+      }}
+    >
+      {level === 2 && (
+        <button 
+          onClick={toggleCollapse}
+          className="collapse-toggle"
+          aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+        >
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+        </button>
+      )}
+      <IconComponent size={level === 1 ? 22 : level === 2 ? 20 : 18} />
+      <span onClick={level === 2 ? toggleCollapse : undefined} style={{ flex: 1 }}>
+        {children}
+      </span>
+      {level === 2 && (
+        <button 
+          onClick={copySection}
+          className="copy-section-btn"
+          aria-label="Copy section to clipboard"
+          title="Copy section to clipboard"
+        >
+          <Copy size={14} />
+        </button>
+      )}
+    </HeadingTag>
+  );
+};
+
+const customComponents = {
+  h1: (props) => <CustomHeading level={1} {...props} />,
+  h2: (props) => <CustomHeading level={2} {...props} />,
+  h3: (props) => <CustomHeading level={3} {...props} />,
+  h4: (props) => <CustomHeading level={4} {...props} />,
+  h5: (props) => <CustomHeading level={5} {...props} />,
+  h6: (props) => <CustomHeading level={6} {...props} />,
 };
 
 const MeetingTranscriptionApp = () => {
@@ -288,6 +457,11 @@ const MeetingTranscriptionApp = () => {
 
   const startRecording = async () => {
     try {
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("getUserMedia is not supported in this browser. Please use a modern browser or enable microphone permissions.");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
@@ -308,6 +482,25 @@ const MeetingTranscriptionApp = () => {
       setIsRecording(true);
     } catch (error) {
       console.error("Error starting recording:", error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = "Failed to access microphone. ";
+      
+      if (error.name === "NotAllowedError") {
+        errorMessage += "Please allow microphone access in your browser settings and try again.";
+      } else if (error.name === "NotFoundError") {
+        errorMessage += "No microphone found. Please connect a microphone and try again.";
+      } else if (error.name === "NotSupportedError") {
+        errorMessage += "Your browser doesn't support audio recording. Please use Chrome, Firefox, or Safari.";
+      } else if (error.name === "NotReadableError") {
+        errorMessage += "Microphone is already in use by another application.";
+      } else if (error.message.includes("getUserMedia")) {
+        errorMessage += "Please use HTTPS or localhost to access the microphone.";
+      } else {
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -715,7 +908,7 @@ const MeetingTranscriptionApp = () => {
         {/* Header */}
         <div className="header-card">
           <h1 className="header-title">
-            <img src="/logo.svg" alt="MeetMemo Logo" className="header-logo" />{" "}
+            <img src="/logo.png" alt="MeetMemo Logo" className="header-logo" />{" "}
             MeetMemo
           </h1>
           <label className="theme-toggle" style={{ float: "right" }}>
@@ -1040,7 +1233,10 @@ const MeetingTranscriptionApp = () => {
                       </p>
                     )}
                     <div className="summary-text">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={customComponents}
+                      >
                         {summary.summary}
                       </ReactMarkdown>
                     </div>
