@@ -342,14 +342,40 @@ const getIconsForFormat = (sectionType, format = 'web') => {
       summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
     },
     pdf: {
-      // Elegant Unicode symbols for PDF compatibility
-      actions: '✓', decisions: '◉', issues: '▲', 
-      highlights: '★', 'next-steps': '▶', participants: '◈',
-      summary: '≡', ideas: '◐', discussion: '◯', default: '◆'
+      // Same emojis for PDF - we'll convert them to images
+      actions: '✅', decisions: '🎯', issues: '⚠️', 
+      highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
+      summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
     }
   };
   
   return iconMaps[format][sectionType] || iconMaps[format].default;
+};
+
+// Convert emoji to image data for PDF embedding
+const emojiToImageData = async (emoji, size = 16) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = size;
+    canvas.height = size;
+    
+    // Set font and styling
+    ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", "EmojiSymbols"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Clear background
+    ctx.clearRect(0, 0, size, size);
+    
+    // Draw emoji
+    ctx.fillText(emoji, size / 2, size / 2);
+    
+    // Convert to image data
+    const imageData = canvas.toDataURL('image/png');
+    resolve(imageData);
+  });
 };
 
 // Custom ReactMarkdown components with icons
@@ -1171,6 +1197,9 @@ const MeetingTranscriptionApp = () => {
       putOnlyUsedFonts: true,
       compress: true
     });
+    
+    // Set default font to ensure ASCII characters render properly
+    doc.setFont("helvetica", "normal");
     const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -1215,6 +1244,21 @@ const MeetingTranscriptionApp = () => {
       }
     });
     
+    // Pre-generate emoji images for PDF
+    const emojiImageCache = {};
+    const allEmojis = ['✅', '🎯', '⚠️', '⭐', '⏭️', '👥', '📋', '💡', '💬', '📌'];
+    
+    console.log('🎨 Converting emojis to images for PDF...');
+    for (const emoji of allEmojis) {
+      try {
+        emojiImageCache[emoji] = await emojiToImageData(emoji, 16);
+      } catch (error) {
+        console.warn(`Could not convert emoji ${emoji} to image:`, error);
+        emojiImageCache[emoji] = null;
+      }
+    }
+    console.log('✅ Emoji images ready for PDF');
+    
     // Color scheme for sections (matching web UI)
     const sectionColors = {
       actions: [34, 197, 94],      // Green
@@ -1244,11 +1288,11 @@ const MeetingTranscriptionApp = () => {
       const textContent = tempDiv.textContent || tempDiv.innerText || html;
       
       doc.setFontSize(fontSize);
-      doc.setFont(undefined, 'normal');
+      doc.setFont("helvetica", 'normal');
       
       // Handle bold text (approximate by using bold font)
       if (html.includes('<strong>') || html.includes('<b>')) {
-        doc.setFont(undefined, 'bold');
+        doc.setFont("helvetica", 'bold');
       }
       
       const wrapped = doc.splitTextToSize(textContent, maxWidth);
@@ -1274,7 +1318,7 @@ const MeetingTranscriptionApp = () => {
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
+    doc.setFont("helvetica", 'bold');
     doc.text("MeetMemo - Meeting Summary", margin + 10, y + 15);
     y += 50;
     
@@ -1316,12 +1360,20 @@ const MeetingTranscriptionApp = () => {
           doc.setTextColor(...sectionColor);
           const headingSize = Math.max(14, 20 - (block.level * 2));
           doc.setFontSize(headingSize);
-          doc.setFont(undefined, 'bold');
+          doc.setFont("helvetica", 'bold');
           
           // Add section icon using our dual format system
           const icon = getIconsForFormat(block.sectionType, 'pdf');
+          const emojiImage = emojiImageCache[icon];
           
-          doc.text(`${icon} ${block.content}`, margin, y + 15);
+          // Add emoji as image if available, otherwise use text
+          if (emojiImage) {
+            doc.addImage(emojiImage, 'PNG', margin, y + 2, 14, 14);
+            doc.text(block.content, margin + 18, y + 15);
+          } else {
+            doc.text(`${icon} ${block.content}`, margin, y + 15);
+          }
+          
           y += 25 + (6 - block.level) * 2;
           break;
           
@@ -1348,7 +1400,7 @@ const MeetingTranscriptionApp = () => {
             
             // Render bullet/number
             doc.setFontSize(11);
-            doc.setFont(undefined, 'bold');
+            doc.setFont("helvetica", 'bold');
             doc.setTextColor(41, 152, 213);
             doc.text(bullet, margin + 5, y);
             
@@ -1372,7 +1424,7 @@ const MeetingTranscriptionApp = () => {
           doc.rect(margin + 5, y - 5, pageWidth - 2 * margin - 5, block.content.length * 15 + 10, 'F');
           
           doc.setTextColor(80, 80, 80);
-          doc.setFont(undefined, 'italic');
+          doc.setFont("helvetica", 'italic');
           
           block.content.forEach(contentItem => {
             y = renderFormattedText(contentItem, margin + 15, y, pageWidth - 2 * margin - 20, 11) + 5;
@@ -1412,6 +1464,7 @@ const MeetingTranscriptionApp = () => {
       doc.setPage(i);
       doc.setTextColor(150, 150, 150);
       doc.setFontSize(8);
+      doc.setFont("helvetica", 'normal');
       doc.text(
         `Generated on ${new Date().toLocaleDateString()} - Page ${i} of ${totalPages}`,
         margin,
