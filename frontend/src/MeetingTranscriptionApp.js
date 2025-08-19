@@ -332,6 +332,26 @@ const validateContentParity = (markdownText) => {
   return validation;
 };
 
+// Icon mapping for different formats
+const getIconsForFormat = (sectionType, format = 'web') => {
+  const iconMaps = {
+    web: {
+      // Beautiful emojis for web display
+      actions: '✅', decisions: '🎯', issues: '⚠️', 
+      highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
+      summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
+    },
+    pdf: {
+      // Elegant Unicode symbols for PDF compatibility
+      actions: '✓', decisions: '◉', issues: '▲', 
+      highlights: '★', 'next-steps': '▶', participants: '◈',
+      summary: '≡', ideas: '◐', discussion: '◯', default: '◆'
+    }
+  };
+  
+  return iconMaps[format][sectionType] || iconMaps[format].default;
+};
+
 // Custom ReactMarkdown components with icons
 const getHeadingIcon = (children, level) => {
   const text = String(children).toLowerCase();
@@ -454,6 +474,9 @@ const CustomHeading = ({ level, children, sectionType, ...props }) => {
       )}
       <IconComponent size={level === 1 ? 22 : level === 2 ? 20 : 18} />
       <span onClick={level === 2 ? toggleCollapse : undefined} style={{ flex: 1 }}>
+        <span style={{ marginRight: '0.5rem' }}>
+          {getIconsForFormat(sectionType || getSectionType(children, level), 'web')}
+        </span>
         {children}
       </span>
       {level === 2 && (
@@ -1136,17 +1159,61 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Delete failed:", err));
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!summary) return;
     
     // Parse content using our unified parser
     const contentBlocks = parseMarkdownContent(summary.summary);
     
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const doc = new jsPDF({ 
+      unit: "pt", 
+      format: "a4",
+      putOnlyUsedFonts: true,
+      compress: true
+    });
     const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     let y = margin;
+    
+    // Load logo image data
+    const logoImageData = await new Promise((resolve) => {
+      try {
+        // Create a canvas to render SVG as image
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        // SVG content as data URI with the MeetMemo brand colors
+        const svgData = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 336 336" width="40" height="40">
+          <path fill="#ffffff" opacity="1.000000" stroke="none" d="M177.747375,243.805908 C187.551575,241.301575 197.013290,238.972092 206.908539,236.535873 C204.759552,235.384598 204.424896,234.538498 206.484528,233.528259 C212.344498,230.654022 217.545486,226.736145 222.800049,222.924042 C226.764954,220.047577 230.801468,217.213058 233.987167,212.706787 C231.110565,213.523422 229.964417,216.416870 227.391235,216.342590 C270.326691,171.020096 275.153503,123.156799 237.025314,72.363441 C208.287735,43.867672 174.722794,33.016499 135.331573,45.502388 C101.301178,56.289051 66.757080,90.920616 66.988014,143.659973 C64.010902,142.756012 62.900990,140.794342 63.083389,137.876831 C63.311653,134.225845 63.604523,130.573563 63.666595,126.918396 C64.074638,102.891487 75.006737,83.385185 90.650024,66.328651 C107.063400,48.432461 127.628914,37.923756 151.837524,34.549519 C199.599701,27.892355 244.227371,54.204498 262.365082,94.030251 C289.743286,154.145752 261.283630,225.271652 195.461365,244.490952 C187.299316,246.874176 178.813599,249.559479 170.474350,248.045975 C163.230560,246.731262 155.755524,246.989639 147.830627,244.607788 C152.871735,242.437286 157.198074,245.701920 161.380615,244.358170 C166.695435,242.650650 172.098038,245.493088 177.747375,243.805908 z"/>
+          <path fill="#ffffff" opacity="1.000000" stroke="none" d="M144.557846,100.642075 C144.454010,96.865738 144.634216,93.491203 144.084503,90.240089 C143.365341,85.986664 141.712006,85.504791 138.435089,88.324097 C133.134125,92.884796 129.809021,98.978676 126.787552,105.045654 C116.444420,125.814163 111.866333,147.922363 112.155304,171.127670 C112.202446,174.912796 114.405891,177.919022 114.877113,181.637314 C111.994888,182.634949 111.038200,180.748596 110.131523,179.023773 C108.383972,175.699295 107.897812,171.935760 107.881264,168.363571 C107.747765,139.552032 114.372986,112.664459 131.397156,88.912643 C132.639359,87.179527 134.204468,85.583191 135.896622,84.284348 C141.749985,79.791504 146.205811,81.709770 147.535187,88.917953 C149.409729,99.082161 147.860092,109.154007 146.834869,119.204338 C145.639740,130.920135 143.869629,142.576889 142.405411,154.266312 C142.268204,155.361633 142.535324,156.507584 142.657623,158.236557 C145.376160,156.624207 146.116531,154.161026 147.331223,152.153656 C162.807449,126.577873 180.049973,102.315323 200.657288,80.573273 C205.353470,75.618507 210.243698,70.809212 216.784744,68.197105 C221.105011,66.471832 223.820969,67.664108 225.196075,72.121109 C227.106186,78.312141 226.704437,84.716255 226.050522,90.965324 C221.744995,132.110748 212.297729,172.156769 199.741058,211.511856 C199.265366,213.002762 199.308594,214.937897 197.065948,215.393448 C194.808594,214.103424 196.017517,212.266876 196.444916,210.635620 C203.393860,184.112762 210.527023,157.618393 215.009399,130.542145 C217.715836,114.193642 221.315155,97.934174 221.656311,81.263908 C221.704605,78.905289 222.638092,75.839195 219.734573,74.567993 C217.104919,73.416687 214.959824,75.534653 212.996735,76.953629 C202.474777,84.559181 194.424042,94.592728 186.444733,104.631073 C173.057159,121.473297 161.445831,139.571411 149.607147,157.502899 C149.240143,158.058792 148.942459,158.670547 148.517242,159.176193 C146.672485,161.369919 145.541000,165.372055 141.916855,164.165176 C138.090225,162.890884 138.424927,158.826523 138.759598,155.563950 C140.198990,141.531586 141.797073,127.515121 143.403503,113.500443 C143.876587,109.373245 143.227066,105.148659 144.557846,100.642075 z"/>
+        </svg>`;
+        
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        img.onload = () => {
+          canvas.width = 40;
+          canvas.height = 40;
+          ctx.drawImage(img, 0, 0, 40, 40);
+          
+          const imageData = canvas.toDataURL('image/png');
+          URL.revokeObjectURL(url);
+          resolve(imageData);
+        };
+        
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(null);
+        };
+        
+        img.src = url;
+      } catch (error) {
+        console.warn('Could not load logo for PDF:', error);
+        resolve(null);
+      }
+    });
     
     // Color scheme for sections (matching web UI)
     const sectionColors = {
@@ -1195,14 +1262,20 @@ const MeetingTranscriptionApp = () => {
       return currentY + (wrapped.length * lineHeight);
     };
     
-    // Title section with modern styling
+    // Title section with modern styling and logo
     checkPageBreak(60);
     doc.setFillColor(41, 152, 213);
     doc.rect(margin, y - 10, pageWidth - 2 * margin, 40, 'F');
+    
+    // Add logo to header if loaded successfully
+    if (logoImageData) {
+      doc.addImage(logoImageData, 'PNG', pageWidth - margin - 50, y - 5, 35, 35);
+    }
+    
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.setFont(undefined, 'bold');
-    doc.text("Meeting Summary", margin + 10, y + 15);
+    doc.text("MeetMemo - Meeting Summary", margin + 10, y + 15);
     y += 50;
     
     // Meeting title
@@ -1211,7 +1284,7 @@ const MeetingTranscriptionApp = () => {
       doc.setFontSize(16);
       doc.setFont(undefined, 'bold');
       checkPageBreak(25);
-      doc.text(`${summary.meetingTitle}`, margin, y);
+      doc.text(`≡ ${summary.meetingTitle}`, margin, y);
       y += 30;
     }
     
@@ -1245,15 +1318,10 @@ const MeetingTranscriptionApp = () => {
           doc.setFontSize(headingSize);
           doc.setFont(undefined, 'bold');
           
-          // Add section icon (simple text symbols for PDF compatibility)
-          const icons = {
-            actions: '> ', decisions: '* ', issues: '! ', 
-            highlights: '+ ', 'next-steps': '>> ', participants: '@ ',
-            summary: '= ', ideas: '~ ', discussion: '- ', default: '# '
-          };
-          const icon = icons[block.sectionType] || icons.default;
+          // Add section icon using our dual format system
+          const icon = getIconsForFormat(block.sectionType, 'pdf');
           
-          doc.text(`${icon}${block.content}`, margin, y + 15);
+          doc.text(`${icon} ${block.content}`, margin, y + 15);
           y += 25 + (6 - block.level) * 2;
           break;
           
