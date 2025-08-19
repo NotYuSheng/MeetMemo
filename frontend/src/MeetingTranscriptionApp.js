@@ -117,39 +117,83 @@ const parseMarkdownContent = (markdownText) => {
         sectionType: getSectionType(trimmedLine.substring(7).trim(), 6)
       };
     } 
-    // Detect list items (bulleted)
+    // Detect list items (bulleted) - but check if it might be a header first
     else if (trimmedLine.match(/^[-*+]\s+/)) {
       const content = trimmedLine.replace(/^[-*+]\s+/, '');
       const indent = line.length - line.trimStart().length;
       
-      if (!currentBlock || currentBlock.type !== 'list') {
+      // Check if this looks like a header (capitalized, short, doesn't end with punctuation)
+      const isLikelyHeader = (
+        content.length < 100 && // Reasonable header length
+        content.charAt(0) === content.charAt(0).toUpperCase() && // Starts with capital
+        !content.match(/\s(and|or|the|a|an|in|on|at|to|for|of|with|by)\s/i) && // Doesn't contain common mid-sentence words
+        (content.split(' ').length <= 8) && // Not too many words for a header
+        indent === 0 // No indentation
+      );
+      
+      if (isLikelyHeader) {
+        // Treat as heading
         if (currentBlock) contentBlocks.push(currentBlock);
         currentBlock = {
-          type: 'list',
-          listType: 'bullet',
-          items: [],
-          rawLines: []
+          type: 'heading',
+          level: 3, // Treat bullet headers as H3
+          content: content,
+          rawLine: line,
+          sectionType: getSectionType(content, 3)
         };
+      } else {
+        // Treat as list item
+        if (!currentBlock || currentBlock.type !== 'list') {
+          if (currentBlock) contentBlocks.push(currentBlock);
+          currentBlock = {
+            type: 'list',
+            listType: 'bullet',
+            items: [],
+            rawLines: []
+          };
+        }
+        currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
+        currentBlock.rawLines.push(line);
       }
-      currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
-      currentBlock.rawLines.push(line);
     }
-    // Detect numbered list items
+    // Detect numbered list items - but check if it might be a header first
     else if (trimmedLine.match(/^\d+\.\s+/)) {
       const content = trimmedLine.replace(/^\d+\.\s+/, '');
       const indent = line.length - line.trimStart().length;
       
-      if (!currentBlock || currentBlock.type !== 'list') {
+      // Check if this looks like a header (capitalized, short, doesn't end with punctuation)
+      const isLikelyHeader = (
+        content.length < 100 && // Reasonable header length
+        content.charAt(0) === content.charAt(0).toUpperCase() && // Starts with capital
+        !content.match(/\s(and|or|the|a|an|in|on|at|to|for|of|with|by)\s/i) && // Doesn't contain common mid-sentence words
+        (content.split(' ').length <= 8) && // Not too many words for a header
+        indent === 0 // No indentation
+      );
+      
+      if (isLikelyHeader) {
+        // Treat as heading
         if (currentBlock) contentBlocks.push(currentBlock);
         currentBlock = {
-          type: 'list',
-          listType: 'number',
-          items: [],
-          rawLines: []
+          type: 'heading',
+          level: 3, // Treat numbered headers as H3
+          content: content,
+          rawLine: line,
+          sectionType: getSectionType(content, 3)
         };
+      } else {
+        // Treat as list item
+        if (!currentBlock || currentBlock.type !== 'list') {
+          if (currentBlock) contentBlocks.push(currentBlock);
+          currentBlock = {
+            type: 'list',
+            listType: 'number',
+            items: [],
+            rawLines: []
+          };
+        }
+        currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
+        currentBlock.rawLines.push(line);
       }
-      currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
-      currentBlock.rawLines.push(line);
     }
     // Detect code blocks
     else if (trimmedLine.startsWith('```')) {
@@ -1167,7 +1211,7 @@ const MeetingTranscriptionApp = () => {
       doc.setFontSize(16);
       doc.setFont(undefined, 'bold');
       checkPageBreak(25);
-      doc.text(`📋 ${summary.meetingTitle}`, margin, y);
+      doc.text(`${summary.meetingTitle}`, margin, y);
       y += 30;
     }
     
@@ -1201,15 +1245,15 @@ const MeetingTranscriptionApp = () => {
           doc.setFontSize(headingSize);
           doc.setFont(undefined, 'bold');
           
-          // Add section icon (text-based)
+          // Add section icon (simple text symbols for PDF compatibility)
           const icons = {
-            actions: '✅', decisions: '🎯', issues: '⚠️', 
-            highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
-            summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
+            actions: '> ', decisions: '* ', issues: '! ', 
+            highlights: '+ ', 'next-steps': '>> ', participants: '@ ',
+            summary: '= ', ideas: '~ ', discussion: '- ', default: '# '
           };
           const icon = icons[block.sectionType] || icons.default;
           
-          doc.text(`${icon} ${block.content}`, margin, y + 15);
+          doc.text(`${icon}${block.content}`, margin, y + 15);
           y += 25 + (6 - block.level) * 2;
           break;
           
