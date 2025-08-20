@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Frontend (React)
 - `cd frontend && npm ci` - Install frontend dependencies
-- `cd frontend && npm start` - Start development server on port 3000
+- `cd frontend && npm start` - Start development server with HTTPS on port 3000 (required for microphone access)
 - `cd frontend && npm run build` - Build production frontend
 - `cd frontend && npm test` - Run tests
 - `cd frontend && npm run lint:css` - Lint CSS files
@@ -100,6 +100,7 @@ MeetMemo is a meeting transcription and summarization application with:
 - Real-time polling for job status updates
 - Speaker color mapping for UI consistency
 - Dark/light mode support with system preference detection
+- Microphone access requires HTTPS (automatically enabled in dev server)
 
 ### Error Handling
 - Backend logs errors with timestamps to logs/app.log
