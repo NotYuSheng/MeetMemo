@@ -50,6 +50,334 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
   });
 };
 
+// Shared content processing system for both web and PDF
+const parseMarkdownContent = (markdownText) => {
+  if (!markdownText) return [];
+  
+  const lines = markdownText.split('\n');
+  const contentBlocks = [];
+  let currentBlock = null;
+  
+  lines.forEach((line, index) => {
+    const trimmedLine = line.trim();
+    
+    // Detect headings
+    if (trimmedLine.startsWith('# ')) {
+      if (currentBlock) contentBlocks.push(currentBlock);
+      currentBlock = {
+        type: 'heading',
+        level: 1,
+        content: trimmedLine.substring(2).trim(),
+        rawLine: line,
+        sectionType: getSectionType(trimmedLine.substring(2).trim(), 1)
+      };
+    } else if (trimmedLine.startsWith('## ')) {
+      if (currentBlock) contentBlocks.push(currentBlock);
+      currentBlock = {
+        type: 'heading',
+        level: 2,
+        content: trimmedLine.substring(3).trim(),
+        rawLine: line,
+        sectionType: getSectionType(trimmedLine.substring(3).trim(), 2)
+      };
+    } else if (trimmedLine.startsWith('### ')) {
+      if (currentBlock) contentBlocks.push(currentBlock);
+      currentBlock = {
+        type: 'heading',
+        level: 3,
+        content: trimmedLine.substring(4).trim(),
+        rawLine: line,
+        sectionType: getSectionType(trimmedLine.substring(4).trim(), 3)
+      };
+    } else if (trimmedLine.startsWith('#### ')) {
+      if (currentBlock) contentBlocks.push(currentBlock);
+      currentBlock = {
+        type: 'heading',
+        level: 4,
+        content: trimmedLine.substring(5).trim(),
+        rawLine: line,
+        sectionType: getSectionType(trimmedLine.substring(5).trim(), 4)
+      };
+    } else if (trimmedLine.startsWith('##### ')) {
+      if (currentBlock) contentBlocks.push(currentBlock);
+      currentBlock = {
+        type: 'heading',
+        level: 5,
+        content: trimmedLine.substring(6).trim(),
+        rawLine: line,
+        sectionType: getSectionType(trimmedLine.substring(6).trim(), 5)
+      };
+    } else if (trimmedLine.startsWith('###### ')) {
+      if (currentBlock) contentBlocks.push(currentBlock);
+      currentBlock = {
+        type: 'heading',
+        level: 6,
+        content: trimmedLine.substring(7).trim(),
+        rawLine: line,
+        sectionType: getSectionType(trimmedLine.substring(7).trim(), 6)
+      };
+    } 
+    // Detect list items (bulleted) - but check if it might be a header first
+    else if (trimmedLine.match(/^[-*+]\s+/)) {
+      const content = trimmedLine.replace(/^[-*+]\s+/, '');
+      const indent = line.length - line.trimStart().length;
+      
+      // Check if this looks like a header (capitalized, short, doesn't end with punctuation)
+      const isLikelyHeader = (
+        content.length < 100 && // Reasonable header length
+        content.charAt(0) === content.charAt(0).toUpperCase() && // Starts with capital
+        !content.match(/\s(and|or|the|a|an|in|on|at|to|for|of|with|by)\s/i) && // Doesn't contain common mid-sentence words
+        (content.split(' ').length <= 8) && // Not too many words for a header
+        indent === 0 // No indentation
+      );
+      
+      if (isLikelyHeader) {
+        // Treat as heading
+        if (currentBlock) contentBlocks.push(currentBlock);
+        currentBlock = {
+          type: 'heading',
+          level: 3, // Treat bullet headers as H3
+          content: content,
+          rawLine: line,
+          sectionType: getSectionType(content, 3)
+        };
+      } else {
+        // Treat as list item
+        if (!currentBlock || currentBlock.type !== 'list') {
+          if (currentBlock) contentBlocks.push(currentBlock);
+          currentBlock = {
+            type: 'list',
+            listType: 'bullet',
+            items: [],
+            rawLines: []
+          };
+        }
+        currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
+        currentBlock.rawLines.push(line);
+      }
+    }
+    // Detect numbered list items - but check if it might be a header first
+    else if (trimmedLine.match(/^\d+\.\s+/)) {
+      const content = trimmedLine.replace(/^\d+\.\s+/, '');
+      const indent = line.length - line.trimStart().length;
+      
+      // Check if this looks like a header (capitalized, short, doesn't end with punctuation)
+      const isLikelyHeader = (
+        content.length < 100 && // Reasonable header length
+        content.charAt(0) === content.charAt(0).toUpperCase() && // Starts with capital
+        !content.match(/\s(and|or|the|a|an|in|on|at|to|for|of|with|by)\s/i) && // Doesn't contain common mid-sentence words
+        (content.split(' ').length <= 8) && // Not too many words for a header
+        indent === 0 // No indentation
+      );
+      
+      if (isLikelyHeader) {
+        // Treat as heading
+        if (currentBlock) contentBlocks.push(currentBlock);
+        currentBlock = {
+          type: 'heading',
+          level: 3, // Treat numbered headers as H3
+          content: content,
+          rawLine: line,
+          sectionType: getSectionType(content, 3)
+        };
+      } else {
+        // Treat as list item
+        if (!currentBlock || currentBlock.type !== 'list') {
+          if (currentBlock) contentBlocks.push(currentBlock);
+          currentBlock = {
+            type: 'list',
+            listType: 'number',
+            items: [],
+            rawLines: []
+          };
+        }
+        currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
+        currentBlock.rawLines.push(line);
+      }
+    }
+    // Detect code blocks
+    else if (trimmedLine.startsWith('```')) {
+      if (!currentBlock || currentBlock.type !== 'codeblock') {
+        if (currentBlock) contentBlocks.push(currentBlock);
+        currentBlock = {
+          type: 'codeblock',
+          language: trimmedLine.substring(3).trim(),
+          content: [],
+          rawLines: []
+        };
+      } else {
+        // End of code block
+        if (currentBlock) contentBlocks.push(currentBlock);
+        currentBlock = null;
+      }
+    }
+    // Detect blockquotes
+    else if (trimmedLine.startsWith('> ')) {
+      const content = trimmedLine.substring(2);
+      if (!currentBlock || currentBlock.type !== 'blockquote') {
+        if (currentBlock) contentBlocks.push(currentBlock);
+        currentBlock = {
+          type: 'blockquote',
+          content: [],
+          rawLines: []
+        };
+      }
+      currentBlock.content.push(parseInlineFormatting(content));
+      currentBlock.rawLines.push(line);
+    }
+    // Regular paragraph or content
+    else if (trimmedLine) {
+      if (currentBlock && currentBlock.type === 'codeblock') {
+        currentBlock.content.push(line);
+        currentBlock.rawLines.push(line);
+      } else {
+        if (!currentBlock || currentBlock.type !== 'paragraph') {
+          if (currentBlock) contentBlocks.push(currentBlock);
+          currentBlock = {
+            type: 'paragraph',
+            content: [],
+            rawLines: []
+          };
+        }
+        currentBlock.content.push(parseInlineFormatting(trimmedLine));
+        currentBlock.rawLines.push(line);
+      }
+    }
+    // Empty lines
+    else {
+      if (currentBlock) {
+        contentBlocks.push(currentBlock);
+        currentBlock = null;
+      }
+    }
+  });
+  
+  if (currentBlock) {
+    contentBlocks.push(currentBlock);
+  }
+  
+  return contentBlocks;
+};
+
+// Parse inline formatting (bold, italic, code, links)
+const parseInlineFormatting = (text) => {
+  return {
+    raw: text,
+    html: text
+      // Bold **text** or __text__
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
+      // Italic *text* or _text_
+      .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>')
+      // Code `text`
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Links [text](url)
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+  };
+};
+
+// Get section type (reuse existing logic)
+const getSectionType = (content, level) => {
+  const text = String(content).toLowerCase();
+  
+  if (level <= 2) {
+    if (text.includes('action') || text.includes('tasks') || text.includes('todo')) return 'actions';
+    if (text.includes('decision') || text.includes('outcome')) return 'decisions';
+    if (text.includes('participant') || text.includes('attendee')) return 'participants';
+    if (text.includes('discussion') || text.includes('topic')) return 'discussion';
+    if (text.includes('key point') || text.includes('highlight')) return 'highlights';
+    if (text.includes('next step') || text.includes('follow up')) return 'next-steps';
+    if (text.includes('issue') || text.includes('concern') || text.includes('risk')) return 'issues';
+    if (text.includes('idea') || text.includes('suggestion') || text.includes('insight')) return 'ideas';
+    if (text.includes('summary') || text.includes('overview')) return 'summary';
+  }
+  
+  return 'default';
+};
+
+// Content validation function - ensures web and PDF show identical content
+const validateContentParity = (markdownText) => {
+  const contentBlocks = parseMarkdownContent(markdownText);
+  const validation = {
+    totalBlocks: contentBlocks.length,
+    headings: contentBlocks.filter(b => b.type === 'heading').length,
+    paragraphs: contentBlocks.filter(b => b.type === 'paragraph').length,
+    lists: contentBlocks.filter(b => b.type === 'list').length,
+    codeblocks: contentBlocks.filter(b => b.type === 'codeblock').length,
+    blockquotes: contentBlocks.filter(b => b.type === 'blockquote').length,
+    sections: {},
+    wordCount: 0
+  };
+  
+  // Count section types and total words
+  contentBlocks.forEach(block => {
+    if (block.type === 'heading' && block.sectionType) {
+      validation.sections[block.sectionType] = (validation.sections[block.sectionType] || 0) + 1;
+    }
+    
+    // Count words in different block types
+    if (block.content) {
+      if (typeof block.content === 'string') {
+        validation.wordCount += block.content.split(/\s+/).length;
+      } else if (Array.isArray(block.content)) {
+        block.content.forEach(item => {
+          const text = item.raw || item.html || String(item);
+          validation.wordCount += text.replace(/<[^>]*>/g, '').split(/\s+/).length;
+        });
+      }
+    }
+  });
+  
+  return validation;
+};
+
+// Icon mapping for different formats
+const getIconsForFormat = (sectionType, format = 'web') => {
+  const iconMaps = {
+    web: {
+      // Beautiful emojis for web display
+      actions: '✅', decisions: '🎯', issues: '⚠️', 
+      highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
+      summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
+    },
+    pdf: {
+      // Same emojis for PDF - we'll convert them to images
+      actions: '✅', decisions: '🎯', issues: '⚠️', 
+      highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
+      summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
+    }
+  };
+  
+  return iconMaps[format][sectionType] || iconMaps[format].default;
+};
+
+// Convert emoji to image data for PDF embedding
+const emojiToImageData = async (emoji, size = 16) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = size;
+    canvas.height = size;
+    
+    // Set font and styling
+    ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", "EmojiSymbols"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Clear background
+    ctx.clearRect(0, 0, size, size);
+    
+    // Draw emoji
+    ctx.fillText(emoji, size / 2, size / 2);
+    
+    // Convert to image data
+    const imageData = canvas.toDataURL('image/png');
+    resolve(imageData);
+  });
+};
+
 // Custom ReactMarkdown components with icons
 const getHeadingIcon = (children, level) => {
   const text = String(children).toLowerCase();
@@ -78,30 +406,20 @@ const getHeadingIcon = (children, level) => {
   return Hash;
 };
 
-const getSectionStyle = (children, level) => {
-  const text = String(children).toLowerCase();
-  
-  if (level === 2) {
-    if (text.includes('action') || text.includes('tasks') || text.includes('todo')) {
-      return 'summary-section-actions';
-    }
-    if (text.includes('decision') || text.includes('outcome')) {
-      return 'summary-section-decisions';
-    }
-    if (text.includes('participant') || text.includes('attendee')) {
-      return 'summary-section-participants';
-    }
-    if (text.includes('key point') || text.includes('highlight')) {
-      return 'summary-section-highlights';
-    }
-    if (text.includes('issue') || text.includes('concern') || text.includes('risk')) {
-      return 'summary-section-issues';
-    }
-    if (text.includes('next step') || text.includes('follow up')) {
-      return 'summary-section-next-steps';
+const getSectionStyle = (sectionType, level) => {
+  if (level <= 2) {
+    switch (sectionType) {
+      case 'actions': return 'summary-section-actions';
+      case 'decisions': return 'summary-section-decisions';
+      case 'participants': return 'summary-section-participants';
+      case 'highlights': return 'summary-section-highlights';
+      case 'issues': return 'summary-section-issues';
+      case 'next-steps': return 'summary-section-next-steps';
+      case 'ideas': return 'summary-section-ideas';
+      case 'discussion': return 'summary-section-discussion';
+      default: return 'summary-section-default';
     }
   }
-  
   return 'summary-section-default';
 };
 
@@ -114,11 +432,11 @@ const CollapsibleSection = ({ isCollapsed, onToggle, children }) => {
   );
 };
 
-const CustomHeading = ({ level, children, ...props }) => {
+const CustomHeading = ({ level, children, sectionType, ...props }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const HeadingTag = `h${level}`;
   const IconComponent = getHeadingIcon(children, level);
-  const sectionClass = getSectionStyle(children, level);
+  const sectionClass = getSectionStyle(sectionType || getSectionType(children, level), level);
   const headingId = `heading-${String(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}`;
   
   const toggleCollapse = () => {
@@ -182,6 +500,9 @@ const CustomHeading = ({ level, children, ...props }) => {
       )}
       <IconComponent size={level === 1 ? 22 : level === 2 ? 20 : 18} />
       <span onClick={level === 2 ? toggleCollapse : undefined} style={{ flex: 1 }}>
+        <span style={{ marginRight: '0.5rem' }}>
+          {getIconsForFormat(sectionType || getSectionType(children, level), 'web')}
+        </span>
         {children}
       </span>
       {level === 2 && (
@@ -195,6 +516,87 @@ const CustomHeading = ({ level, children, ...props }) => {
         </button>
       )}
     </HeadingTag>
+  );
+};
+
+// Render parsed content blocks as React elements
+const ContentRenderer = ({ contentBlocks }) => {
+  if (!contentBlocks || contentBlocks.length === 0) {
+    return <div>No content available</div>;
+  }
+
+  const renderInlineFormatting = (formatted) => {
+    if (!formatted || !formatted.html) return formatted?.raw || formatted || '';
+    
+    return <span dangerouslySetInnerHTML={{ __html: formatted.html }} />;
+  };
+
+  return (
+    <div className="content-renderer">
+      {contentBlocks.map((block, index) => {
+        const key = `block-${index}`;
+        
+        switch (block.type) {
+          case 'heading':
+            return (
+              <CustomHeading 
+                key={key}
+                level={block.level} 
+                sectionType={block.sectionType}
+              >
+                {block.content}
+              </CustomHeading>
+            );
+            
+          case 'paragraph':
+            return (
+              <p key={key} className="content-paragraph">
+                {block.content.map((item, pIndex) => (
+                  <span key={`p-${pIndex}`}>
+                    {renderInlineFormatting(item)}
+                    {pIndex < block.content.length - 1 && ' '}
+                  </span>
+                ))}
+              </p>
+            );
+            
+          case 'list':
+            const ListTag = block.listType === 'bullet' ? 'ul' : 'ol';
+            return (
+              <ListTag key={key} className="content-list">
+                {block.items.map((item, liIndex) => (
+                  <li key={`li-${liIndex}`} style={{ marginLeft: `${item.indent || 0}px` }}>
+                    {renderInlineFormatting(item.formatted)}
+                  </li>
+                ))}
+              </ListTag>
+            );
+            
+          case 'blockquote':
+            return (
+              <blockquote key={key} className="content-blockquote">
+                {block.content.map((item, bqIndex) => (
+                  <p key={`bq-${bqIndex}`}>
+                    {renderInlineFormatting(item)}
+                  </p>
+                ))}
+              </blockquote>
+            );
+            
+          case 'codeblock':
+            return (
+              <pre key={key} className="content-codeblock">
+                <code className={block.language ? `language-${block.language}` : ''}>
+                  {block.content.join('\n')}
+                </code>
+              </pre>
+            );
+            
+          default:
+            return null;
+        }
+      })}
+    </div>
   );
 };
 
@@ -783,44 +1185,323 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Delete failed:", err));
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!summary) return;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    
+    // Parse content using our unified parser
+    const contentBlocks = parseMarkdownContent(summary.summary);
+    
+    const doc = new jsPDF({ 
+      unit: "pt", 
+      format: "a4",
+      putOnlyUsedFonts: true,
+      compress: true
+    });
+    
+    // Set default font to ensure ASCII characters render properly
+    doc.setFont("helvetica", "normal");
     const margin = 40;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const lineHeight = 14;
     let y = margin;
-    const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
-      doc.setFontSize(fontSize);
-      doc.setFont(undefined, isBold ? "bold" : "normal");
-      const wrapped = doc.splitTextToSize(text, pageWidth - indent - margin);
-      wrapped.forEach((line) => {
-        if (y + lineHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-        doc.text(line, indent, y);
-        y += lineHeight;
-      });
-    };
-    doc.setFontSize(18);
-    addLine("Meeting Summary", margin, 18, true);
-    y += lineHeight;
-    doc.setFontSize(12);
-    addLine(`Title: ${summary.meetingTitle || "N/A"}`, margin, 12, true);
-    y += lineHeight;
-    const lines = summary.summary.split("\n");
-    lines.forEach((line) => {
-      if (line.startsWith("### ")) {
-        addLine(line.substring(4), margin, 14, true);
-      } else if (line.startsWith("- ")) {
-        addLine(line.substring(2), margin + 15);
-      } else {
-        addLine(line, margin);
+    
+    // Load logo image data
+    const logoImageData = await new Promise((resolve) => {
+      try {
+        // Create a canvas to render SVG as image
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        // SVG content as data URI with the MeetMemo brand colors
+        const svgData = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 336 336" width="40" height="40">
+          <path fill="#ffffff" opacity="1.000000" stroke="none" d="M177.747375,243.805908 C187.551575,241.301575 197.013290,238.972092 206.908539,236.535873 C204.759552,235.384598 204.424896,234.538498 206.484528,233.528259 C212.344498,230.654022 217.545486,226.736145 222.800049,222.924042 C226.764954,220.047577 230.801468,217.213058 233.987167,212.706787 C231.110565,213.523422 229.964417,216.416870 227.391235,216.342590 C270.326691,171.020096 275.153503,123.156799 237.025314,72.363441 C208.287735,43.867672 174.722794,33.016499 135.331573,45.502388 C101.301178,56.289051 66.757080,90.920616 66.988014,143.659973 C64.010902,142.756012 62.900990,140.794342 63.083389,137.876831 C63.311653,134.225845 63.604523,130.573563 63.666595,126.918396 C64.074638,102.891487 75.006737,83.385185 90.650024,66.328651 C107.063400,48.432461 127.628914,37.923756 151.837524,34.549519 C199.599701,27.892355 244.227371,54.204498 262.365082,94.030251 C289.743286,154.145752 261.283630,225.271652 195.461365,244.490952 C187.299316,246.874176 178.813599,249.559479 170.474350,248.045975 C163.230560,246.731262 155.755524,246.989639 147.830627,244.607788 C152.871735,242.437286 157.198074,245.701920 161.380615,244.358170 C166.695435,242.650650 172.098038,245.493088 177.747375,243.805908 z"/>
+          <path fill="#ffffff" opacity="1.000000" stroke="none" d="M144.557846,100.642075 C144.454010,96.865738 144.634216,93.491203 144.084503,90.240089 C143.365341,85.986664 141.712006,85.504791 138.435089,88.324097 C133.134125,92.884796 129.809021,98.978676 126.787552,105.045654 C116.444420,125.814163 111.866333,147.922363 112.155304,171.127670 C112.202446,174.912796 114.405891,177.919022 114.877113,181.637314 C111.994888,182.634949 111.038200,180.748596 110.131523,179.023773 C108.383972,175.699295 107.897812,171.935760 107.881264,168.363571 C107.747765,139.552032 114.372986,112.664459 131.397156,88.912643 C132.639359,87.179527 134.204468,85.583191 135.896622,84.284348 C141.749985,79.791504 146.205811,81.709770 147.535187,88.917953 C149.409729,99.082161 147.860092,109.154007 146.834869,119.204338 C145.639740,130.920135 143.869629,142.576889 142.405411,154.266312 C142.268204,155.361633 142.535324,156.507584 142.657623,158.236557 C145.376160,156.624207 146.116531,154.161026 147.331223,152.153656 C162.807449,126.577873 180.049973,102.315323 200.657288,80.573273 C205.353470,75.618507 210.243698,70.809212 216.784744,68.197105 C221.105011,66.471832 223.820969,67.664108 225.196075,72.121109 C227.106186,78.312141 226.704437,84.716255 226.050522,90.965324 C221.744995,132.110748 212.297729,172.156769 199.741058,211.511856 C199.265366,213.002762 199.308594,214.937897 197.065948,215.393448 C194.808594,214.103424 196.017517,212.266876 196.444916,210.635620 C203.393860,184.112762 210.527023,157.618393 215.009399,130.542145 C217.715836,114.193642 221.315155,97.934174 221.656311,81.263908 C221.704605,78.905289 222.638092,75.839195 219.734573,74.567993 C217.104919,73.416687 214.959824,75.534653 212.996735,76.953629 C202.474777,84.559181 194.424042,94.592728 186.444733,104.631073 C173.057159,121.473297 161.445831,139.571411 149.607147,157.502899 C149.240143,158.058792 148.942459,158.670547 148.517242,159.176193 C146.672485,161.369919 145.541000,165.372055 141.916855,164.165176 C138.090225,162.890884 138.424927,158.826523 138.759598,155.563950 C140.198990,141.531586 141.797073,127.515121 143.403503,113.500443 C143.876587,109.373245 143.227066,105.148659 144.557846,100.642075 z"/>
+        </svg>`;
+        
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        img.onload = () => {
+          canvas.width = 40;
+          canvas.height = 40;
+          ctx.drawImage(img, 0, 0, 40, 40);
+          
+          const imageData = canvas.toDataURL('image/png');
+          URL.revokeObjectURL(url);
+          resolve(imageData);
+        };
+        
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(null);
+        };
+        
+        img.src = url;
+      } catch (error) {
+        console.warn('Could not load logo for PDF:', error);
+        resolve(null);
       }
     });
-    doc.save("meeting-summary.pdf");
+    
+    // Pre-generate emoji images for PDF
+    const emojiImageCache = {};
+    const allEmojis = ['✅', '🎯', '⚠️', '⭐', '⏭️', '👥', '📋', '💡', '💬', '📌'];
+    
+    console.log('🎨 Converting emojis to images for PDF...');
+    for (const emoji of allEmojis) {
+      try {
+        emojiImageCache[emoji] = await emojiToImageData(emoji, 16);
+      } catch (error) {
+        console.warn(`Could not convert emoji ${emoji} to image:`, error);
+        emojiImageCache[emoji] = null;
+      }
+    }
+    console.log('✅ Emoji images ready for PDF');
+    
+    // Color scheme for sections (matching web UI)
+    const sectionColors = {
+      actions: [34, 197, 94],      // Green
+      decisions: [59, 130, 246],   // Blue  
+      issues: [239, 68, 68],       // Red
+      highlights: [245, 158, 11],  // Amber
+      'next-steps': [139, 92, 246], // Purple
+      participants: [6, 182, 212], // Cyan
+      default: [41, 152, 213]      // Primary blue
+    };
+    
+    // Helper function to add page breaks
+    const checkPageBreak = (requiredHeight) => {
+      if (y + requiredHeight > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+        return true;
+      }
+      return false;
+    };
+    
+    // Helper function to render text with HTML formatting
+    const renderFormattedText = (formatted, x, currentY, maxWidth, fontSize = 12) => {
+      const html = formatted.html || formatted.raw || formatted;
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const textContent = tempDiv.textContent || tempDiv.innerText || html;
+      
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", 'normal');
+      
+      // Handle bold text (approximate by using bold font)
+      if (html.includes('<strong>') || html.includes('<b>')) {
+        doc.setFont("helvetica", 'bold');
+      }
+      
+      const wrapped = doc.splitTextToSize(textContent, maxWidth);
+      const lineHeight = fontSize * 1.2;
+      
+      wrapped.forEach((line, index) => {
+        checkPageBreak(lineHeight);
+        doc.text(line, x, currentY + (index * lineHeight));
+      });
+      
+      return currentY + (wrapped.length * lineHeight);
+    };
+    
+    // Title section with modern styling and logo
+    checkPageBreak(60);
+    doc.setFillColor(41, 152, 213);
+    doc.rect(margin, y - 10, pageWidth - 2 * margin, 40, 'F');
+    
+    // Add logo to header if loaded successfully
+    if (logoImageData) {
+      doc.addImage(logoImageData, 'PNG', pageWidth - margin - 50, y - 5, 35, 35);
+    }
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", 'bold');
+    doc.text("MeetMemo - Meeting Summary", margin + 10, y + 15);
+    y += 50;
+    
+    // Meeting title
+    if (summary.meetingTitle) {
+      doc.setTextColor(41, 152, 213);
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      checkPageBreak(25);
+      doc.text(`≡ ${summary.meetingTitle}`, margin, y);
+      y += 30;
+    }
+    
+    // Reset text color for content
+    doc.setTextColor(0, 0, 0);
+    
+    // Process each content block
+    contentBlocks.forEach((block, blockIndex) => {
+      const isLastBlock = blockIndex === contentBlocks.length - 1;
+      
+      switch (block.type) {
+        case 'heading':
+          const sectionColor = sectionColors[block.sectionType] || sectionColors.default;
+          
+          // Add spacing before headings (except first)
+          if (blockIndex > 0) {
+            y += 20;
+          }
+          
+          checkPageBreak(30 + (6 - block.level) * 5);
+          
+          // Colored bar for sections
+          if (block.level <= 2) {
+            doc.setFillColor(...sectionColor);
+            doc.rect(margin - 5, y - 5, 4, 20, 'F');
+          }
+          
+          // Heading text
+          doc.setTextColor(...sectionColor);
+          const headingSize = Math.max(14, 20 - (block.level * 2));
+          doc.setFontSize(headingSize);
+          doc.setFont("helvetica", 'bold');
+          
+          // Add section icon using our dual format system
+          const icon = getIconsForFormat(block.sectionType, 'pdf');
+          const emojiImage = emojiImageCache[icon];
+          
+          // Add emoji as image if available, otherwise use text
+          if (emojiImage) {
+            doc.addImage(emojiImage, 'PNG', margin, y + 2, 14, 14);
+            doc.text(block.content, margin + 18, y + 15);
+          } else {
+            doc.text(`${icon} ${block.content}`, margin, y + 15);
+          }
+          
+          y += 25 + (6 - block.level) * 2;
+          break;
+          
+        case 'paragraph':
+          checkPageBreak(40);
+          doc.setTextColor(0, 0, 0);
+          
+          block.content.forEach(contentItem => {
+            y = renderFormattedText(contentItem, margin, y, pageWidth - 2 * margin, 11) + 5;
+          });
+          
+          if (!isLastBlock) y += 10;
+          break;
+          
+        case 'list':
+          checkPageBreak(30);
+          doc.setTextColor(0, 0, 0);
+          
+          block.items.forEach((item, itemIndex) => {
+            const bullet = block.listType === 'bullet' ? '•' : `${itemIndex + 1}.`;
+            const indent = margin + 15 + (item.indent || 0);
+            
+            checkPageBreak(18);
+            
+            // Render bullet/number
+            doc.setFontSize(11);
+            doc.setFont("helvetica", 'bold');
+            doc.setTextColor(41, 152, 213);
+            doc.text(bullet, margin + 5, y);
+            
+            // Render content
+            doc.setTextColor(0, 0, 0);
+            y = renderFormattedText(item.formatted, indent, y, pageWidth - indent - margin, 11) + 3;
+          });
+          
+          if (!isLastBlock) y += 10;
+          break;
+          
+        case 'blockquote':
+          checkPageBreak(40);
+          
+          // Quote bar
+          doc.setFillColor(200, 200, 200);
+          doc.rect(margin, y - 5, 3, block.content.length * 15 + 10, 'F');
+          
+          // Quote background
+          doc.setFillColor(248, 248, 248);
+          doc.rect(margin + 5, y - 5, pageWidth - 2 * margin - 5, block.content.length * 15 + 10, 'F');
+          
+          doc.setTextColor(80, 80, 80);
+          doc.setFont("helvetica", 'italic');
+          
+          block.content.forEach(contentItem => {
+            y = renderFormattedText(contentItem, margin + 15, y, pageWidth - 2 * margin - 20, 11) + 5;
+          });
+          
+          if (!isLastBlock) y += 15;
+          break;
+          
+        case 'codeblock':
+          checkPageBreak(Math.max(40, block.content.length * 12 + 20));
+          
+          // Code background
+          doc.setFillColor(245, 245, 245);
+          const codeHeight = block.content.length * 12 + 20;
+          doc.rect(margin, y - 5, pageWidth - 2 * margin, codeHeight, 'F');
+          
+          // Code border
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(margin, y - 5, pageWidth - 2 * margin, codeHeight, 'S');
+          
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(10);
+          doc.setFont('courier', 'normal');
+          
+          block.content.forEach((line, lineIndex) => {
+            doc.text(line, margin + 10, y + 10 + (lineIndex * 12));
+          });
+          
+          y += codeHeight + 10;
+          break;
+      }
+    });
+    
+    // Add footer with generation date
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", 'normal');
+      doc.text(
+        `Generated on ${new Date().toLocaleDateString()} - Page ${i} of ${totalPages}`,
+        margin,
+        pageHeight - 20
+      );
+      doc.text('Created with MeetMemo', pageWidth - margin - 80, pageHeight - 20);
+    }
+    
+    // Generate smart filename
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const titleSlug = summary.meetingTitle 
+      ? summary.meetingTitle.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30)
+      : 'Meeting-Summary';
+    
+    doc.save(`${titleSlug}-${dateStr}.pdf`);
+  };
+
+  // Debug function for testing content parity (can be removed after testing)
+  const debugContentParity = () => {
+    if (!summary?.summary) return;
+    
+    const validation = validateContentParity(summary.summary);
+    console.log('🔍 Content Parity Validation:', validation);
+    console.log('📄 Parsed Content Blocks:', parseMarkdownContent(summary.summary));
+    
+    alert(`Content Analysis:
+📊 Total Blocks: ${validation.totalBlocks}
+📝 Headings: ${validation.headings}
+📄 Paragraphs: ${validation.paragraphs} 
+📋 Lists: ${validation.lists}
+📦 Code Blocks: ${validation.codeblocks}
+💬 Blockquotes: ${validation.blockquotes}
+🔤 Word Count: ${validation.wordCount}
+🏷️ Sections: ${Object.keys(validation.sections).join(', ')}
+
+Check console for detailed breakdown.`);
   };
 
   const exportTranscriptToTxt = () => {
@@ -1142,6 +1823,16 @@ const MeetingTranscriptionApp = () => {
                         <Download className="btn-icon" />
                         Export PDF
                       </button>
+                      {/* Debug button for testing - remove after verification */}
+                      {process.env.NODE_ENV === 'development' && (
+                        <button
+                          onClick={debugContentParity}
+                          className="btn btn-secondary btn-small"
+                          title="Debug: Verify content parity between web and PDF"
+                        >
+                          🔍 Debug
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1233,12 +1924,9 @@ const MeetingTranscriptionApp = () => {
                       </p>
                     )}
                     <div className="summary-text">
-                      <ReactMarkdown 
-                        remarkPlugins={[remarkGfm]}
-                        components={customComponents}
-                      >
-                        {summary.summary}
-                      </ReactMarkdown>
+                      <ContentRenderer 
+                        contentBlocks={parseMarkdownContent(summary.summary)} 
+                      />
                     </div>
                   </div>
                 ) : (
