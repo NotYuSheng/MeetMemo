@@ -236,22 +236,18 @@ def summarise_transcript(transcript: str, filename: str = None, custom_prompt: s
     model_name = str(os.getenv("LLM_MODEL_NAME"))
 
     # Default system prompt
-    default_system_prompt = "You are a meeting summarizer. You MUST follow the exact format provided in the user prompt. Always start with a # title, include source file information, and use the specific markdown structure requested. Do not deviate from the format."
+    default_system_prompt = "You are a meeting summarizer. You MUST start your response with a title in this exact format: '# [descriptive title]'. This is mandatory."
     
     # Default user prompt
     default_user_prompt = (
-        "REQUIRED FORMAT - Generate a meeting summary using EXACTLY this structure:\n\n"
-        "# [Generate a descriptive title for this meeting]\n\n"
-        "**Source File:** [filename]\n\n"
-        "## Participants\n"
-        "- [list participants]\n\n"
-        "## Key Points\n"
-        "- [summarize main discussion points]\n\n"
-        "## Action Items\n"
-        "- [list specific actions, or 'None identified']\n\n"
-        "## Next Steps\n"
-        "- [list next steps, or 'None identified']\n\n"
-        "Be concise and professional. Use the exact markdown structure shown above."
+        "Create a meeting summary in this exact format:\n\n"
+        "First line must be: # Meeting About [topic]\n"
+        "Then add: Source: [filename]\n"
+        "Then list: Participants, Key Points, Action Items, Next Steps\n\n"
+        "Example:\n"
+        "# Meeting About Project Planning\n"
+        "Source: meeting-recording.wav\n\n"
+        "Now create the actual summary:"
     )
 
     # Use custom prompts if provided, otherwise use defaults
@@ -266,7 +262,7 @@ def summarise_transcript(transcript: str, filename: str = None, custom_prompt: s
 
     payload = {
         "model": model_name,
-        "temperature": 0.3,
+        "temperature": 0.1,
         "max_tokens": 5000,
         "messages": [
             {"role": "system", "content": final_system_prompt},
@@ -279,6 +275,35 @@ def summarise_transcript(transcript: str, filename: str = None, custom_prompt: s
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
+        
+        # Post-process to ensure title and filename are included
+        logger.info(f"Raw summary starts with: '{summary[:50]}'")
+        
+        # Check if filename is mentioned in the summary
+        if filename and filename not in summary:
+            logger.info("Adding filename reference to summary")
+            # Find where to insert filename - after title if exists, or at beginning
+            if summary.startswith('#'):
+                # Find end of first line (title)
+                first_line_end = summary.find('\n')
+                if first_line_end != -1:
+                    # Insert filename after title
+                    title_part = summary[:first_line_end]
+                    rest_part = summary[first_line_end:]
+                    summary = f"{title_part}\n\n**Source File:** {filename}{rest_part}"
+                else:
+                    summary = f"{summary}\n\n**Source File:** {filename}"
+            else:
+                # No title, add both title and filename
+                logger.info("Adding title and filename to summary")
+                base_name = filename.split('.')[0].replace('_', ' ').replace('-', ' ')
+                title = f"Meeting: {base_name}"
+                summary = f"# {title}\n\n**Source File:** {filename}\n\n{summary}"
+        elif not summary.startswith('#'):
+            # No title, add generic title
+            logger.info("Adding generic title to summary")
+            summary = f"# Meeting Summary\n\n{summary}"
+        
         return summary
     
     except requests.RequestException as e:
