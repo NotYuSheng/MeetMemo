@@ -26,8 +26,7 @@ import {
 import "./MeetingTranscriptionApp.css";
 import jsPDF from "jspdf";
 import { useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import logger from "./utils/logger";
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
@@ -423,6 +422,22 @@ const getSectionStyle = (sectionType, level) => {
   return 'summary-section-default';
 };
 
+// Extract AI-generated title from summary markdown
+const extractTitleFromSummary = (summaryText) => {
+  if (!summaryText) return null;
+  
+  // Look for the first # heading in the summary
+  const lines = summaryText.split('\n');
+  for (const line of lines) {
+    const match = line.match(/^#\s+(.+)$/);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  
+  return null;
+};
+
 // Collapsible Section Component
 const CollapsibleSection = ({ isCollapsed, onToggle, children }) => {
   return (
@@ -793,7 +808,7 @@ const MeetingTranscriptionApp = () => {
         setIsRenaming(false);
       })
       .catch((err) => {
-        console.error("Failed to save speaker names:", err);
+        logger.apiError(`/jobs/${selectedMeetingId}/speakers`, err, { mapping: currentSpeakerNameMap });
         alert("An error occurred while saving the new names.");
       })
       .finally(() => {
@@ -827,12 +842,16 @@ const MeetingTranscriptionApp = () => {
       })
       .then((res) => res.json())
       .then((data) => {
+        const aiTitle = extractTitleFromSummary(data.summary);
         setSummary({
-          meetingTitle: data.fileName,
+          meetingTitle: aiTitle || data.fileName,
           summary: data.summary,
         });
       })
-      .catch((err) => console.error("Failed to load past meeting", err))
+      .catch((err) => {
+        logger.apiError(`/jobs/${uuid}/transcript`, err);
+        console.error("Failed to load past meeting", err);
+      })
       .finally(() => setSummaryLoading(false));
   };
 
@@ -854,7 +873,10 @@ const MeetingTranscriptionApp = () => {
           setIsRenaming(false);
         }
       })
-      .catch((err) => console.error("Failed to rename meeting", err));
+      .catch((err) => {
+        logger.apiError(`/jobs/${selectedMeetingId}/rename`, err, { new_name: newName });
+        console.error("Failed to rename meeting", err);
+      });
   };
 
   const startRecording = async () => {
@@ -883,6 +905,7 @@ const MeetingTranscriptionApp = () => {
       setRecordingTime(0);
       setIsRecording(true);
     } catch (error) {
+      logger.error("Failed to start audio recording", error, { userAgent: navigator.userAgent });
       console.error("Error starting recording:", error);
       
       // Provide user-friendly error messages
@@ -1005,6 +1028,7 @@ const MeetingTranscriptionApp = () => {
         // Job still processing, wait and retry
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
+        logger.apiError(`/jobs/${uuid}/status`, error, { attempt, maxAttempts });
         console.error("Error polling job status:", error);
         throw error;
       }
@@ -1048,6 +1072,7 @@ const MeetingTranscriptionApp = () => {
 
       setSelectedFile(null);
     } catch (err) {
+      logger.error("Failed to process uploaded file", err, { fileName: selectedFile?.name });
       console.error("Failed to process uploaded file:", err);
       alert(`Failed to process file: ${err.message}`);
     } finally {
@@ -1087,6 +1112,7 @@ const MeetingTranscriptionApp = () => {
         throw new Error("No transcript or job ID returned");
       }
     } catch (err) {
+      logger.error("Failed to process recorded audio", err, { audioSize: audioBlob?.size });
       console.error("Failed to process recorded audio:", err);
       alert(`Failed to process recording: ${err.message}`);
     } finally {
@@ -1104,7 +1130,10 @@ const MeetingTranscriptionApp = () => {
         }));
         setMeetingList(list);
       })
-      .catch((err) => console.error("Failed to fetch meeting list", err));
+      .catch((err) => {
+        logger.apiError("/jobs", err);
+        console.error("Failed to fetch meeting list", err);
+      });
   };
 
   const fetchSummary = (uuid, forceRegenerate = false) => {
@@ -1136,13 +1165,17 @@ const MeetingTranscriptionApp = () => {
         .then((res) => res.json())
         .then((data) => {
           if (data && data.summary) {
+            const aiTitle = extractTitleFromSummary(data.summary);
             setSummary({
-              meetingTitle: data.fileName,
+              meetingTitle: aiTitle || data.fileName,
               summary: data.summary,
             });
           }
         })
-        .catch((err) => console.error("Failed to fetch summary", err))
+        .catch((err) => {
+          logger.apiError(`/jobs/${uuid}/summarise`, err, requestBody);
+          console.error("Failed to fetch summary", err);
+        })
         .finally(() => setSummaryLoading(false));
     };
 
@@ -1158,6 +1191,7 @@ const MeetingTranscriptionApp = () => {
           generateSummary();
         })
         .catch((err) => {
+          logger.apiError(`/jobs/${uuid}/summary`, err);
           console.error("Failed to delete cached summary", err);
           // Still try to generate new summary even if deletion failed
           generateSummary();
@@ -1182,7 +1216,10 @@ const MeetingTranscriptionApp = () => {
           setSelectedMeetingId(null);
         }
       })
-      .catch((err) => console.error("Delete failed:", err));
+      .catch((err) => {
+        logger.apiError(`/jobs/${uuid}`, err, { method: 'DELETE' });
+        console.error("Delete failed:", err);
+      });
   };
 
   const exportToPDF = async () => {
@@ -1565,7 +1602,10 @@ Check console for detailed breakdown.`);
         }));
         setMeetingList(list);
       })
-      .catch((err) => console.error("Failed to fetch meeting list", err));
+      .catch((err) => {
+        logger.apiError("/jobs", err);
+        console.error("Failed to fetch meeting list", err);
+      });
   }, []);
 
   useEffect(() => {

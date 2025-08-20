@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import tempfile
+import uuid as uuid_lib
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -13,16 +14,21 @@ from threading import Lock
 import requests
 import whisper
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pyannote.audio import Pipeline
 from pydantic import BaseModel
+from typing import Optional, Dict, Any
 from pydub import AudioSegment
 
 from pyannote_whisper.utils import diarize_text
 
 # Start up the app
-app = FastAPI()    
+app = FastAPI(
+    title="MeetMemo API",
+    description="Audio transcription and speaker diarization service for meeting recordings",
+    version="1.0.0"
+)    
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,10 +44,17 @@ if not os.path.exists("logs/app.log"):
         f.write("")  # Create an empty log file if it doesn't exist
 
 # Store logs inside the volume
-logging.basicConfig(level=logging.INFO,
-                    filename='logs/app.log',
-                    filemode='a',
-                    )
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log'),
+        logging.StreamHandler()  # Also log to console
+    ]
+)
+
+# Create logger instance
+logger = logging.getLogger(__name__)
 
 # Variables 
 load_dotenv('.env')
@@ -65,6 +78,16 @@ class SummarizeRequest(BaseModel):
     custom_prompt: str = None
     system_prompt: str = None
 
+class ClientLogEntry(BaseModel):
+    '''Pydantic model for client-side log entries.'''
+    level: str
+    message: str
+    timestamp: str
+    url: Optional[str] = None
+    userAgent: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+    error: Optional[Dict[str, Any]] = None
+
 ##################################### Functions #####################################
 def get_timestamp() -> str:
     '''
@@ -72,7 +95,6 @@ def get_timestamp() -> str:
     '''
     tz_gmt8 = timezone(timedelta(hours=8))
     return datetime.now(tz_gmt8).strftime("%Y-%m-%d %H:%M:%S")
-
 
 def format_result(diarized: list) -> list[dict]:
     """
@@ -83,14 +105,25 @@ def format_result(diarized: list) -> list[dict]:
     """
     full_transcript = []
     for segment, speaker, utterance in diarized:
+        # Convert SPEAKER_XX format to Speaker X format
+        formatted_speaker = speaker
+        if speaker.startswith("SPEAKER_"):
+            speaker_num = speaker.replace("SPEAKER_", "")
+            try:
+                # Convert zero-padded number to regular number (e.g., "00" -> "1")
+                speaker_number = int(speaker_num) + 1
+                formatted_speaker = f"Speaker {speaker_number}"
+            except ValueError:
+                # If parsing fails, keep original format
+                formatted_speaker = speaker
+        
         full_transcript.append({
-            "speaker": speaker,
+            "speaker": formatted_speaker,
             "text": utterance.strip(),
             "start": f"{segment.start:.2f}",
             "end": f"{segment.end:.2f}",
         })
     return full_transcript
-
 
 def upload_audio(uuid: str, file: UploadFile) -> str:
     """
@@ -98,8 +131,17 @@ def upload_audio(uuid: str, file: UploadFile) -> str:
     & returns the resultant file name in string form.
     """
     
-    filename = f"{uuid}_{file.filename}"
+    filename = file.filename
     file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    # Handle duplicate filenames by adding (1), (2), etc.
+    if os.path.exists(file_path):
+        name, ext = os.path.splitext(filename)
+        counter = 1
+        while os.path.exists(file_path):
+            filename = f"{name} ({counter}){ext}"
+            file_path = os.path.join(UPLOAD_DIR, filename)
+            counter += 1
 
     # Save the file to disk
     with open(file_path, "wb") as buffer:
@@ -127,13 +169,12 @@ def add_job(uuid: str, file_name: str, status_code: str) -> None:
             "status_code": status_code
         })
 
-        rows.sort(key=lambda r: int(r["uuid"]))
+        rows.sort(key=lambda r: r["uuid"])
 
         with open(CSV_FILE, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
             writer.writeheader()
             writer.writerows(rows)
-
 
 def update_status(uuid: str, new_status: str) -> None:
     """
@@ -163,9 +204,9 @@ def parse_transcript_with_times(text: str) -> dict:
     pattern = re.compile(
         r'(?P<start>\d+\.\d+)\s+'                   # start time
         r'(?P<end>\d+\.\d+)\s+'                     # end time
-        r'(?P<speaker>speaker_\d+):?\s+'            # speaker label (case-insensitive, optional colon)
+        r'(?P<speaker>(?:speaker\s*\d+|speaker_\d+)):?\s+'  # speaker label (case-insensitive, optional colon)
         r'(?P<utterance>.*?)'                       # the spoken text
-        r'(?=(?:\d+\.\d+\s+\d+\.\d+\s+speaker_\d+)|\Z)',  
+        r'(?=(?:\d+\.\d+\s+\d+\.\d+\s+(?:speaker\s*\d+|speaker_\d+))|\Z)',  
         re.DOTALL | re.IGNORECASE                   # match across lines, ignore case
     )
 
@@ -179,12 +220,13 @@ def parse_transcript_with_times(text: str) -> dict:
 
     return dict(speakers)
 
-def summarise_transcript(transcript: str, custom_prompt: str = None, system_prompt: str = None) -> str:
+def summarise_transcript(transcript: str, filename: str = None, custom_prompt: str = None, system_prompt: str = None) -> str:
     """
     Summarises the transcript using a defined LLM.
     
     Args:
         transcript: The transcript text to summarize
+        filename: The source filename to include in the summary
         custom_prompt: Optional custom user prompt. If None, uses default prompt.
         system_prompt: Optional custom system prompt. If None, uses default system prompt.
     """
@@ -194,26 +236,33 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     model_name = str(os.getenv("LLM_MODEL_NAME"))
 
     # Default system prompt
-    default_system_prompt = "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."
+    default_system_prompt = "You are a meeting summarizer. You MUST follow the exact format provided in the user prompt. Always start with a # title, include source file information, and use the specific markdown structure requested. Do not deviate from the format."
     
     # Default user prompt
     default_user_prompt = (
-        "Please provide a concise summary of the following meeting transcript, "
-        "highlighting participants, key points, action items & next steps."
-        "The summary should contain point forms phrased in concise standard English."
-        "You are to give the final summary in markdown format for easier visualisation."
-        "Do not give the output in an integrated code block i.e.: '```markdown ```"
-        "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself."
+        "REQUIRED FORMAT - Generate a meeting summary using EXACTLY this structure:\n\n"
+        "# [Generate a descriptive title for this meeting]\n\n"
+        "**Source File:** [filename]\n\n"
+        "## Participants\n"
+        "- [list participants]\n\n"
+        "## Key Points\n"
+        "- [summarize main discussion points]\n\n"
+        "## Action Items\n"
+        "- [list specific actions, or 'None identified']\n\n"
+        "## Next Steps\n"
+        "- [list next steps, or 'None identified']\n\n"
+        "Be concise and professional. Use the exact markdown structure shown above."
     )
 
     # Use custom prompts if provided, otherwise use defaults
     final_system_prompt = system_prompt if system_prompt else default_system_prompt
     
-    # Always append transcript to user prompt, whether custom or default
+    # Always append filename and transcript to user prompt, whether custom or default
+    filename_text = f"Source file: {filename}\n\n" if filename else ""
     if custom_prompt:
-        final_user_prompt = custom_prompt + "\n\n" + transcript
+        final_user_prompt = custom_prompt + "\n\n" + filename_text + transcript
     else:
-        final_user_prompt = default_user_prompt + "\n\n" + transcript 
+        final_user_prompt = default_user_prompt + "\n\n" + filename_text + transcript 
 
     payload = {
         "model": model_name,
@@ -239,7 +288,6 @@ def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_frame_rate(sample_rate).set_channels(1)  # 16kHz mono
     audio.export(output_path, format="wav")
-
 
 ##################################### Main routes for back-end #####################################
 @app.get("/jobs")
@@ -270,8 +318,8 @@ def get_jobs() -> dict:
         return {"csv_list": jobs}
 
     except Exception as e:
-        return {"error": str(e)}
-
+        logger.error(f"Error retrieving jobs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/jobs")
 def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
@@ -280,31 +328,13 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
-    uuid=""
-    used = set()
+    # Generate a unique UUID for this job
+    uuid = str(uuid_lib.uuid4())
 
     if not os.path.isfile(CSV_FILE):
             with open(CSV_FILE, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
                 writer.writeheader()
-
-    with open(CSV_FILE, "r") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            try:
-                if row:
-                    used.add(int(row[0]))
-            except (ValueError,IndexError):
-                continue
-    for i in range(10000):
-        if i not in used:
-            uuid = f"{i:04d}"
-            break
-    if uuid == "":
-        timestamp = get_timestamp()
-        file_name = file.filename
-        logging.error(f"{timestamp}: Error generating UUID for transcription request for file: {file_name}.wav")
-        return {"error": "No available UUIDs.", "file_name": file_name}
     
     try:
         file_name = upload_audio(uuid, file)
@@ -320,27 +350,97 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             wav_file_name = file_name  # keep the original if already WAV
 
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
+        logger.info(f"Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
         add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
-        model = whisper.load_model(model_name)
-        device = DEVICE
-        model = model.to(device)
+        
+        try:
+            model = whisper.load_model(model_name)
+            device = DEVICE
+            model = model.to(device)
+        except Exception as e:
+            logger.error(f"Whisper model loading error for UUID {uuid}, model: {model_name}: {e}", exc_info=True)
+            update_status(uuid, "500")
+            raise HTTPException(status_code=500, detail=f"Error loading Whisper model: {str(e)}")
         file_path = os.path.join(UPLOAD_DIR, wav_file_name)
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Processing file {wav_file_name} with model {model_name}")
+        logger.info(f"Processing file {wav_file_name} with model {model_name}")
 
         # Transcription & diarization of text
         hf_token = os.getenv("HF_TOKEN")
-        pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization", 
-            use_auth_token=hf_token
-        )
-        asr = model.transcribe(file_path, language="en")
-        diarization = pipeline(file_path)
+        if not hf_token:
+            error_msg = "HF_TOKEN environment variable is not set. Please check your .env file."
+            logger.error(f"HF_TOKEN missing for UUID {uuid}, file: {file_name}")
+            update_status(uuid, "500")
+            raise HTTPException(status_code=500, detail=error_msg)
+        
+        # Try to load PyAnnote pipeline for speaker diarization
+        pipeline = None
+        use_diarization = True
+        
+        try:
+            # Set the Hugging Face token as an environment variable for PyAnnote
+            os.environ["HF_TOKEN"] = hf_token
+            
+            # Try to login to Hugging Face Hub first
+            try:
+                from huggingface_hub import login
+                login(token=hf_token)
+            except ImportError:
+                logger.warning("huggingface_hub not available for login, continuing with token-based auth")
+            except Exception as e:
+                logger.warning(f"Failed to login to Hugging Face Hub: {e}")
+            
+            # Try different authentication methods for PyAnnote
+            try:
+                # Method 1: Use token parameter (newer versions)
+                pipeline = Pipeline.from_pretrained(
+                    "pyannote/speaker-diarization", 
+                    token=hf_token
+                )
+                logger.info(f"PyAnnote pipeline loaded successfully for UUID {uuid}")
+            except (TypeError, AttributeError):
+                try:
+                    # Method 2: Use use_auth_token parameter (older versions)
+                    pipeline = Pipeline.from_pretrained(
+                        "pyannote/speaker-diarization", 
+                        use_auth_token=hf_token
+                    )
+                    logger.info(f"PyAnnote pipeline loaded successfully (legacy auth) for UUID {uuid}")
+                except (TypeError, AttributeError):
+                    # Method 3: Environment variable based (fallback)
+                    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization")
+                    logger.info(f"PyAnnote pipeline loaded successfully (env auth) for UUID {uuid}")
+                    
+        except Exception as e:
+            logger.warning(f"PyAnnote pipeline failed to load for UUID {uuid}: {e}. Falling back to transcription-only mode.")
+            use_diarization = False
+            pipeline = None
 
-        # Format the transcribed + diarized results as array of speaker-utterance pairs
-        diarized = diarize_text(asr, diarization)
-        full_transcript = format_result(diarized=diarized)
+        # Perform transcription
+        asr = model.transcribe(file_path, language="en")
+        
+        if use_diarization and pipeline is not None:
+            try:
+                # Perform speaker diarization
+                diarization = pipeline(file_path)
+                diarized = diarize_text(asr, diarization)
+                full_transcript = format_result(diarized=diarized)
+                logger.info(f"Successfully processed with speaker diarization for UUID {uuid}")
+            except Exception as e:
+                logger.warning(f"Speaker diarization failed for UUID {uuid}: {e}. Using transcription-only.")
+                use_diarization = False
+        
+        if not use_diarization:
+            # Fallback: Create transcript without speaker diarization
+            full_transcript = []
+            for i, segment in enumerate(asr['segments']):
+                full_transcript.append({
+                    "speaker": f"Speaker 1",  # Default speaker when diarization fails
+                    "text": segment['text'].strip(),
+                    "start": f"{segment['start']:.2f}",
+                    "end": f"{segment['end']:.2f}",
+                })
+            logger.info(f"Successfully processed without speaker diarization for UUID {uuid}")
 
         # Save results & log activity process
         timestamp = get_timestamp()
@@ -351,25 +451,26 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
                 json.dump(full_transcript, f, indent=4)
 
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Successfully processed file {file_name} with model {model_name}")
+        logger.info(f"Successfully processed file {file_name} with model {model_name}")
         update_status(uuid, "200") 
         return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
     
     # Catch any errors when trying to transcribe & diarize recording
+    except HTTPException:
+        # Re-raise HTTPExceptions to maintain proper status codes
+        raise
     except Exception as e:
-        timestamp = get_timestamp()
         file_name = file.filename
-        logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
+        logger.error(f"Unexpected error processing file {file_name} for UUID {uuid}: {e}", exc_info=True)
         update_status(uuid, "500")
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.delete("/jobs/{uuid}")
 def delete_job(uuid: str) -> dict:
     """
     Deletes the job with the given UUID, including the audio file and its transcript.
     """
-    file_name = None
-    uuid = uuid.zfill(4)  
+    file_name = None  
 
     if not os.path.isfile(CSV_FILE):
             with open(CSV_FILE, "w", newline="") as f:
@@ -386,7 +487,7 @@ def delete_job(uuid: str) -> dict:
                 rows.remove(row)
                 break
         else:
-            return {"error": "UUID not found", "status_code": "404"}
+            raise HTTPException(status_code=404, detail="UUID not found")
 
         with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
@@ -395,15 +496,15 @@ def delete_job(uuid: str) -> dict:
         os.remove(os.path.join(UPLOAD_DIR, file_name))
     except FileNotFoundError:
         timestamp = get_timestamp()
-        logging.warning(f"{timestamp}: File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
+        logger.warning(f"File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
     try:  
         os.remove(os.path.join("transcripts", f"{file_name}.json"))
     except FileNotFoundError:
         timestamp = get_timestamp()
-        logging.warning(f"{timestamp}: Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
+        logger.warning(f"Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
 
     timestamp = get_timestamp()
-    logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
+    logger.info(f"Deleted job with UUID: {uuid}, file name: {file_name}")
     return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
 
 @app.get("/jobs/{uuid}/filename")
@@ -411,7 +512,6 @@ def get_file_name(uuid: str) -> dict:
     """
     Returns the file name associated with the given UUID.
     """
-    uuid = uuid.zfill(4)
 
     if not os.path.isfile(CSV_FILE):
             with open(CSV_FILE, "w", newline="") as f:
@@ -424,7 +524,7 @@ def get_file_name(uuid: str) -> dict:
             if row[0] == uuid:
                 return {"uuid": uuid, "file_name": row[1]}
             
-    return {"error": f"UUID: {uuid} not found", "status_code": "404", "file_name": "404"}
+    raise HTTPException(status_code=404, detail=f"UUID: {uuid} not found")
 
 @app.get("/jobs/{uuid}/status")
 def get_job_status(uuid: str):
@@ -432,7 +532,6 @@ def get_job_status(uuid: str):
     Returns the file_name and status for the given uuid,
     reading from jobs.csv (uuid, file_name, status_code).
     """
-    uuid = uuid.zfill(4)
     file_name = "unknown"
     status_code = "404"
 
@@ -475,27 +574,25 @@ def get_file_transcript(uuid: str) -> dict:
     Returns the raw full transcript for the given UUID.
     """
     try:
-        uuid = uuid.zfill(4)
         file_name = get_file_name(uuid)["file_name"]
         file_path = f"transcripts/{file_name}.json"
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Retrieving transcript for UUID: {uuid}, file name: {file_name}")
+        logger.info(f"Retrieving transcript for UUID: {uuid}, file name: {file_name}")
         
         if os.path.exists(file_path):
             full_transcript = []
             with open(file_path, "r", encoding="utf-8") as f:
                 full_transcript = f.read()
-            timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Successfully retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
+            logger.info(f"Successfully retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
             return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript,"status_code":"200"}
         else:
-            timestamp = get_timestamp()
-            logging.error(f"{timestamp}: {file_name} transcript not found.")
-            return {"uuid": uuid, "status": "not found", "status_code":"404"}
+            logger.error(f"Transcript file not found for UUID: {uuid}, file name: {file_name}")
+            raise HTTPException(status_code=404, detail="Transcript not found")
+    except HTTPException:
+        raise
     except Exception as e: 
-        timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error retrieving {file_name} transcript.")
-        return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
+        logger.error(f"Error retrieving transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.delete("/jobs/{uuid}/summary")
 def delete_summary(uuid: str) -> dict:
@@ -503,7 +600,6 @@ def delete_summary(uuid: str) -> dict:
     Deletes the cached summary for the given UUID.
     """
     try:
-        uuid = uuid.zfill(4)
         file_name = get_file_name(uuid)["file_name"]
         summary_dir = Path("summary")
         summary_path = summary_dir / f"{uuid}.txt"
@@ -511,7 +607,7 @@ def delete_summary(uuid: str) -> dict:
         if summary_path.exists():
             summary_path.unlink()
             timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Deleted cached summary for UUID: {uuid}, file name: {file_name}")
+            logger.info(f"Deleted cached summary for UUID: {uuid}, file name: {file_name}")
             return {
                 "uuid": uuid,
                 "fileName": file_name,
@@ -521,7 +617,7 @@ def delete_summary(uuid: str) -> dict:
             }
         else:
             timestamp = get_timestamp()
-            logging.warning(f"{timestamp}: No cached summary found to delete for UUID: {uuid}, file name: {file_name}")
+            logger.warning(f"No cached summary found to delete for UUID: {uuid}, file name: {file_name}")
             return {
                 "uuid": uuid,
                 "fileName": file_name,
@@ -530,9 +626,8 @@ def delete_summary(uuid: str) -> dict:
                 "status_code": "404"
             }
     except Exception as e:
-        timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error deleting summary for UUID: {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+        logger.error(f"Error deleting summary for UUID: {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/jobs/{uuid}/summarise")
 def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]:
@@ -541,10 +636,9 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
     Summary is cached to a text file in the "summary" folder.
     Accepts optional custom prompts via request body.
     """
-    uuid = uuid.zfill(4)
     file_name_response = get_file_name(uuid)
     if "error" in file_name_response:
-        return {"error": f"File not found for UUID: {uuid}", "status_code": "404"}
+        raise HTTPException(status_code=404, detail=f"File not found for UUID: {uuid}")
     file_name = file_name_response["file_name"]
     summary_dir = Path("summary")
     summary_dir.mkdir(exist_ok=True)
@@ -555,7 +649,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
         try:
             cached_summary = summary_path.read_text(encoding="utf-8")
             timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Returned cached summary for UUID: {uuid}, file name: {file_name}")
+            logger.info(f"Returned cached summary for UUID: {uuid}, file name: {file_name}")
             return {
                 "uuid": uuid,
                 "fileName": file_name,
@@ -564,17 +658,13 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
                 "summary": cached_summary
             }
         except Exception as e:
-            timestamp = get_timestamp()
-            logging.error(f"{timestamp}: Error reading cached summary for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+            logger.error(f"Error reading cached summary for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
             # Fall through to generate new summary if reading cached summary fails
 
     # Generate new summary if not cached or error reading cached
     try:
         get_full_transcript_response = get_file_transcript(uuid)
-        if get_full_transcript_response["status"] == "not found":
-            return {"error": f"Transcript not found for the given UUID: {uuid}."}
-        else:
-            full_transcript = get_full_transcript_response["full_transcript"]
+        full_transcript = get_full_transcript_response["full_transcript"]
 
         # Use custom prompts if provided
         custom_prompt = None
@@ -583,20 +673,20 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
             custom_prompt = request.custom_prompt
             system_prompt = request.system_prompt
 
-        summary = summarise_transcript(full_transcript, custom_prompt, system_prompt)
+        summary = summarise_transcript(full_transcript, file_name, custom_prompt, system_prompt)
         timestamp = get_timestamp()
 
         if "Error" in summary:
-            logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
+            logger.error(f"Error summarising transcript for UUID: {uuid}, file name: {file_name}")
+            raise HTTPException(status_code=500, detail="Failed to generate summary")
         else:
             # Save summary to file
             try:
                 summary_path.write_text(summary, encoding="utf-8")
             except Exception as e:
-                logging.error(f"{timestamp}: Error saving summary to file for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+                logger.error(f"Error saving summary to file for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
 
-            logging.info(f"{timestamp}: Summarised transcript for UUID: {uuid}, file name: {file_name}")
+            logger.info(f"Summarised transcript for UUID: {uuid}, file name: {file_name}")
             return {
                 "uuid": uuid,
                 "fileName": file_name,
@@ -605,17 +695,17 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
                 "summary": summary
             }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""}  # type: ignore
+        logger.error(f"Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.patch("/jobs/{uuid}/rename")
 def rename_job(uuid: str, new_name: str) -> dict:
     """
     Renames the job with the given UUID.
     """
-    uuid = uuid.zfill(4)
     
     with CSV_LOCK:
         rows = []
@@ -649,7 +739,7 @@ def rename_job(uuid: str, new_name: str) -> dict:
             
             return {"uuid": uuid, "status": "success", "new_name": new_name}
         else:
-            return {"error": "UUID not found", "status_code": "404"}
+            raise HTTPException(status_code=404, detail="UUID not found")
         
 @app.patch("/jobs/{uuid}/speakers")
 def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
@@ -659,28 +749,27 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
     Expects a JSON body with a 'mapping' key, e.g.:
     {
         "mapping": {
-            "SPEAKER_00": "Alice",
-            "SPEAKER_01": "Bob"
+            "Speaker 1": "Alice",
+            "Speaker 2": "Bob"
         }
     }
     """
     try:
-        uuid = uuid.zfill(4)
         timestamp = get_timestamp()
         
         # 1. Get the filename associated with the UUID
         filename_response = get_file_name(uuid)
         if "error" in filename_response:
-            logging.error(f"{timestamp}: No file found for UUID {uuid} during speaker rename attempt.")
-            return {"error": f"UUID {uuid} not found", "status_code": "404"}
+            logger.error(f"No file found for UUID {uuid} during speaker rename attempt.")
+            raise HTTPException(status_code=404, detail=f"UUID {uuid} not found")
             
         file_name = filename_response["file_name"]
         transcript_path = os.path.join("transcripts", f"{file_name}.json")
 
         # 2. Check if the transcript file exists
         if not os.path.exists(transcript_path):
-            logging.error(f"{timestamp}: Transcript file not found at {transcript_path} for UUID {uuid}.")
-            return {"error": "Transcript file not found", "status_code": "404"}
+            logger.error(f"Transcript file not found at {transcript_path} for UUID {uuid}.")
+            raise HTTPException(status_code=404, detail="Transcript file not found")
 
         # 3. Read, update, and write the transcript data
         temp_file_path = transcript_path + ".tmp"
@@ -693,7 +782,7 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
             # Iterate through each segment and update the speaker name if it's in the map
             # Normalize None to placeholder
             for segment in transcript_data:
-                original_speaker = (segment.get("speaker") or "SPEAKER_00").strip()
+                original_speaker = (segment.get("speaker") or "Speaker 1").strip()
 
                 if original_speaker in name_map:
                     segment["speaker"] = name_map[original_speaker].strip()
@@ -703,7 +792,7 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
         # Atomically replace the original file with the updated one
         os.replace(temp_file_path, transcript_path)
 
-        logging.info(f"{timestamp}: Successfully renamed speakers for UUID {uuid}, file: {file_name}")
+        logger.info(f"Successfully renamed speakers for UUID {uuid}, file: {file_name}")
         return {
             "uuid": uuid, 
             "status": "success", 
@@ -712,14 +801,14 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
             "transcript": transcript_data
         }
 
+    except HTTPException:
+        raise
     except json.JSONDecodeError as e:
-        timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error decoding JSON for UUID {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": "Invalid transcript file format.", "status_code": "500"}
+        logger.error(f"Error decoding JSON for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Invalid transcript file format")
     except Exception as e:
-        timestamp = get_timestamp()
-        logging.error(f"{timestamp}: An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+        logger.error(f"An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 ##################################### Functionality check #####################################
 @app.get("/health")
@@ -731,19 +820,46 @@ def health_check():
         logs = get_logs()
         error_msg = [i for i in logs['logs'] if "error" in i.lower()]
         if error_msg:
-            timestamp = get_timestamp()
-            logging.error(f"{timestamp}: Health check found errors: {error_msg}")
-            return {"status": "error", "message": error_msg, "status_code": "500"}
+            logger.error(f"Health check found errors: {error_msg}")
+            raise HTTPException(status_code=500, detail="Health check failed")
         else:
-            timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Health check passed successfully.")
+            logger.info("Health check passed successfully.")
             return {"status": "ok", "status_code": "200"}
+    except HTTPException:
+        raise
     except Exception as e:
-        timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Health check failed: {e}")
-        return {"status": "error", "error": str(e), "status_code": "500"}
-
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 def get_logs():
     """Placeholder function for getting logs."""
     return {"logs": []}
+
+@app.post("/api/logs")
+def receive_client_logs(log_entry: ClientLogEntry):
+    """
+    Receives client-side log entries from the frontend.
+    """
+    try:
+        # Format the client log for server logging
+        client_info = f"Client[{log_entry.url}] - {log_entry.userAgent[:50] if log_entry.userAgent else 'Unknown'}"
+        
+        if log_entry.level == "ERROR":
+            error_details = ""
+            if log_entry.error:
+                error_details = f" | Error: {log_entry.error.get('name', '')}: {log_entry.error.get('message', '')}"
+            
+            logger.error(
+                f"CLIENT ERROR - {log_entry.message}{error_details} | {client_info}",
+                extra={"client_log": log_entry.dict()}
+            )
+        elif log_entry.level == "WARN":
+            logger.warning(f"CLIENT WARN - {log_entry.message} | {client_info}")
+        else:
+            logger.info(f"CLIENT {log_entry.level} - {log_entry.message} | {client_info}")
+        
+        return {"status": "logged"}
+        
+    except Exception as e:
+        logger.error(f"Error processing client log: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
