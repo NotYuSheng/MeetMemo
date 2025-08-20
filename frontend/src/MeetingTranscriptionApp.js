@@ -1180,6 +1180,7 @@ const MeetingTranscriptionApp = () => {
         const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
           uuid,
           name: info.file_name,
+          status_code: info.status_code,
         }));
         setMeetingList(list);
       })
@@ -1652,6 +1653,7 @@ Check console for detailed breakdown.`);
         const list = Object.entries(data.csv_list).map(([uuid, info]) => ({
           uuid,
           name: info.file_name,
+          status_code: info.status_code,
         }));
         setMeetingList(list);
       })
@@ -2114,15 +2116,26 @@ Check console for detailed breakdown.`);
                   // Create gradient pattern: 1-2-3-4-3-2-1-2-3-4-3-2...
                   const pattern = [1, 2, 3, 4, 3, 2];
                   const colorClass = `btn-past-${pattern[index % pattern.length]}`;
+                  const isProcessing = meeting.status_code === "202";
+                  const hasError = meeting.status_code === "500";
+                  
                   return (
                     <div key={meeting.uuid} className="meeting-entry">
                       <button
                         className={`space btn btn-small ${colorClass} ${
                           selectedMeetingId === meeting.uuid ? "btn-active" : ""
-                        }`}
-                        onClick={() => loadPastMeeting(meeting.uuid)}
+                        } ${isProcessing ? "btn-disabled" : ""}`}
+                        onClick={() => {
+                          if (!isProcessing) {
+                            loadPastMeeting(meeting.uuid);
+                          }
+                        }}
+                        disabled={isProcessing}
+                        title={isProcessing ? "This meeting is still processing" : ""}
                       >
                         {truncateFileName(meeting.name)}
+                        {isProcessing && <Clock className="btn-icon status-icon" />}
+                        {hasError && <AlertCircle className="btn-icon status-icon error-icon" />}
                       </button>
                       <button
                         className="btn btn-discrete btn-small delete-meeting-btn"
