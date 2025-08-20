@@ -1843,3 +1843,25 @@ input:checked + .toggle-slider::after {
   gap: 8px;
   align-items: center;
 }
+
+/* Meeting Status Icons */
+.status-icon {
+  margin-left: 8px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.status-icon.error-icon {
+  color: var(--btn-danger);
+}
+
+/* Disabled button styles */
+.btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-disabled:hover {
+  opacity: 0.6;
+}
