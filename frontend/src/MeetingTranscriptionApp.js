@@ -997,11 +997,33 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
-  const pollJobStatus = async (uuid, maxAttempts = 30) => {
+  const pollJobStatus = async (uuid, maxAttempts = 60) => {
+    let consecutiveErrors = 0;
+    const maxConsecutiveErrors = 3;
+    
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
+        // Update loading text to show progress
+        if (attempt === 0) {
+          setLoadingText("Starting audio processing...");
+        } else if (attempt < 10) {
+          setLoadingText("Processing audio with AI...");
+        } else if (attempt < 30) {
+          setLoadingText("AI is transcribing your audio...");
+        } else {
+          setLoadingText("Almost done, finalizing transcript...");
+        }
+        
         const response = await fetch(`${API_BASE_URL}/jobs/${uuid}/status`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const statusData = await response.json();
+        
+        // Reset error counter on successful request
+        consecutiveErrors = 0;
 
         if (statusData.status === "completed") {
           // Job completed, fetch transcript
@@ -1022,15 +1044,25 @@ const MeetingTranscriptionApp = () => {
           statusData.status === "failed" ||
           statusData.status === "error"
         ) {
-          throw new Error(statusData.error_message || "Job failed");
+          throw new Error(statusData.error_message || "Job processing failed");
         }
 
         // Job still processing, wait and retry
+        console.log(`Job ${uuid} still processing... (attempt ${attempt + 1}/${maxAttempts})`);
         await new Promise((resolve) => setTimeout(resolve, 2000));
+        
       } catch (error) {
-        logger.apiError(`/jobs/${uuid}/status`, error, { attempt, maxAttempts });
-        console.error("Error polling job status:", error);
-        throw error;
+        consecutiveErrors++;
+        logger.apiError(`/jobs/${uuid}/status`, error, { attempt, maxAttempts, consecutiveErrors });
+        console.warn(`Error polling job status (attempt ${attempt + 1}/${maxAttempts}, consecutive errors: ${consecutiveErrors}):`, error);
+        
+        // Only throw error if we've had too many consecutive errors
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          throw new Error(`Network error during job polling: ${error.message}`);
+        }
+        
+        // Wait longer before retrying after an error
+        await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
     throw new Error("Job polling timeout - processing took too long");
