@@ -1084,6 +1084,15 @@ const MeetingTranscriptionApp = () => {
         body: formData,
       });
 
+      // Check for HTTP 413 error (Request Entity Too Large)
+      if (response.status === 413) {
+        throw new Error("File too large. Please upload a file smaller than 100MB.");
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status ${response.status}`);
+      }
+
       const data = await response.json();
 
       // Check if the response indicates success and has expected data
@@ -1126,6 +1135,15 @@ const MeetingTranscriptionApp = () => {
         method: "POST",
         body: formData,
       });
+
+      // Check for HTTP 413 error (Request Entity Too Large)
+      if (response.status === 413) {
+        throw new Error("Recording too large. Please record a shorter audio clip or upload a smaller file.");
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status ${response.status}`);
+      }
 
       const data = await response.json();
 
