@@ -635,6 +635,7 @@ const MeetingTranscriptionApp = () => {
   const [summary, setSummary] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Processing audio with AI...");
   const [selectedFile, setSelectedFile] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -1072,6 +1073,7 @@ const MeetingTranscriptionApp = () => {
     if (!selectedFile) return;
     speakerColorMap.current = {};
     setLoading(true);
+    setLoadingText("Uploading file...");
 
     try {
       const formData = new FormData();
@@ -1114,6 +1116,7 @@ const MeetingTranscriptionApp = () => {
 
   const processAudio = async (audioBlob) => {
     setIsProcessing(true);
+    setLoadingText("Uploading recording...");
 
     try {
       const formData = new FormData();
@@ -1846,7 +1849,7 @@ Check console for detailed breakdown.`);
               {(loading || isProcessing) && (
                 <div className="processing-indicator">
                   <div className="spinner"></div>
-                  <span>Processing audio with AI...</span>
+                  <span>{loadingText}</span>
                 </div>
               )}
             </div>
