@@ -12,3 +12,5 @@ numba==0.59.1
 python-multipart==0.0.9
 requests==2.32.4
 pydub==0.25.1
+reportlab==4.2.5
+svglib==1.5.1
