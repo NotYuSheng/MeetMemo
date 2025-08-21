@@ -13,7 +13,6 @@ import {
   Trash2,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
-import jsPDF from "jspdf";
 import { useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -587,44 +586,44 @@ const MeetingTranscriptionApp = () => {
       .catch((err) => console.error("Delete failed:", err));
   };
 
-  const exportToPDF = () => {
-    if (!summary) return;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 40;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const lineHeight = 14;
-    let y = margin;
-    const addLine = (text, indent = margin, fontSize = 12, isBold = false) => {
-      doc.setFontSize(fontSize);
-      doc.setFont(undefined, isBold ? "bold" : "normal");
-      const wrapped = doc.splitTextToSize(text, pageWidth - indent - margin);
-      wrapped.forEach((line) => {
-        if (y + lineHeight > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-        doc.text(line, indent, y);
-        y += lineHeight;
-      });
-    };
-    doc.setFontSize(18);
-    addLine("Meeting Summary", margin, 18, true);
-    y += lineHeight;
-    doc.setFontSize(12);
-    addLine(`Title: ${summary.meetingTitle || "N/A"}`, margin, 12, true);
-    y += lineHeight;
-    const lines = summary.summary.split("\n");
-    lines.forEach((line) => {
-      if (line.startsWith("### ")) {
-        addLine(line.substring(4), margin, 14, true);
-      } else if (line.startsWith("- ")) {
-        addLine(line.substring(2), margin + 15);
-      } else {
-        addLine(line, margin);
+  const exportToPDF = async () => {
+    if (!selectedMeetingId) {
+      alert("No meeting selected for PDF export");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate PDF: ${response.statusText}`);
       }
-    });
-    doc.save("meeting-summary.pdf");
+
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'meetmemo-export.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '');
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      alert(`Failed to export PDF: ${error.message}`);
+    }
   };
 
   const exportTranscriptToTxt = () => {

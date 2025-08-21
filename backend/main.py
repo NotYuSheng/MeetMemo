@@ -22,6 +22,19 @@ from typing import Optional, Dict, Any
 from pydub import AudioSegment
 
 from pyannote_whisper.utils import diarize_text
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+from reportlab.platypus.frames import Frame
+from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPDF
+import os
 
 # Start up the app
 app = FastAPI(
@@ -313,6 +326,237 @@ def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_frame_rate(sample_rate).set_channels(1)  # 16kHz mono
     audio.export(output_path, format="wav")
+
+def generate_professional_pdf(summary_data: dict, transcript_data: list) -> BytesIO:
+    """
+    Generate a professional PDF using ReportLab with summary and transcript data.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=inch,
+        leftMargin=inch,
+        topMargin=inch,
+        bottomMargin=inch
+    )
+    
+    # Define styles
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Heading2'],
+        fontSize=16,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#34495e')
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=12,
+        spaceBefore=20,
+        textColor=colors.HexColor('#2980b9'),
+        borderWidth=1,
+        borderColor=colors.HexColor('#2980b9'),
+        borderPadding=5,
+        backColor=colors.HexColor('#ecf0f1')
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=11,
+        spaceAfter=6,
+        alignment=TA_JUSTIFY,
+        leftIndent=0,
+        rightIndent=0
+    )
+    
+    speaker_style = ParagraphStyle(
+        'SpeakerStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#e74c3c'),
+        spaceBefore=8,
+        fontName='Helvetica-Bold'
+    )
+    
+    transcript_style = ParagraphStyle(
+        'TranscriptStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=4,
+        leftIndent=20,
+        alignment=TA_JUSTIFY
+    )
+    
+    # Story elements
+    story = []
+    
+    # Header with logo
+    try:
+        # Load the MeetMemo logo
+        logo_path = os.path.join(os.path.dirname(__file__), 'meetmemo-logo.svg')
+        if os.path.exists(logo_path):
+            # Convert SVG to ReportLab drawing
+            drawing = svg2rlg(logo_path)
+            # Scale the logo to appropriate size (about 40 points high)
+            scale_factor = 40 / drawing.height
+            drawing.width *= scale_factor
+            drawing.height *= scale_factor
+            drawing.scale(scale_factor, scale_factor)
+            
+            # Create a header table with logo and title
+            header_data = [[drawing, "MeetMemo\nProfessional Meeting Analysis"]]
+            header_table = Table(header_data, colWidths=[50, 4*inch])
+            header_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+                ('FONTNAME', (1, 0), (1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (1, 0), (1, 0), 18),
+                ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#2c3e50')),
+                ('LEFTPADDING', (1, 0), (1, 0), 10),
+            ]))
+            story.append(header_table)
+        else:
+            # Fallback to text header if logo not found
+            story.append(Paragraph("🎯 MeetMemo", title_style))
+            story.append(Paragraph("Professional Meeting Analysis", subtitle_style))
+    except Exception as e:
+        # Fallback to text header if there's any error with logo
+        story.append(Paragraph("🎯 MeetMemo", title_style))
+        story.append(Paragraph("Professional Meeting Analysis", subtitle_style))
+    
+    story.append(Spacer(1, 20))
+    
+    # Meeting Info Section
+    if summary_data:
+        story.append(Paragraph("📋 Meeting Information", heading_style))
+        
+        # Create info table
+        meeting_info = [
+            ['Meeting Title:', summary_data.get('meetingTitle', 'Untitled Meeting')],
+            ['Generated On:', datetime.now().strftime('%B %d, %Y at %I:%M %p')],
+            ['Document Type:', 'Meeting Summary & Transcript']
+        ]
+        
+        info_table = Table(meeting_info, colWidths=[2*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            # Clean, minimal design with subtle borders
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8f9fa')),  # Very light gray for labels
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#495057')),   # Dark gray text
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (1, 0), (1, -1), colors.white),                # Clean white for values
+            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#212529')),   # Near-black text
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),  # Subtle border
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 20))
+        
+        # Summary Section
+        story.append(Paragraph("📝 Executive Summary", heading_style))
+        
+        summary_text = summary_data.get('summary', 'No summary available')
+        
+        # Process markdown-like formatting in summary
+        summary_lines = summary_text.split('\n')
+        for line in summary_lines:
+            line = line.strip()
+            if not line:
+                story.append(Spacer(1, 6))
+                continue
+                
+            if line.startswith('# '):
+                # Skip title as we already have it
+                continue
+            elif line.startswith('### '):
+                # Sub-heading
+                sub_heading = line[4:]
+                story.append(Paragraph(f"• {sub_heading}", ParagraphStyle(
+                    'SubHeading',
+                    parent=body_style,
+                    fontSize=12,
+                    textColor=colors.HexColor('#2980b9'),
+                    fontName='Helvetica-Bold',
+                    spaceBefore=10
+                )))
+            elif line.startswith('- '):
+                # Bullet point
+                bullet_text = line[2:]
+                story.append(Paragraph(f"  ◦ {bullet_text}", body_style))
+            elif line.startswith('**') and line.endswith('**'):
+                # Bold text
+                bold_text = line[2:-2]
+                story.append(Paragraph(f"<b>{bold_text}</b>", body_style))
+            else:
+                # Regular text
+                if line:
+                    story.append(Paragraph(line, body_style))
+        
+        story.append(Spacer(1, 30))
+    
+    # Transcript Section
+    if transcript_data:
+        story.append(Paragraph("💬 Full Transcript", heading_style))
+        story.append(Spacer(1, 10))
+        
+        for i, entry in enumerate(transcript_data):
+            speaker = entry.get('speaker', 'Unknown Speaker')
+            text = entry.get('text', '')
+            start_time = entry.get('start', '0.00')
+            end_time = entry.get('end', '0.00')
+            
+            # Speaker and timestamp
+            timestamp_text = f"[{start_time}s - {end_time}s]"
+            speaker_line = f"<b>{speaker}</b> {timestamp_text}"
+            story.append(Paragraph(speaker_line, speaker_style))
+            
+            # Speech text
+            story.append(Paragraph(text, transcript_style))
+            
+            # Add some space between speakers, but not too much
+            if i < len(transcript_data) - 1:
+                story.append(Spacer(1, 8))
+    
+    # Footer
+    story.append(Spacer(1, 30))
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontSize=8,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#7f8c8d')
+    )
+    story.append(Paragraph("Generated by MeetMemo - Professional Meeting Analysis Tool", footer_style))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 ##################################### Main routes for back-end #####################################
 @app.get("/jobs")
@@ -887,4 +1131,43 @@ def receive_client_logs(log_entry: ClientLogEntry):
         
     except Exception as e:
         logger.error(f"Error processing client log: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/jobs/{uuid}/pdf")
+def export_professional_pdf(uuid: str):
+    """
+    Generate and return a professional PDF with summary and transcript for the given UUID.
+    """
+    try:
+        # Get summary data
+        summary_response = summarise_job(uuid)
+        summary_data = {
+            'meetingTitle': summary_response.get('fileName', 'Untitled Meeting'),
+            'summary': summary_response.get('summary', 'No summary available')
+        }
+        
+        # Get transcript data
+        transcript_response = get_file_transcript(uuid)
+        transcript_json = transcript_response.get('full_transcript', '[]')
+        transcript_data = json.loads(transcript_json) if transcript_json else []
+        
+        # Generate professional PDF
+        pdf_buffer = generate_professional_pdf(summary_data, transcript_data)
+        
+        # Create filename
+        safe_filename = summary_data['meetingTitle'].replace(' ', '_').replace('/', '_')
+        filename = f"meetmemo_{safe_filename}_{uuid[:8]}.pdf"
+        
+        logger.info(f"Generated professional PDF for UUID: {uuid}, filename: {filename}")
+        
+        return StreamingResponse(
+            BytesIO(pdf_buffer.read()),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating professional PDF for UUID: {uuid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
