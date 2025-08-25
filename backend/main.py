@@ -1115,4 +1115,5 @@ def export_professional_pdf(uuid: str):
         )
         
     except Exception as e:
-        return {"error": f"Failed to generate PDF: {str(e)}", "status_code": "500"}
+        logging.error(f"Failed to generate PDF for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
