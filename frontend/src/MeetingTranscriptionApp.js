@@ -28,16 +28,25 @@ import { useCallback } from "react";
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
+// Generate a UUID4-like string for client-side use
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const processTranscriptWithSpeakerIds = (transcriptData) => {
   const speakerMap = {};
   let speakerCounter = 1;
-  return transcriptData.map((entry, idx) => {
+  return transcriptData.map((entry) => {
     const speaker = entry.speaker ?? "SPEAKER_00";
     if (!speakerMap[speaker]) {
       speakerMap[speaker] = speakerCounter++;
     }
     return {
-      id: idx,
+      id: generateUUID(),
       speaker: speaker,
       speakerId: speakerMap[speaker],
       text: entry.text,
@@ -497,8 +506,8 @@ const ContentRenderer = ({ contentBlocks }) => {
 
   return (
     <div className="content-renderer">
-      {contentBlocks.map((block, index) => {
-        const key = `block-${index}`;
+      {contentBlocks.map((block) => {
+        const key = `block-${generateUUID()}`;
         
         switch (block.type) {
           case 'heading':
@@ -516,7 +525,7 @@ const ContentRenderer = ({ contentBlocks }) => {
             return (
               <p key={key} className="content-paragraph">
                 {block.content.map((item, pIndex) => (
-                  <span key={`p-${pIndex}`}>
+                  <span key={`p-${generateUUID()}`}>
                     {renderInlineFormatting(item)}
                     {pIndex < block.content.length - 1 && ' '}
                   </span>
@@ -528,8 +537,8 @@ const ContentRenderer = ({ contentBlocks }) => {
             const ListTag = block.listType === 'bullet' ? 'ul' : 'ol';
             return (
               <ListTag key={key} className="content-list">
-                {block.items.map((item, liIndex) => (
-                  <li key={`li-${liIndex}`} style={{ marginLeft: `${item.indent || 0}px` }}>
+                {block.items.map((item) => (
+                  <li key={`li-${generateUUID()}`} style={{ marginLeft: `${item.indent || 0}px` }}>
                     {renderInlineFormatting(item.formatted)}
                   </li>
                 ))}
@@ -539,8 +548,8 @@ const ContentRenderer = ({ contentBlocks }) => {
           case 'blockquote':
             return (
               <blockquote key={key} className="content-blockquote">
-                {block.content.map((item, bqIndex) => (
-                  <p key={`bq-${bqIndex}`}>
+                {block.content.map((item) => (
+                  <p key={`bq-${generateUUID()}`}>
                     {renderInlineFormatting(item)}
                   </p>
                 ))}
@@ -1762,7 +1771,7 @@ Check console for detailed breakdown.`);
                           }
                         }}
                         disabled={isProcessing}
-                        title={isProcessing ? "This meeting is still processing" : ""}
+                        title={isProcessing ? "This file is still processing" : ""}
                       >
                         {truncateFileName(meeting.name)}
                         {isProcessing && <Clock className="btn-icon status-icon" />}

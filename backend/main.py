@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import tempfile
+import uuid
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -179,15 +180,15 @@ def add_job(uuid: str, file_name: str, status_code: str) -> None:
             "status_code": status_code
         })
 
-        # Sort by UUID - handle both numeric and string formats
+        # Sort by UUID - handle both numeric (legacy) and string UUID formats
         def uuid_sort_key(row):
             uuid_str = row["uuid"]
             try:
                 # Try to parse as integer (old 4-digit format)
-                return int(uuid_str)
+                return (0, int(uuid_str))  # Legacy UUIDs first
             except ValueError:
-                # For string UUIDs, use timestamp or lexicographic sort
-                return float('inf')  # Put string UUIDs at the end
+                # For string UUIDs, sort lexicographically after legacy ones
+                return (1, uuid_str)  # New UUIDs after legacy ones
         
         rows.sort(key=uuid_sort_key)
 
@@ -628,39 +629,16 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
     Returns an array of speaker-utterance pairs to be displayed on the front-end.
     '''
-    uuid=""
-    used = set()
+    # Generate a proper UUID4
+    job_uuid = str(uuid.uuid4())
 
     if not os.path.isfile(CSV_FILE):
             with open(CSV_FILE, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
                 writer.writeheader()
-
-    with open(CSV_FILE, "r") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            try:
-                if row and len(row) > 0:
-                    # Try to parse as integer (4-digit format)
-                    try:
-                        used.add(int(row[0]))
-                    except ValueError:
-                        # Skip non-integer UUIDs (string format)
-                        continue
-            except IndexError:
-                continue
-    for i in range(10000):
-        if i not in used:
-            uuid = f"{i:04d}"
-            break
-    if uuid == "":
-        timestamp = get_timestamp()
-        file_name = file.filename
-        logging.error(f"{timestamp}: Error generating UUID for transcription request for file: {file_name}.wav")
-        return {"error": "No available UUIDs.", "file_name": file_name}
     
     try:
-        file_name = upload_audio(uuid, file)
+        file_name = upload_audio(job_uuid, file)
         file_path = os.path.join(UPLOAD_DIR, file_name)
 
         # Check and convert to WAV if needed
@@ -673,8 +651,8 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
             wav_file_name = file_name  # keep the original if already WAV
 
         timestamp = get_timestamp()
-        logging.info(f"{timestamp}: Created transcription request for file: {wav_file_name} and UUID: {uuid} with model: {model_name}")
-        add_job(uuid, os.path.splitext(file_name)[0] + '.wav',"202")
+        logging.info(f"{timestamp}: Created transcription request for file: {wav_file_name} and UUID: {job_uuid} with model: {model_name}")
+        add_job(job_uuid, os.path.splitext(file_name)[0] + '.wav',"202")
         model = whisper.load_model(model_name)
         device = DEVICE
         model = model.to(device)
@@ -705,16 +683,16 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
 
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Successfully processed file {file_name} with model {model_name}")
-        update_status(uuid, "200") 
-        return {"uuid": uuid, "file_name": file_name, "transcript": full_transcript}
+        update_status(job_uuid, "200") 
+        return {"uuid": job_uuid, "file_name": file_name, "transcript": full_transcript}
     
     # Catch any errors when trying to transcribe & diarize recording
     except Exception as e:
         timestamp = get_timestamp()
         file_name = file.filename
         logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
-        update_status(uuid, "500")
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
+        update_status(job_uuid, "500")
+        return {"uuid": job_uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
 
 @app.delete("/jobs/{uuid}")
 def delete_job(uuid: str) -> dict:
