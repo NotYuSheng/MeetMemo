@@ -96,3 +96,9 @@ yarn-error.log*
 backend/audiofiles/
 backend/transcripts/
 frontend/package.json
+
+# -----------------------------
+# Code Assist Tools
+# -----------------------------
+.claude
+claude.md
