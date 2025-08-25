@@ -116,15 +116,43 @@ def format_result(diarized: list) -> list[dict]:
     return full_transcript
 
 
+def get_unique_filename(directory: str, desired_filename: str, exclude_path: str = None) -> str:
+    """
+    Generate a unique filename by appending a counter if needed.
+    
+    Args:
+        directory: Directory to check for existing files
+        desired_filename: The desired filename
+        exclude_path: Optional path to exclude from collision check (for renames)
+    
+    Returns:
+        A unique filename
+    """
+    original_filename = desired_filename
+    filename = original_filename
+    file_path = os.path.join(directory, filename)
+    
+    # Handle filename collisions by appending counter
+    counter = 1
+    while os.path.exists(file_path) and file_path != exclude_path:
+        name, ext = os.path.splitext(original_filename)
+        filename = f"{name}_{counter}{ext}"
+        file_path = os.path.join(directory, filename)
+        counter += 1
+    
+    return filename
+
+
 def upload_audio(uuid: str, file: UploadFile) -> str:
     """
     Uploads the audio file to the desired directory,
     & returns the resultant file name in string form.
+    Handles filename collisions by appending a counter.
     """
     
-    filename = f"{uuid}_{file.filename}"
+    filename = get_unique_filename(UPLOAD_DIR, file.filename)
     file_path = os.path.join(UPLOAD_DIR, filename)
-
+    
     # Save the file to disk
     with open(file_path, "wb") as buffer:
         buffer.write(file.file.read())
@@ -939,6 +967,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
 def rename_job(uuid: str, new_name: str) -> dict:
     """
     Renames the job with the given UUID.
+    Handles filename collisions by appending a counter if needed.
     """
     uuid = normalize_uuid(uuid)
     
@@ -951,30 +980,41 @@ def rename_job(uuid: str, new_name: str) -> dict:
                 for row in reader:
                     if row["uuid"] == uuid:
                         file_name_to_rename = row["file_name"]
-                        row["file_name"] = new_name
+                        break
+
+        if not file_name_to_rename:
+            return {"error": "UUID not found", "status_code": "404"}
+        
+        # Get unique filename, excluding the current file from collision check
+        old_audio_path = os.path.join(UPLOAD_DIR, file_name_to_rename)
+        unique_new_name = get_unique_filename(UPLOAD_DIR, new_name, exclude_path=old_audio_path)
+        
+        # Update CSV with the unique filename
+        if os.path.isfile(CSV_FILE):
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row["uuid"] == uuid:
+                        row["file_name"] = unique_new_name
                     rows.append(row)
 
-        if file_name_to_rename:
-            with open(CSV_FILE, "w", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-                writer.writeheader()
-                writer.writerows(rows)
-            
-            # Rename the audio file
-            old_audio_path = os.path.join(UPLOAD_DIR, file_name_to_rename)
-            new_audio_path = os.path.join(UPLOAD_DIR, new_name)
-            if os.path.exists(old_audio_path):
-                os.rename(old_audio_path, new_audio_path)
+        with open(CSV_FILE, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        # Rename the audio file
+        new_audio_path = os.path.join(UPLOAD_DIR, unique_new_name)
+        if os.path.exists(old_audio_path):
+            os.rename(old_audio_path, new_audio_path)
 
-            # Rename the transcript file
-            old_transcript_path = os.path.join("transcripts", f"{file_name_to_rename}.json")
-            new_transcript_path = os.path.join("transcripts", f"{new_name}.json")
-            if os.path.exists(old_transcript_path):
-                os.rename(old_transcript_path, new_transcript_path)
-            
-            return {"uuid": uuid, "status": "success", "new_name": new_name}
-        else:
-            return {"error": "UUID not found", "status_code": "404"}
+        # Rename the transcript file
+        old_transcript_path = os.path.join("transcripts", f"{file_name_to_rename}.json")
+        new_transcript_path = os.path.join("transcripts", f"{unique_new_name}.json")
+        if os.path.exists(old_transcript_path):
+            os.rename(old_transcript_path, new_transcript_path)
+        
+        return {"uuid": uuid, "status": "success", "new_name": unique_new_name}
         
 @app.patch("/jobs/{uuid}/speakers")
 def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
