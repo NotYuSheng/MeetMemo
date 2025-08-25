@@ -51,9 +51,10 @@ const formatSpeakerName = (speakerName) => {
   return speakerName;
 };
 
-const getDisplaySpeakerName = (speakerName, speakerNameMap) => {
+const getDisplaySpeakerName = (currentSpeaker, originalSpeaker, speakerNameMap) => {
   // Manual renames take priority over automatic formatting
-  return speakerNameMap[speakerName] ?? formatSpeakerName(speakerName);
+  // Use originalSpeaker as the key for lookups, but fall back to currentSpeaker for display
+  return speakerNameMap[originalSpeaker] ?? formatSpeakerName(currentSpeaker);
 };
 
 const processTranscriptWithSpeakerIds = (transcriptData) => {
@@ -67,6 +68,7 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
     return {
       id: generateUUID(),
       speaker: speaker,
+      originalSpeaker: speaker, // Track original speaker ID for mapping
       speakerId: speakerMap[speaker],
       text: entry.text,
       start: entry.start,
@@ -619,11 +621,15 @@ const MeetingTranscriptionApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
-  const [speakerNameMap, setSpeakerNameMap] = useState({});
-  const speakerNameMapRef = useRef(speakerNameMap);
+  const [speakerNameMaps, setSpeakerNameMaps] = useState({}); // Per-meeting mapping
+  const speakerNameMapRef = useRef({});
+  
+  // Get current meeting's speaker mapping
+  const currentSpeakerNameMap = speakerNameMaps[selectedMeetingId] || {};
+  
   useEffect(() => {
-    speakerNameMapRef.current = speakerNameMap;
-  }, [speakerNameMap]);
+    speakerNameMapRef.current = currentSpeakerNameMap;
+  }, [currentSpeakerNameMap]);
 
   // Initialize particles.js
   useEffect(() => {
@@ -742,27 +748,40 @@ const MeetingTranscriptionApp = () => {
       : name;
   };
 
-  const handleSpeakerNameChange = (oldName, newName) => {
-    if (!newName || oldName === newName) return;
+  const handleSpeakerNameChange = (originalSpeaker, newName) => {
+    if (!newName) return;
+    
+    // Update transcript entries that match this original speaker
     setTranscript((prevTranscript) =>
       prevTranscript.map((entry) =>
-        entry.speaker === oldName ? { ...entry, speaker: newName } : entry,
+        entry.originalSpeaker === originalSpeaker ? { ...entry, speaker: newName } : entry,
       ),
     );
-    setSpeakerNameMap((prev) => ({
+    
+    // Create updated mapping for current meeting
+    const updatedMapping = {
+      ...currentSpeakerNameMap,
+      [originalSpeaker]: newName,
+    };
+    
+    // Update state for current meeting only
+    setSpeakerNameMaps(prev => ({
       ...prev,
-      [oldName]: newName,
+      [selectedMeetingId]: updatedMapping
     }));
-    handleSubmitSpeakerNames();
+    
+    // Submit with the updated mapping immediately
+    handleSubmitSpeakerNames(updatedMapping);
   };
 
-  const handleSubmitSpeakerNames = () => {
+  const handleSubmitSpeakerNames = (mappingOverride = null) => {
     if (!selectedMeetingId) {
       alert("No meeting is selected.");
       return;
     }
     setIsSavingNames(true);
-    const currentSpeakerNameMap = speakerNameMapRef.current;
+    const currentSpeakerNameMap = mappingOverride || speakerNameMapRef.current;
+    console.log("Submitting speaker mapping:", currentSpeakerNameMap);
 
     fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/speakers`, {
       method: "PATCH",
@@ -802,6 +821,7 @@ const MeetingTranscriptionApp = () => {
     setSummary(null);
     setSelectedMeetingId(uuid);
     speakerColorMap.current = {};
+    setEditingSpeaker(null); // Clear any active speaker editing
     setSummaryLoading(true);
 
     fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
@@ -1261,7 +1281,7 @@ Check console for detailed breakdown.`);
     if (transcript.length === 0) return;
     let textContent = "Meeting Transcript\n\n";
     transcript.forEach((entry) => {
-      const speaker = getDisplaySpeakerName(entry.speaker, speakerNameMap);
+      const speaker = getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap);
       textContent += `${speaker}: ${entry.text}\n\n`;
     });
 
@@ -1698,14 +1718,14 @@ Check console for detailed breakdown.`);
                     transcript.map((entry) => (
                       <div key={entry.id} className="transcript-entry">
                         <div className="transcript-header">
-                          {editingSpeaker === entry.speaker ? (
+                          {editingSpeaker === entry.originalSpeaker ? (
                             <div className="speaker-edit-container">
                               <input
                                 type="text"
                                 defaultValue={formatSpeakerName(entry.speaker ?? "SPEAKER_00")}
                                 onBlur={(e) => {
                                   handleSpeakerNameChange(
-                                    entry.speaker,
+                                    entry.originalSpeaker,
                                     e.target.value,
                                   );
                                   setEditingSpeaker(null);
@@ -1713,7 +1733,7 @@ Check console for detailed breakdown.`);
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     handleSpeakerNameChange(
-                                      entry.speaker,
+                                      entry.originalSpeaker,
                                       e.target.value,
                                     );
                                     setEditingSpeaker(null);
@@ -1732,10 +1752,10 @@ Check console for detailed breakdown.`);
                               <span
                                 className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
                               >
-                                {getDisplaySpeakerName(entry.speaker, speakerNameMap)}
+                                {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap)}
                               </span>
                               <button
-                                onClick={() => setEditingSpeaker(entry.speaker)}
+                                onClick={() => setEditingSpeaker(entry.originalSpeaker)}
                                 className="btn btn-secondary btn-small rename-speaker-btn"
                               >
                                 Rename
