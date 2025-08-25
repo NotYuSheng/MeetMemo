@@ -621,11 +621,15 @@ const MeetingTranscriptionApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const speakerColorMap = useRef({});
   const [selectedModel, setSelectedModel] = useState("turbo");
-  const [speakerNameMap, setSpeakerNameMap] = useState({});
-  const speakerNameMapRef = useRef(speakerNameMap);
+  const [speakerNameMaps, setSpeakerNameMaps] = useState({}); // Per-meeting mapping
+  const speakerNameMapRef = useRef({});
+  
+  // Get current meeting's speaker mapping
+  const currentSpeakerNameMap = speakerNameMaps[selectedMeetingId] || {};
+  
   useEffect(() => {
-    speakerNameMapRef.current = speakerNameMap;
-  }, [speakerNameMap]);
+    speakerNameMapRef.current = currentSpeakerNameMap;
+  }, [currentSpeakerNameMap]);
 
   // Initialize particles.js
   useEffect(() => {
@@ -754,14 +758,17 @@ const MeetingTranscriptionApp = () => {
       ),
     );
     
-    // Create updated mapping
+    // Create updated mapping for current meeting
     const updatedMapping = {
-      ...speakerNameMap,
+      ...currentSpeakerNameMap,
       [originalSpeaker]: newName,
     };
     
-    // Update state
-    setSpeakerNameMap(updatedMapping);
+    // Update state for current meeting only
+    setSpeakerNameMaps(prev => ({
+      ...prev,
+      [selectedMeetingId]: updatedMapping
+    }));
     
     // Submit with the updated mapping immediately
     handleSubmitSpeakerNames(updatedMapping);
@@ -814,6 +821,7 @@ const MeetingTranscriptionApp = () => {
     setSummary(null);
     setSelectedMeetingId(uuid);
     speakerColorMap.current = {};
+    setEditingSpeaker(null); // Clear any active speaker editing
     setSummaryLoading(true);
 
     fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
@@ -1273,7 +1281,7 @@ Check console for detailed breakdown.`);
     if (transcript.length === 0) return;
     let textContent = "Meeting Transcript\n\n";
     transcript.forEach((entry) => {
-      const speaker = getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, speakerNameMap);
+      const speaker = getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap);
       textContent += `${speaker}: ${entry.text}\n\n`;
     });
 
@@ -1744,7 +1752,7 @@ Check console for detailed breakdown.`);
                               <span
                                 className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
                               >
-                                {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, speakerNameMap)}
+                                {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap)}
                               </span>
                               <button
                                 onClick={() => setEditingSpeaker(entry.originalSpeaker)}
