@@ -37,6 +37,20 @@ const generateUUID = () => {
   });
 };
 
+const formatSpeakerName = (speakerName) => {
+  if (!speakerName) return "Speaker 1";
+  
+  // Convert SPEAKER_XX format to "Speaker X" format
+  const match = speakerName.match(/^SPEAKER_(\d+)$/);
+  if (match) {
+    const speakerNumber = parseInt(match[1], 10) + 1; // Convert 0-based to 1-based
+    return `Speaker ${speakerNumber}`;
+  }
+  
+  // Return the original name if it doesn't match the SPEAKER_XX pattern
+  return speakerName;
+};
+
 const processTranscriptWithSpeakerIds = (transcriptData) => {
   const speakerMap = {};
   let speakerCounter = 1;
@@ -1242,7 +1256,7 @@ Check console for detailed breakdown.`);
     if (transcript.length === 0) return;
     let textContent = "Meeting Transcript\n\n";
     transcript.forEach((entry) => {
-      const speaker = speakerNameMap[entry.speaker] ?? entry.speaker;
+      const speaker = speakerNameMap[entry.speaker] ?? formatSpeakerName(entry.speaker);
       textContent += `${speaker}: ${entry.text}\n\n`;
     });
 
@@ -1683,7 +1697,7 @@ Check console for detailed breakdown.`);
                             <div className="speaker-edit-container">
                               <input
                                 type="text"
-                                defaultValue={entry.speaker ?? "SPEAKER_00"}
+                                defaultValue={formatSpeakerName(entry.speaker ?? "SPEAKER_00")}
                                 onBlur={(e) => {
                                   handleSpeakerNameChange(
                                     entry.speaker,
@@ -1713,7 +1727,7 @@ Check console for detailed breakdown.`);
                               <span
                                 className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
                               >
-                                {speakerNameMap[entry.speaker] ?? entry.speaker}
+                                {speakerNameMap[entry.speaker] ?? formatSpeakerName(entry.speaker)}
                               </span>
                               <button
                                 onClick={() => setEditingSpeaker(entry.speaker)}
