@@ -754,22 +754,27 @@ const MeetingTranscriptionApp = () => {
       ),
     );
     
-    // Use originalSpeaker as the key for the mapping
-    setSpeakerNameMap((prev) => ({
-      ...prev,
+    // Create updated mapping
+    const updatedMapping = {
+      ...speakerNameMap,
       [originalSpeaker]: newName,
-    }));
+    };
     
-    handleSubmitSpeakerNames();
+    // Update state
+    setSpeakerNameMap(updatedMapping);
+    
+    // Submit with the updated mapping immediately
+    handleSubmitSpeakerNames(updatedMapping);
   };
 
-  const handleSubmitSpeakerNames = () => {
+  const handleSubmitSpeakerNames = (mappingOverride = null) => {
     if (!selectedMeetingId) {
       alert("No meeting is selected.");
       return;
     }
     setIsSavingNames(true);
-    const currentSpeakerNameMap = speakerNameMapRef.current;
+    const currentSpeakerNameMap = mappingOverride || speakerNameMapRef.current;
+    console.log("Submitting speaker mapping:", currentSpeakerNameMap);
 
     fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/speakers`, {
       method: "PATCH",
