@@ -136,6 +136,29 @@ def format_speaker_name(speaker_name: str) -> str:
     return speaker_name
 
 
+def format_transcript_for_llm(transcript_json: str) -> str:
+    """
+    Format transcript JSON for LLM consumption with proper speaker names.
+    Converts SPEAKER_XX format to 'Speaker X' format while preserving manual renames.
+    """
+    try:
+        transcript_data = json.loads(transcript_json)
+        formatted_lines = []
+        
+        for entry in transcript_data:
+            raw_speaker = entry.get('speaker', 'Unknown Speaker')
+            formatted_speaker = format_speaker_name(raw_speaker)
+            text = entry.get('text', '').strip()
+            
+            if text:  # Only include entries with actual text
+                formatted_lines.append(f"{formatted_speaker}: {text}")
+        
+        return "\n\n".join(formatted_lines)
+    except json.JSONDecodeError:
+        # If JSON parsing fails, return the original string
+        return transcript_json
+
+
 def get_unique_filename(directory: str, desired_filename: str, exclude_path: str = None) -> str:
     """
     Generate a unique filename by appending a counter if needed.
@@ -925,7 +948,9 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
         if get_full_transcript_response["status"] == "not found":
             return {"error": f"Transcript not found for the given UUID: {uuid}."}
         else:
-            full_transcript = get_full_transcript_response["full_transcript"]
+            full_transcript_json = get_full_transcript_response["full_transcript"]
+            # Format the transcript with proper speaker names for LLM consumption
+            formatted_transcript = format_transcript_for_llm(full_transcript_json)
 
         # Use custom prompts if provided
         custom_prompt = None
@@ -934,7 +959,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
             custom_prompt = request.custom_prompt
             system_prompt = request.system_prompt
 
-        summary = summarise_transcript(full_transcript, custom_prompt, system_prompt)
+        summary = summarise_transcript(formatted_transcript, custom_prompt, system_prompt)
         timestamp = get_timestamp()
 
         if "Error" in summary:
