@@ -1166,6 +1166,8 @@ const MeetingTranscriptionApp = () => {
   const exportToPDF = async () => {
     if (!summary || !selectedMeetingId) return;
     
+    console.log('🔧 Using ReportLab PDF export via backend endpoint');
+    
     try {
       // Call backend ReportLab PDF generation endpoint
       const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`);
