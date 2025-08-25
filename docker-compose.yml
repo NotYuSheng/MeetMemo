@@ -17,8 +17,6 @@ services:
       - whisper_cache:/root/.cache/whisper
     ports:
       - "8000:8000"
-    depends_on:
-      - meetmemo-frontend
     deploy:
       resources:
         reservations:
@@ -27,7 +25,7 @@ services:
               count: all
               capabilities: [gpu]
     networks:
-      - shared-network
+      - meetmemo-network
 
   meetmemo-frontend:
     build:
@@ -36,8 +34,10 @@ services:
     container_name: meetmemo-frontend
     ports:
       - "3000:80"
+    depends_on:
+      - meetmemo-backend
     networks:
-      - shared-network
+      - meetmemo-network
 
 volumes:
   audiofiles:
@@ -47,7 +47,6 @@ volumes:
   summary:
 
 networks:
-  shared-network:
-    name: shared-network
-    external: true
-    # driver: bridge
+  meetmemo-network:
+    name: meetmemo-network
+    driver: bridge
