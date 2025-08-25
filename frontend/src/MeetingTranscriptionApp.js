@@ -791,6 +791,10 @@ const MeetingTranscriptionApp = () => {
       })
       .then(() => {
         setIsRenaming(false);
+        // Regenerate summary with updated speaker names
+        if (summary && summary.summary) {
+          fetchSummary(selectedMeetingId, true);
+        }
       })
       .catch((err) => {
         console.error("Failed to save speaker names:", err);

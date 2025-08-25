@@ -947,6 +947,16 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
         # Atomically replace the original file with the updated one
         os.replace(temp_file_path, transcript_path)
 
+        # Invalidate cached summary since speaker names have changed
+        summary_dir = Path("summary")
+        summary_path = summary_dir / f"{uuid}.txt"
+        if summary_path.exists():
+            try:
+                summary_path.unlink()
+                logging.info(f"{timestamp}: Invalidated cached summary for UUID {uuid} due to speaker rename")
+            except Exception as e:
+                logging.warning(f"{timestamp}: Failed to invalidate cached summary for UUID {uuid}: {e}")
+
         logging.info(f"{timestamp}: Successfully renamed speakers for UUID {uuid}, file: {file_name}")
         return {
             "uuid": uuid, 
