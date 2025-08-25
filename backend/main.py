@@ -331,7 +331,12 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     }
 
     try:
-        resp = requests.post(url, headers={"Content-Type": "application/json"}, json=payload)
+        headers = {"Content-Type": "application/json"}
+        api_key = os.getenv("LLM_API_KEY")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        
+        resp = requests.post(url, headers=headers, json=payload)
         resp.raise_for_status()
         data = resp.json()
         summary = data["choices"][0]["message"]["content"].strip()
