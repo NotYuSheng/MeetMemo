@@ -87,6 +87,17 @@ def get_timestamp() -> str:
     return datetime.now(tz_gmt8).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def normalize_uuid(uuid: str) -> str:
+    """
+    Normalize UUID to handle both 4-digit format and full UUID strings.
+    For 4-digit or shorter numeric strings, pad with zeros.
+    For longer UUIDs, return as-is.
+    """
+    if len(uuid) <= 4 and uuid.isdigit():
+        return uuid.zfill(4)
+    return uuid
+
+
 def format_result(diarized: list) -> list[dict]:
     """
     Formats the diarized results into a list of dictionaries,
@@ -140,7 +151,17 @@ def add_job(uuid: str, file_name: str, status_code: str) -> None:
             "status_code": status_code
         })
 
-        rows.sort(key=lambda r: int(r["uuid"]))
+        # Sort by UUID - handle both numeric and string formats
+        def uuid_sort_key(row):
+            uuid_str = row["uuid"]
+            try:
+                # Try to parse as integer (old 4-digit format)
+                return int(uuid_str)
+            except ValueError:
+                # For string UUIDs, use timestamp or lexicographic sort
+                return float('inf')  # Put string UUIDs at the end
+        
+        rows.sort(key=uuid_sort_key)
 
         with open(CSV_FILE, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
@@ -591,9 +612,14 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         reader = csv.reader(f)
         for row in reader:
             try:
-                if row:
-                    used.add(int(row[0]))
-            except (ValueError,IndexError):
+                if row and len(row) > 0:
+                    # Try to parse as integer (4-digit format)
+                    try:
+                        used.add(int(row[0]))
+                    except ValueError:
+                        # Skip non-integer UUIDs (string format)
+                        continue
+            except IndexError:
                 continue
     for i in range(10000):
         if i not in used:
@@ -668,7 +694,7 @@ def delete_job(uuid: str) -> dict:
     Deletes the job with the given UUID, including the audio file and its transcript.
     """
     file_name = None
-    uuid = uuid.zfill(4)  
+    uuid = normalize_uuid(uuid)  
 
     if not os.path.isfile(CSV_FILE):
             with open(CSV_FILE, "w", newline="") as f:
@@ -710,7 +736,7 @@ def get_file_name(uuid: str) -> dict:
     """
     Returns the file name associated with the given UUID.
     """
-    uuid = uuid.zfill(4)
+    uuid = normalize_uuid(uuid)
 
     if not os.path.isfile(CSV_FILE):
             with open(CSV_FILE, "w", newline="") as f:
@@ -731,7 +757,7 @@ def get_job_status(uuid: str):
     Returns the file_name and status for the given uuid,
     reading from jobs.csv (uuid, file_name, status_code).
     """
-    uuid = uuid.zfill(4)
+    uuid = normalize_uuid(uuid)
     file_name = "unknown"
     status_code = "404"
 
@@ -774,7 +800,7 @@ def get_file_transcript(uuid: str) -> dict:
     Returns the raw full transcript for the given UUID.
     """
     try:
-        uuid = uuid.zfill(4)
+        uuid = normalize_uuid(uuid)
         file_name = get_file_name(uuid)["file_name"]
         file_path = f"transcripts/{file_name}.json"
         timestamp = get_timestamp()
@@ -802,7 +828,7 @@ def delete_summary(uuid: str) -> dict:
     Deletes the cached summary for the given UUID.
     """
     try:
-        uuid = uuid.zfill(4)
+        uuid = normalize_uuid(uuid)
         file_name = get_file_name(uuid)["file_name"]
         summary_dir = Path("summary")
         summary_path = summary_dir / f"{uuid}.txt"
@@ -840,7 +866,7 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
     Summary is cached to a text file in the "summary" folder.
     Accepts optional custom prompts via request body.
     """
-    uuid = uuid.zfill(4)
+    uuid = normalize_uuid(uuid)
     file_name_response = get_file_name(uuid)
     if "error" in file_name_response:
         return {"error": f"File not found for UUID: {uuid}", "status_code": "404"}
@@ -914,7 +940,7 @@ def rename_job(uuid: str, new_name: str) -> dict:
     """
     Renames the job with the given UUID.
     """
-    uuid = uuid.zfill(4)
+    uuid = normalize_uuid(uuid)
     
     with CSV_LOCK:
         rows = []
@@ -964,7 +990,7 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
     }
     """
     try:
-        uuid = uuid.zfill(4)
+        uuid = normalize_uuid(uuid)
         timestamp = get_timestamp()
         
         # 1. Get the filename associated with the UUID
