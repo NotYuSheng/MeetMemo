@@ -388,7 +388,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list) -> Byte
             drawing.scale(scale_factor, scale_factor)
             
             # Create a header table with logo and title
-            header_data = [[drawing, "MeetMemo\nAI Summary"]]
+            header_data = [[drawing, "MeetMemo AI Summary"]]
             header_table = Table(header_data, colWidths=[60, 5*inch])
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -398,7 +398,6 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list) -> Byte
                 ('FONTSIZE', (1, 0), (1, 0), 20),
                 ('TEXTCOLOR', (1, 0), (1, 0), colors.HexColor('#2c3e50')),
                 ('LEFTPADDING', (1, 0), (1, 0), 15),
-                ('LEADING', (1, 0), (1, 0), 24),  # Increased line spacing
             ]))
             story.append(header_table)
         else:
