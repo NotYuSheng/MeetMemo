@@ -51,6 +51,11 @@ const formatSpeakerName = (speakerName) => {
   return speakerName;
 };
 
+const getDisplaySpeakerName = (speakerName, speakerNameMap) => {
+  // Manual renames take priority over automatic formatting
+  return speakerNameMap[speakerName] ?? formatSpeakerName(speakerName);
+};
+
 const processTranscriptWithSpeakerIds = (transcriptData) => {
   const speakerMap = {};
   let speakerCounter = 1;
@@ -1256,7 +1261,7 @@ Check console for detailed breakdown.`);
     if (transcript.length === 0) return;
     let textContent = "Meeting Transcript\n\n";
     transcript.forEach((entry) => {
-      const speaker = speakerNameMap[entry.speaker] ?? formatSpeakerName(entry.speaker);
+      const speaker = getDisplaySpeakerName(entry.speaker, speakerNameMap);
       textContent += `${speaker}: ${entry.text}\n\n`;
     });
 
@@ -1727,7 +1732,7 @@ Check console for detailed breakdown.`);
                               <span
                                 className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
                               >
-                                {speakerNameMap[entry.speaker] ?? formatSpeakerName(entry.speaker)}
+                                {getDisplaySpeakerName(entry.speaker, speakerNameMap)}
                               </span>
                               <button
                                 onClick={() => setEditingSpeaker(entry.speaker)}

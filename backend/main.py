@@ -117,6 +117,25 @@ def format_result(diarized: list) -> list[dict]:
     return full_transcript
 
 
+def format_speaker_name(speaker_name: str) -> str:
+    """
+    Format speaker name from SPEAKER_XX format to 'Speaker X' format.
+    If the speaker name doesn't match SPEAKER_XX pattern, return as-is (manual rename takes priority).
+    """
+    if not speaker_name:
+        return "Speaker 1"
+    
+    # Check if it matches SPEAKER_XX pattern
+    import re
+    match = re.match(r'^SPEAKER_(\d+)$', speaker_name)
+    if match:
+        speaker_number = int(match.group(1)) + 1  # Convert 0-based to 1-based
+        return f"Speaker {speaker_number}"
+    
+    # If it doesn't match the pattern, it's likely a manual rename - return as-is
+    return speaker_name
+
+
 def get_unique_filename(directory: str, desired_filename: str, exclude_path: str = None) -> str:
     """
     Generate a unique filename by appending a counter if needed.
@@ -565,7 +584,8 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list) -> Byte
         story.append(Spacer(1, 10))
         
         for i, entry in enumerate(transcript_data):
-            speaker = entry.get('speaker', 'Unknown Speaker')
+            raw_speaker = entry.get('speaker', 'Unknown Speaker')
+            speaker = format_speaker_name(raw_speaker)
             text = entry.get('text', '')
             start_time = entry.get('start', '0.00')
             end_time = entry.get('end', '0.00')
