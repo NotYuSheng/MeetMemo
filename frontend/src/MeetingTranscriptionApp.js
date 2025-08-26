@@ -430,7 +430,7 @@ const MeetingTranscriptionApp = () => {
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
-          setSummary((prev) => ({ ...prev, meetingTitle: newName }));
+          setSummary((prev) => ({ ...prev, meetingTitle: data.new_name }));
           fetchMeetingList();
           setIsRenaming(false);
         }
