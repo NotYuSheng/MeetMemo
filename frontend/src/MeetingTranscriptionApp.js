@@ -115,7 +115,7 @@ const PDFViewer = ({ selectedMeetingId, meetingTitle, onPdfLoaded }) => {
         return null;
       });
     };
-  }, [selectedMeetingId]);
+  }, [selectedMeetingId, onPdfLoaded]);
 
   if (!selectedMeetingId) {
     return (
