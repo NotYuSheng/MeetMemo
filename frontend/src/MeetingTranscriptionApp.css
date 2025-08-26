@@ -358,8 +358,8 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
-  height: calc(100vh - 10rem);
-  min-height: 0;
+  min-height: calc(100vh - 8rem);
+  height: auto;
 }
 
 @media (width >= 1024px) {
@@ -368,7 +368,14 @@ body {
   }
 }
 
-.left-column,
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 1250px; /* Ensure left column can accommodate PDF viewer */
+  overflow-y: auto;
+}
+
 .right-column {
   display: flex;
   flex-direction: column;
@@ -1528,7 +1535,14 @@ body {
 }
 
 /* 3 ── tell the growing cards they are allowed to shrink + scroll */
-.left-column .card:last-child,
+.left-column .card:last-child {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 1200px; /* Allow enough height for PDF viewer */
+  overflow: hidden; /* keep the card chrome fixed           */
+}
+
 .right-column .card:last-child {
   flex: 1 1 auto;
   display: flex;
