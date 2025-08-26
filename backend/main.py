@@ -866,7 +866,7 @@ def get_file_transcript(uuid: str) -> dict:
                 full_transcript = f.read()
             timestamp = get_timestamp()
             logging.info(f"{timestamp}: Successfully retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript,"status_code":"200"}
+            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript, "file_name": file_name, "status_code":"200"}
         else:
             timestamp = get_timestamp()
             logging.error(f"{timestamp}: {file_name} transcript not found.")

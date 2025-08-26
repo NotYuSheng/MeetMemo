@@ -12,15 +12,15 @@
 
 
 .pdf-viewer {
-  width: 100%;
+  width: 85%;
   min-height: 1200px;
   height: 90vh;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: white;
-  transform: scale(0.85);
-  transform-origin: top left;
-  margin-bottom: -10%;
+  transform: scale(1);
+  transform-origin: center center;
+  margin-bottom: 0;
 }
 
 .summary-pdf {
@@ -1568,8 +1568,7 @@ body {
 }
 
 .pdf-expanded .transcript-container {
-  min-height: 1150px; /* Match summary content height */
-  max-height: none; /* Remove height restriction when PDF is loaded */
+  max-height: 1150px; /* Match summary content height and maintain scrolling */
 }
 
 .meetings-scroll-wrapper {
