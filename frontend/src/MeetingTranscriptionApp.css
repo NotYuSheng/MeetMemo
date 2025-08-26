@@ -1,3 +1,55 @@
+/* PDF Viewer Styles */
+.pdf-viewer-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-header {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.pdf-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.pdf-viewer {
+  width: 100%;
+  min-height: 800px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+}
+
+.summary-pdf {
+  margin-top: 1rem;
+}
+
+.pdf-loading-state,
+.pdf-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  min-height: 200px;
+}
+
+.pdf-loading-state .spinner {
+  margin-bottom: 1rem;
+}
+
+.pdf-error-state .empty-icon {
+  color: var(--btn-danger);
+  margin-bottom: 1rem;
+}
+
 :root {
   /* Icons */
   --icon: #272b2d;

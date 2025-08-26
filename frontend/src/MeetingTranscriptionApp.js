@@ -10,18 +10,8 @@ import {
   Hash,
   Send,
   Trash2,
-  CheckCircle,
-  Users,
   Clock,
-  Target,
   AlertCircle,
-  Lightbulb,
-  Star,
-  Calendar,
-  MessageSquare,
-  ChevronDown,
-  ChevronRight,
-  Copy,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import { useCallback } from "react";
@@ -77,519 +67,102 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
   });
 };
 
-// Shared content processing system for both web and PDF
-const parseMarkdownContent = (markdownText) => {
-  if (!markdownText) return [];
-  
-  const lines = markdownText.split('\n');
-  const contentBlocks = [];
-  let currentBlock = null;
-  
-  lines.forEach((line, index) => {
-    const trimmedLine = line.trim();
-    
-    // Detect headings
-    if (trimmedLine.startsWith('# ')) {
-      if (currentBlock) contentBlocks.push(currentBlock);
-      currentBlock = {
-        type: 'heading',
-        level: 1,
-        content: trimmedLine.substring(2).trim(),
-        rawLine: line,
-        sectionType: getSectionType(trimmedLine.substring(2).trim(), 1)
-      };
-    } else if (trimmedLine.startsWith('## ')) {
-      if (currentBlock) contentBlocks.push(currentBlock);
-      currentBlock = {
-        type: 'heading',
-        level: 2,
-        content: trimmedLine.substring(3).trim(),
-        rawLine: line,
-        sectionType: getSectionType(trimmedLine.substring(3).trim(), 2)
-      };
-    } else if (trimmedLine.startsWith('### ')) {
-      if (currentBlock) contentBlocks.push(currentBlock);
-      currentBlock = {
-        type: 'heading',
-        level: 3,
-        content: trimmedLine.substring(4).trim(),
-        rawLine: line,
-        sectionType: getSectionType(trimmedLine.substring(4).trim(), 3)
-      };
-    } else if (trimmedLine.startsWith('#### ')) {
-      if (currentBlock) contentBlocks.push(currentBlock);
-      currentBlock = {
-        type: 'heading',
-        level: 4,
-        content: trimmedLine.substring(5).trim(),
-        rawLine: line,
-        sectionType: getSectionType(trimmedLine.substring(5).trim(), 4)
-      };
-    } else if (trimmedLine.startsWith('##### ')) {
-      if (currentBlock) contentBlocks.push(currentBlock);
-      currentBlock = {
-        type: 'heading',
-        level: 5,
-        content: trimmedLine.substring(6).trim(),
-        rawLine: line,
-        sectionType: getSectionType(trimmedLine.substring(6).trim(), 5)
-      };
-    } else if (trimmedLine.startsWith('###### ')) {
-      if (currentBlock) contentBlocks.push(currentBlock);
-      currentBlock = {
-        type: 'heading',
-        level: 6,
-        content: trimmedLine.substring(7).trim(),
-        rawLine: line,
-        sectionType: getSectionType(trimmedLine.substring(7).trim(), 6)
-      };
-    } 
-    // Detect list items (bulleted) - but check if it might be a header first
-    else if (trimmedLine.match(/^[-*+]\s+/)) {
-      const content = trimmedLine.replace(/^[-*+]\s+/, '');
-      const indent = line.length - line.trimStart().length;
-      
-      // Check if this looks like a header (capitalized, short, doesn't end with punctuation)
-      const isLikelyHeader = (
-        content.length < 100 && // Reasonable header length
-        content.charAt(0) === content.charAt(0).toUpperCase() && // Starts with capital
-        !content.match(/\s(and|or|the|a|an|in|on|at|to|for|of|with|by)\s/i) && // Doesn't contain common mid-sentence words
-        (content.split(' ').length <= 8) && // Not too many words for a header
-        indent === 0 // No indentation
-      );
-      
-      if (isLikelyHeader) {
-        // Treat as heading
-        if (currentBlock) contentBlocks.push(currentBlock);
-        currentBlock = {
-          type: 'heading',
-          level: 3, // Treat bullet headers as H3
-          content: content,
-          rawLine: line,
-          sectionType: getSectionType(content, 3)
-        };
-      } else {
-        // Treat as list item
-        if (!currentBlock || currentBlock.type !== 'list') {
-          if (currentBlock) contentBlocks.push(currentBlock);
-          currentBlock = {
-            type: 'list',
-            listType: 'bullet',
-            items: [],
-            rawLines: []
-          };
-        }
-        currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
-        currentBlock.rawLines.push(line);
-      }
-    }
-    // Detect numbered list items - but check if it might be a header first
-    else if (trimmedLine.match(/^\d+\.\s+/)) {
-      const content = trimmedLine.replace(/^\d+\.\s+/, '');
-      const indent = line.length - line.trimStart().length;
-      
-      // Check if this looks like a header (capitalized, short, doesn't end with punctuation)
-      const isLikelyHeader = (
-        content.length < 100 && // Reasonable header length
-        content.charAt(0) === content.charAt(0).toUpperCase() && // Starts with capital
-        !content.match(/\s(and|or|the|a|an|in|on|at|to|for|of|with|by)\s/i) && // Doesn't contain common mid-sentence words
-        (content.split(' ').length <= 8) && // Not too many words for a header
-        indent === 0 // No indentation
-      );
-      
-      if (isLikelyHeader) {
-        // Treat as heading
-        if (currentBlock) contentBlocks.push(currentBlock);
-        currentBlock = {
-          type: 'heading',
-          level: 3, // Treat numbered headers as H3
-          content: content,
-          rawLine: line,
-          sectionType: getSectionType(content, 3)
-        };
-      } else {
-        // Treat as list item
-        if (!currentBlock || currentBlock.type !== 'list') {
-          if (currentBlock) contentBlocks.push(currentBlock);
-          currentBlock = {
-            type: 'list',
-            listType: 'number',
-            items: [],
-            rawLines: []
-          };
-        }
-        currentBlock.items.push({ content, indent, formatted: parseInlineFormatting(content) });
-        currentBlock.rawLines.push(line);
-      }
-    }
-    // Detect code blocks
-    else if (trimmedLine.startsWith('```')) {
-      if (!currentBlock || currentBlock.type !== 'codeblock') {
-        if (currentBlock) contentBlocks.push(currentBlock);
-        currentBlock = {
-          type: 'codeblock',
-          language: trimmedLine.substring(3).trim(),
-          content: [],
-          rawLines: []
-        };
-      } else {
-        // End of code block
-        if (currentBlock) contentBlocks.push(currentBlock);
-        currentBlock = null;
-      }
-    }
-    // Detect blockquotes
-    else if (trimmedLine.startsWith('> ')) {
-      const content = trimmedLine.substring(2);
-      if (!currentBlock || currentBlock.type !== 'blockquote') {
-        if (currentBlock) contentBlocks.push(currentBlock);
-        currentBlock = {
-          type: 'blockquote',
-          content: [],
-          rawLines: []
-        };
-      }
-      currentBlock.content.push(parseInlineFormatting(content));
-      currentBlock.rawLines.push(line);
-    }
-    // Regular paragraph or content
-    else if (trimmedLine) {
-      if (currentBlock && currentBlock.type === 'codeblock') {
-        currentBlock.content.push(line);
-        currentBlock.rawLines.push(line);
-      } else {
-        if (!currentBlock || currentBlock.type !== 'paragraph') {
-          if (currentBlock) contentBlocks.push(currentBlock);
-          currentBlock = {
-            type: 'paragraph',
-            content: [],
-            rawLines: []
-          };
-        }
-        currentBlock.content.push(parseInlineFormatting(trimmedLine));
-        currentBlock.rawLines.push(line);
-      }
-    }
-    // Empty lines
-    else {
-      if (currentBlock) {
-        contentBlocks.push(currentBlock);
-        currentBlock = null;
-      }
-    }
-  });
-  
-  if (currentBlock) {
-    contentBlocks.push(currentBlock);
-  }
-  
-  return contentBlocks;
-};
+// Simple PDF viewer component
+const PDFViewer = ({ selectedMeetingId, meetingTitle }) => {
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-// Parse inline formatting (bold, italic, code, links)
-const parseInlineFormatting = (text) => {
-  return {
-    raw: text,
-    html: text
-      // Bold **text** or __text__
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/__(.*?)__/g, '<strong>$1</strong>')
-      // Italic *text* or _text_
-      .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
-      .replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>')
-      // Code `text`
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Links [text](url)
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-  };
-};
-
-// Get section type (reuse existing logic)
-const getSectionType = (content, level) => {
-  const text = String(content).toLowerCase();
-  
-  if (level <= 2) {
-    if (text.includes('action') || text.includes('tasks') || text.includes('todo')) return 'actions';
-    if (text.includes('decision') || text.includes('outcome')) return 'decisions';
-    if (text.includes('participant') || text.includes('attendee')) return 'participants';
-    if (text.includes('discussion') || text.includes('topic')) return 'discussion';
-    if (text.includes('key point') || text.includes('highlight')) return 'highlights';
-    if (text.includes('next step') || text.includes('follow up')) return 'next-steps';
-    if (text.includes('issue') || text.includes('concern') || text.includes('risk')) return 'issues';
-    if (text.includes('idea') || text.includes('suggestion') || text.includes('insight')) return 'ideas';
-    if (text.includes('summary') || text.includes('overview')) return 'summary';
-  }
-  
-  return 'default';
-};
-
-// Content validation function - ensures web and PDF show identical content
-const validateContentParity = (markdownText) => {
-  const contentBlocks = parseMarkdownContent(markdownText);
-  const validation = {
-    totalBlocks: contentBlocks.length,
-    headings: contentBlocks.filter(b => b.type === 'heading').length,
-    paragraphs: contentBlocks.filter(b => b.type === 'paragraph').length,
-    lists: contentBlocks.filter(b => b.type === 'list').length,
-    codeblocks: contentBlocks.filter(b => b.type === 'codeblock').length,
-    blockquotes: contentBlocks.filter(b => b.type === 'blockquote').length,
-    sections: {},
-    wordCount: 0
-  };
-  
-  // Count section types and total words
-  contentBlocks.forEach(block => {
-    if (block.type === 'heading' && block.sectionType) {
-      validation.sections[block.sectionType] = (validation.sections[block.sectionType] || 0) + 1;
+  useEffect(() => {
+    if (!selectedMeetingId) {
+      setPdfBlobUrl(null);
+      return;
     }
-    
-    // Count words in different block types
-    if (block.content) {
-      if (typeof block.content === 'string') {
-        validation.wordCount += block.content.split(/\s+/).length;
-      } else if (Array.isArray(block.content)) {
-        block.content.forEach(item => {
-          const text = item.raw || item.html || String(item);
-          validation.wordCount += text.replace(/<[^>]*>/g, '').split(/\s+/).length;
-        });
-      }
-    }
-  });
-  
-  return validation;
-};
 
-// Icon mapping for different formats
-const getIconsForFormat = (sectionType, format = 'web') => {
-  const iconMaps = {
-    web: {
-      // Beautiful emojis for web display
-      actions: '✅', decisions: '🎯', issues: '⚠️', 
-      highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
-      summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
-    },
-    pdf: {
-      // Same emojis for PDF - we'll convert them to images
-      actions: '✅', decisions: '🎯', issues: '⚠️', 
-      highlights: '⭐', 'next-steps': '⏭️', participants: '👥',
-      summary: '📋', ideas: '💡', discussion: '💬', default: '📌'
-    }
-  };
-  
-  return iconMaps[format][sectionType] || iconMaps[format].default;
-};
-
-
-// Custom ReactMarkdown components with icons
-const getHeadingIcon = (children, level) => {
-  const text = String(children).toLowerCase();
-  
-  // Level 1 headings (main sections)
-  if (level === 1) {
-    if (text.includes('summary') || text.includes('overview')) return FileText;
-    if (text.includes('agenda')) return Calendar;
-    return Hash;
-  }
-  
-  // Level 2 headings (subsections)  
-  if (level === 2) {
-    if (text.includes('action') || text.includes('tasks') || text.includes('todo')) return CheckCircle;
-    if (text.includes('decision') || text.includes('outcome')) return Target;
-    if (text.includes('participant') || text.includes('attendee')) return Users;
-    if (text.includes('discussion') || text.includes('topic')) return MessageSquare;
-    if (text.includes('key point') || text.includes('highlight')) return Star;
-    if (text.includes('next step') || text.includes('follow up')) return Clock;
-    if (text.includes('issue') || text.includes('concern') || text.includes('risk')) return AlertCircle;
-    if (text.includes('idea') || text.includes('suggestion') || text.includes('insight')) return Lightbulb;
-    return Hash;
-  }
-  
-  // Level 3+ headings
-  return Hash;
-};
-
-const getSectionStyle = (sectionType, level) => {
-  if (level <= 2) {
-    switch (sectionType) {
-      case 'actions': return 'summary-section-actions';
-      case 'decisions': return 'summary-section-decisions';
-      case 'participants': return 'summary-section-participants';
-      case 'highlights': return 'summary-section-highlights';
-      case 'issues': return 'summary-section-issues';
-      case 'next-steps': return 'summary-section-next-steps';
-      case 'ideas': return 'summary-section-ideas';
-      case 'discussion': return 'summary-section-discussion';
-      default: return 'summary-section-default';
-    }
-  }
-  return 'summary-section-default';
-};
-
-
-const CustomHeading = ({ level, children, sectionType, ...props }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const HeadingTag = `h${level}`;
-  const IconComponent = getHeadingIcon(children, level);
-  const sectionClass = getSectionStyle(sectionType || getSectionType(children, level), level);
-  const headingId = `heading-${String(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}`;
-  
-  const toggleCollapse = () => {
-    if (level === 2) { // Only make H2 sections collapsible
-      setIsCollapsed(!isCollapsed);
-      
-      // Find and toggle the next sibling elements until the next heading
-      const heading = document.getElementById(headingId);
-      if (heading) {
-        let nextElement = heading.nextElementSibling;
-        while (nextElement && !nextElement.tagName.match(/^H[1-6]$/)) {
-          nextElement.style.display = isCollapsed ? 'block' : 'none';
-          nextElement = nextElement.nextElementSibling;
-        }
-      }
-    }
-  };
-
-  const copySection = async () => {
-    const heading = document.getElementById(headingId);
-    if (heading) {
-      let sectionText = heading.textContent + '\n\n';
-      let nextElement = heading.nextElementSibling;
-      
-      while (nextElement && !nextElement.tagName.match(/^H[1-6]$/)) {
-        if (nextElement.style.display !== 'none') {
-          sectionText += nextElement.textContent + '\n';
-        }
-        nextElement = nextElement.nextElementSibling;
-      }
+    const fetchPdfBlob = async () => {
+      setIsLoading(true);
+      setError(null);
       
       try {
-        await navigator.clipboard.writeText(sectionText.trim());
-        // You could add a toast notification here
+        const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setPdfBlobUrl(blobUrl);
       } catch (err) {
-        console.error('Failed to copy text: ', err);
+        console.error('Error fetching PDF:', err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  };
-  
-  return (
-    <HeadingTag 
-      {...props} 
-      id={headingId}
-      className={`custom-heading ${sectionClass} ${level === 2 ? 'collapsible-heading' : ''}`}
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem',
-        cursor: level === 2 ? 'pointer' : 'default'
-      }}
-    >
-      {level === 2 && (
-        <button 
-          onClick={toggleCollapse}
-          className="collapse-toggle"
-          aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
-        >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-        </button>
-      )}
-      <IconComponent size={level === 1 ? 22 : level === 2 ? 20 : 18} />
-      <span onClick={level === 2 ? toggleCollapse : undefined} style={{ flex: 1 }}>
-        <span style={{ marginRight: '0.5rem' }}>
-          {getIconsForFormat(sectionType || getSectionType(children, level), 'web')}
-        </span>
-        {children}
-      </span>
-      {level === 2 && (
-        <button 
-          onClick={copySection}
-          className="copy-section-btn"
-          aria-label="Copy section to clipboard"
-          title="Copy section to clipboard"
-        >
-          <Copy size={14} />
-        </button>
-      )}
-    </HeadingTag>
-  );
-};
+    };
 
-// Render parsed content blocks as React elements
-const ContentRenderer = ({ contentBlocks }) => {
-  if (!contentBlocks || contentBlocks.length === 0) {
-    return <div>No content available</div>;
+    fetchPdfBlob();
+
+    // Cleanup blob URL when component unmounts or ID changes
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [selectedMeetingId, pdfBlobUrl]);
+
+  if (!selectedMeetingId) {
+    return (
+      <div className="empty-state">
+        <Hash className="empty-icon" />
+        <p className="empty-title">No PDF available</p>
+        <p className="empty-subtitle">PDF will be generated after processing audio</p>
+      </div>
+    );
   }
 
-  const renderInlineFormatting = (formatted) => {
-    if (!formatted || !formatted.html) return formatted?.raw || formatted || '';
-    
-    return <span dangerouslySetInnerHTML={{ __html: formatted.html }} />;
-  };
+  if (isLoading) {
+    return (
+      <div className="pdf-loading-state">
+        <div className="spinner"></div>
+        <p>Loading PDF...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="pdf-error-state">
+        <AlertCircle className="empty-icon" />
+        <p className="empty-title">Failed to load PDF</p>
+        <p className="empty-subtitle">{error}</p>
+      </div>
+    );
+  }
+
+  if (!pdfBlobUrl) {
+    return (
+      <div className="empty-state">
+        <Hash className="empty-icon" />
+        <p className="empty-title">No PDF available</p>
+        <p className="empty-subtitle">PDF will be generated after processing audio</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="content-renderer">
-      {contentBlocks.map((block) => {
-        const key = `block-${generateUUID()}`;
-        
-        switch (block.type) {
-          case 'heading':
-            return (
-              <CustomHeading 
-                key={key}
-                level={block.level} 
-                sectionType={block.sectionType}
-              >
-                {block.content}
-              </CustomHeading>
-            );
-            
-          case 'paragraph':
-            return (
-              <p key={key} className="content-paragraph">
-                {block.content.map((item, pIndex) => (
-                  <span key={`p-${generateUUID()}`}>
-                    {renderInlineFormatting(item)}
-                    {pIndex < block.content.length - 1 && ' '}
-                  </span>
-                ))}
-              </p>
-            );
-            
-          case 'list':
-            const ListTag = block.listType === 'bullet' ? 'ul' : 'ol';
-            return (
-              <ListTag key={key} className="content-list">
-                {block.items.map((item) => (
-                  <li key={`li-${generateUUID()}`} style={{ marginLeft: `${item.indent || 0}px` }}>
-                    {renderInlineFormatting(item.formatted)}
-                  </li>
-                ))}
-              </ListTag>
-            );
-            
-          case 'blockquote':
-            return (
-              <blockquote key={key} className="content-blockquote">
-                {block.content.map((item) => (
-                  <p key={`bq-${generateUUID()}`}>
-                    {renderInlineFormatting(item)}
-                  </p>
-                ))}
-              </blockquote>
-            );
-            
-          case 'codeblock':
-            return (
-              <pre key={key} className="content-codeblock">
-                <code className={block.language ? `language-${block.language}` : ''}>
-                  {block.content.join('\n')}
-                </code>
-              </pre>
-            );
-            
-          default:
-            return null;
-        }
-      })}
+    <div className="pdf-viewer-container">
+      <div className="pdf-header">
+        <h3>{meetingTitle}</h3>
+      </div>
+      <iframe
+        src={pdfBlobUrl}
+        className="pdf-viewer"
+        title="Meeting Summary PDF"
+        width="100%"
+        height="800px"
+        style={{ border: 'none', borderRadius: '8px' }}
+      />
     </div>
   );
 };
@@ -829,15 +402,8 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
         setTranscript(processTranscriptWithSpeakerIds(parsed));
-        return fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, {
-          method: "POST",
-        });
-      })
-      .then((res) => res.json())
-      .then((data) => {
         setSummary({
-          meetingTitle: data.fileName,
-          summary: data.summary,
+          meetingTitle: data.file_name || `Meeting ${uuid}`,
         });
       })
       .catch((err) => console.error("Failed to load past meeting", err))
@@ -1162,10 +728,9 @@ const MeetingTranscriptionApp = () => {
       fetch(`${API_BASE_URL}/jobs/${uuid}/summarise`, requestOptions)
         .then((res) => res.json())
         .then((data) => {
-          if (data && data.summary) {
+          if (data && data.fileName) {
             setSummary({
               meetingTitle: data.fileName,
-              summary: data.summary,
             });
           }
         })
@@ -1256,26 +821,6 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
-  // Debug function for testing content parity (can be removed after testing)
-  const debugContentParity = () => {
-    if (!summary?.summary) return;
-    
-    const validation = validateContentParity(summary.summary);
-    console.log('🔍 Content Parity Validation:', validation);
-    console.log('📄 Parsed Content Blocks:', parseMarkdownContent(summary.summary));
-    
-    alert(`Content Analysis:
-📊 Total Blocks: ${validation.totalBlocks}
-📝 Headings: ${validation.headings}
-📄 Paragraphs: ${validation.paragraphs} 
-📋 Lists: ${validation.lists}
-📦 Code Blocks: ${validation.codeblocks}
-💬 Blockquotes: ${validation.blockquotes}
-🔤 Word Count: ${validation.wordCount}
-🏷️ Sections: ${Object.keys(validation.sections).join(', ')}
-
-Check console for detailed breakdown.`);
-  };
 
   const exportTranscriptToTxt = () => {
     if (transcript.length === 0) return;
@@ -1597,16 +1142,6 @@ Check console for detailed breakdown.`);
                         <Download className="btn-icon" />
                         Export PDF
                       </button>
-                      {/* Debug button for testing - remove after verification */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <button
-                          onClick={debugContentParity}
-                          className="btn btn-secondary btn-small"
-                          title="Debug: Verify content parity between web and PDF"
-                        >
-                          🔍 Debug
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
@@ -1658,7 +1193,7 @@ Check console for detailed breakdown.`);
                     <div className="spinner"></div>
                     <span>Generating summary with AI…</span>
                   </div>
-                ) : summary && summary.summary ? (
+                ) : summary && summary.meetingTitle ? (
                   <div className="summary-content">
                     {isRenaming ? (
                       <div className="rename-container">
@@ -1697,9 +1232,10 @@ Check console for detailed breakdown.`);
                         </button>
                       </p>
                     )}
-                    <div className="summary-text">
-                      <ContentRenderer 
-                        contentBlocks={parseMarkdownContent(summary.summary)} 
+                    <div className="summary-pdf">
+                      <PDFViewer 
+                        selectedMeetingId={selectedMeetingId} 
+                        meetingTitle={summary.meetingTitle} 
                       />
                     </div>
                   </div>
