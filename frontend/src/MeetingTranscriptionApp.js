@@ -103,13 +103,17 @@ const PDFViewer = ({ selectedMeetingId, meetingTitle }) => {
 
     fetchPdfBlob();
 
-    // Cleanup blob URL when component unmounts or ID changes
+    // Cleanup function for when component unmounts or selectedMeetingId changes
     return () => {
-      if (pdfBlobUrl) {
-        URL.revokeObjectURL(pdfBlobUrl);
-      }
+      // This cleanup will run on next effect or unmount
+      setPdfBlobUrl((prevUrl) => {
+        if (prevUrl) {
+          URL.revokeObjectURL(prevUrl);
+        }
+        return null;
+      });
     };
-  }, [selectedMeetingId, pdfBlobUrl]);
+  }, [selectedMeetingId]);
 
   if (!selectedMeetingId) {
     return (
