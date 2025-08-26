@@ -68,7 +68,7 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
 };
 
 // Simple PDF viewer component
-const PDFViewer = ({ selectedMeetingId, meetingTitle, onPdfLoaded }) => {
+const PDFViewer = ({ selectedMeetingId, onPdfLoaded }) => {
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -158,9 +158,6 @@ const PDFViewer = ({ selectedMeetingId, meetingTitle, onPdfLoaded }) => {
 
   return (
     <div className="pdf-viewer-container">
-      <div className="pdf-header">
-        <h3>{meetingTitle}</h3>
-      </div>
       <iframe
         src={pdfBlobUrl}
         className="pdf-viewer"
@@ -1245,7 +1242,6 @@ const MeetingTranscriptionApp = () => {
                     <div className="summary-pdf">
                       <PDFViewer 
                         selectedMeetingId={selectedMeetingId} 
-                        meetingTitle={summary.meetingTitle} 
                         onPdfLoaded={handlePdfLoaded}
                       />
                     </div>
