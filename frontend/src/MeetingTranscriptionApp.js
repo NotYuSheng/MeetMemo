@@ -164,7 +164,6 @@ const PDFViewer = ({ selectedMeetingId, meetingTitle }) => {
         className="pdf-viewer"
         title="Meeting Summary PDF"
         width="100%"
-        height="800px"
         style={{ border: 'none', borderRadius: '8px' }}
       />
     </div>
