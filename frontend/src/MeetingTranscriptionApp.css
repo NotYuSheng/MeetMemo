@@ -1566,7 +1566,6 @@ body {
 }
 
 .pdf-expanded .transcript-container {
-  min-height: 1350px; /* Match summary content height */
   max-height: none; /* Remove height restriction when PDF is loaded */
 }
 

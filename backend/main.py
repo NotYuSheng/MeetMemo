@@ -514,7 +514,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list) -> Byte
         
         # Create info table
         meeting_info = [
-            ['Meeting Title:', summary_data.get('meetingTitle', 'Untitled Meeting')],
+            ['File Name:', summary_data.get('meetingTitle', 'Untitled Meeting')],
             ['Generated On:', datetime.now().strftime('%B %d, %Y at %I:%M %p')],
             ['Document Type:', 'Meeting Summary & Transcript']
         ]

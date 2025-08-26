@@ -1227,7 +1227,7 @@ const MeetingTranscriptionApp = () => {
                       </div>
                     ) : (
                       <p>
-                        <strong>Title:</strong> {summary.meetingTitle}
+                        <strong>File Name:</strong> {summary.meetingTitle}
                         <button
                           onClick={() => {
                             setIsRenaming(true);
