@@ -1,3 +1,52 @@
+/* PDF Viewer Styles */
+.pdf-viewer-container {
+  width: 100%;
+  height: 100%;
+  min-height: 1250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+
+.pdf-viewer {
+  width: 85%;
+  min-height: 1200px;
+  height: 90vh;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  transform: scale(1);
+  transform-origin: center center;
+  margin-bottom: 0;
+}
+
+.summary-pdf {
+  margin-top: 1rem;
+}
+
+.pdf-loading-state,
+.pdf-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  min-height: 200px;
+}
+
+.pdf-loading-state .spinner {
+  margin-bottom: 1rem;
+}
+
+.pdf-error-state .empty-icon {
+  color: var(--btn-danger);
+  margin-bottom: 1rem;
+}
+
 :root {
   /* Icons */
   --icon: #272b2d;
@@ -270,8 +319,9 @@ body {
 }
 
 .max-width-container {
-  max-width: 80rem;
+  max-width: 90rem;
   margin: 0 auto;
+  width: 100%;
 }
 
 .header-card {
@@ -314,13 +364,30 @@ body {
   }
 }
 
-.left-column,
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .right-column {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* Conditional expansion when PDF is loaded */
+.pdf-expanded .left-column {
+  min-height: 1250px;
+}
+
+.pdf-expanded .main-grid {
+  min-height: calc(100vh - 4rem);
+  height: auto;
 }
 
 .card {
@@ -926,15 +993,17 @@ body {
 .rename-btn {
   margin-left: auto;
   transition: all 0.2s ease;
-  border: 1px solid var(--btn-primary) !important;
-  color: var(--btn-primary) !important;
+  background: #f8f9fa !important;
+  border: 1px solid #e9ecef !important;
+  color: #6c757d !important;
 }
 
 .rename-btn:hover {
-  background-color: var(--btn-primary) !important;
-  color: white !important;
+  background: #e9ecef !important;
+  border: 1px solid #dee2e6 !important;
+  color: #5a6268 !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(41, 152, 213, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Summary Content Container Enhancements */
@@ -1306,7 +1375,7 @@ body {
 }
 
 .content-renderer .content-paragraph {
-  margin: 0.75rem 0;
+  margin: 0.25rem 0;
   text-align: justify;
   line-height: 1.7;
 }
@@ -1481,11 +1550,25 @@ body {
   overflow: hidden; /* keep the card chrome fixed           */
 }
 
+/* Conditional expansion for PDF viewer */
+.pdf-expanded .left-column .card:last-child {
+  min-height: 1200px; /* Allow enough height for PDF viewer */
+}
+
 .transcript-container,
 .summary-content {
   flex: 1 1 auto;
-  min-height: 0; /* ← also crucial inside flex columns   */
+  min-height: 0;
   overflow-y: auto; /* inner scrollbar appears when needed  */
+}
+
+/* Conditional expansion for PDF content */
+.pdf-expanded .summary-content {
+  min-height: 1150px; /* Ensure adequate space for PDF viewer */
+}
+
+.pdf-expanded .transcript-container {
+  max-height: 1150px; /* Match summary content height and maintain scrolling */
 }
 
 .meetings-scroll-wrapper {
