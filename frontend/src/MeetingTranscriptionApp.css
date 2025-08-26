@@ -1373,7 +1373,7 @@ body {
 }
 
 .content-renderer .content-paragraph {
-  margin: 0.75rem 0;
+  margin: 0.25rem 0;
   text-align: justify;
   line-height: 1.7;
 }
@@ -1563,6 +1563,11 @@ body {
 /* Conditional expansion for PDF content */
 .pdf-expanded .summary-content {
   min-height: 1350px; /* Ensure adequate space for PDF viewer */
+}
+
+.pdf-expanded .transcript-container {
+  min-height: 1350px; /* Match summary content height */
+  max-height: none; /* Remove height restriction when PDF is loaded */
 }
 
 .meetings-scroll-wrapper {
