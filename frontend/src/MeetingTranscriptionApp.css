@@ -2,9 +2,10 @@
 .pdf-viewer-container {
   width: 100%;
   height: 100%;
-  min-height: 1100px;
+  min-height: 900px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .pdf-header {
@@ -21,11 +22,14 @@
 
 .pdf-viewer {
   width: 100%;
-  min-height: 1000px;
-  height: 85vh;
+  min-height: 800px;
+  height: 70vh;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: white;
+  transform: scale(0.85);
+  transform-origin: top left;
+  margin-bottom: -10%;
 }
 
 .summary-pdf {
@@ -358,8 +362,8 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
-  min-height: calc(100vh - 8rem);
-  height: auto;
+  height: calc(100vh - 10rem);
+  min-height: 0;
 }
 
 @media (width >= 1024px) {
@@ -372,7 +376,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  min-height: 1250px; /* Ensure left column can accommodate PDF viewer */
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -382,6 +386,16 @@ body {
   gap: 1.5rem;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* Conditional expansion when PDF is loaded */
+.pdf-expanded .left-column {
+  min-height: 1250px;
+}
+
+.pdf-expanded .main-grid {
+  min-height: calc(100vh - 6rem);
+  height: auto;
 }
 
 .card {
@@ -1535,14 +1549,7 @@ body {
 }
 
 /* 3 ── tell the growing cards they are allowed to shrink + scroll */
-.left-column .card:last-child {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 1200px; /* Allow enough height for PDF viewer */
-  overflow: hidden; /* keep the card chrome fixed           */
-}
-
+.left-column .card:last-child,
 .right-column .card:last-child {
   flex: 1 1 auto;
   display: flex;
@@ -1551,11 +1558,21 @@ body {
   overflow: hidden; /* keep the card chrome fixed           */
 }
 
+/* Conditional expansion for PDF viewer */
+.pdf-expanded .left-column .card:last-child {
+  min-height: 1200px; /* Allow enough height for PDF viewer */
+}
+
 .transcript-container,
 .summary-content {
   flex: 1 1 auto;
-  min-height: 1150px; /* Ensure adequate space for PDF viewer */
+  min-height: 0;
   overflow-y: auto; /* inner scrollbar appears when needed  */
+}
+
+/* Conditional expansion for PDF content */
+.pdf-expanded .summary-content {
+  min-height: 1150px; /* Ensure adequate space for PDF viewer */
 }
 
 .meetings-scroll-wrapper {

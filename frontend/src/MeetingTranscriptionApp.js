@@ -68,7 +68,7 @@ const processTranscriptWithSpeakerIds = (transcriptData) => {
 };
 
 // Simple PDF viewer component
-const PDFViewer = ({ selectedMeetingId, meetingTitle }) => {
+const PDFViewer = ({ selectedMeetingId, meetingTitle, onPdfLoaded }) => {
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -76,6 +76,7 @@ const PDFViewer = ({ selectedMeetingId, meetingTitle }) => {
   useEffect(() => {
     if (!selectedMeetingId) {
       setPdfBlobUrl(null);
+      if (onPdfLoaded) onPdfLoaded(false);
       return;
     }
 
@@ -93,6 +94,7 @@ const PDFViewer = ({ selectedMeetingId, meetingTitle }) => {
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
         setPdfBlobUrl(blobUrl);
+        if (onPdfLoaded) onPdfLoaded(true);
       } catch (err) {
         console.error('Error fetching PDF:', err);
         setError(err.message);
@@ -199,6 +201,11 @@ const MeetingTranscriptionApp = () => {
   const [selectedModel, setSelectedModel] = useState("turbo");
   const [speakerNameMaps, setSpeakerNameMaps] = useState({}); // Per-meeting mapping
   const speakerNameMapRef = useRef({});
+  const [isPdfLoaded, setIsPdfLoaded] = useState(false);
+  
+  const handlePdfLoaded = useCallback((loaded) => {
+    setIsPdfLoaded(loaded);
+  }, []);
   
   // Get current meeting's speaker mapping
   const currentSpeakerNameMap = speakerNameMaps[selectedMeetingId] || {};
@@ -906,7 +913,7 @@ const MeetingTranscriptionApp = () => {
   }, []);
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isPdfLoaded ? 'pdf-expanded' : ''}`}>
       <div className="max-width-container">
         {/* Header */}
         <div className="header-card">
@@ -1239,6 +1246,7 @@ const MeetingTranscriptionApp = () => {
                       <PDFViewer 
                         selectedMeetingId={selectedMeetingId} 
                         meetingTitle={summary.meetingTitle} 
+                        onPdfLoaded={handlePdfLoaded}
                       />
                     </div>
                   </div>
