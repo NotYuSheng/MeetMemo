@@ -2010,11 +2010,15 @@ input:checked + .toggle-slider::after {
 .edit-text-btn {
   opacity: 0.3;
   transition: opacity 0.2s ease;
-  padding: 0.1rem !important; /* Minimal internal padding */
+  padding: 0.15rem !important; /* Reduced internal padding */
   min-height: unset !important;
   flex-shrink: 0;
   margin-left: 0.5rem; /* Add space from the text */
   margin-right: 0.75rem; /* Add space from the right edge */
+}
+
+.edit-text-btn .btn-icon {
+  margin-right: 0; /* Remove right margin from icon since there's no text */
 }
 
 .transcript-edit-container {
