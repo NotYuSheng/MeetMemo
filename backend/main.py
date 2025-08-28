@@ -312,8 +312,7 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     # Default user prompt
     default_user_prompt = (
         "Please provide a comprehensive summary of the following meeting transcript with this exact structure:\n\n"
-        "# [Title]\n"
-        "Generate a concise, descriptive title that captures the main purpose or topic of the meeting.\n\n"
+        "# [Generate a concise, descriptive title that captures the main purpose or topic of the meeting]\n\n"
         "## Executive Summary\n"
         "Provide a brief overview of the meeting's main outcomes and key decisions.\n\n"
         "## Participants\n"
