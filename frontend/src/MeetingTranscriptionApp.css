@@ -100,6 +100,9 @@
   --btn-success: linear-gradient(135deg, #2998d5 0%, #0ea5e9 100%);
   --btn-success-hover: linear-gradient(135deg, #1b75bb 0%, #0284c7 100%);
   --btn-success-text: #fff;
+  --btn-warning: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  --btn-warning-hover: linear-gradient(135deg, #d97706 0%, #ea580c 100%);
+  --btn-warning-text: #fff;
   --btn-active: linear-gradient(135deg, #2998d5 0%, #0ea5e9 100%);
   --btn-active-text: #fff;
 
@@ -245,6 +248,15 @@ body {
 
 .btn-success:hover {
   background: var(--btn-success-hover);
+}
+
+.btn-warning {
+  background: var(--btn-warning);
+  color: var(--btn-warning-text);
+}
+
+.btn-warning:hover {
+  background: var(--btn-warning-hover);
 }
 
 .btn-active {
@@ -1891,6 +1903,14 @@ input:checked + .toggle-slider::after {
 [data-theme="dark"] .model-select option {
   background-color: #4a4e50;
   color: #fff;
+}
+
+/* Actions Group - General */
+.actions-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Summary Actions Group */
