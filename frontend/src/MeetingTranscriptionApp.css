@@ -1954,9 +1954,78 @@ input:checked + .toggle-slider::after {
 }
 
 .speaker-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0rem;
+}
+
+.speaker-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Transcript Text Editing Styles */
+.transcript-text-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.transcript-text-container:hover .edit-text-btn {
+  opacity: 1;
+}
+
+.edit-text-btn {
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+  padding: 0.25rem !important;
+  min-height: unset !important;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.transcript-edit-container {
+  width: 100%;
+}
+
+.transcript-textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  background-color: var(--input-bg, var(--bg));
+  color: var(--text);
+}
+
+.transcript-textarea:focus {
+  outline: none;
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 2px var(--btn-primary-alpha);
+}
+
+.transcript-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Spinning Animation for Refresh Icon */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Meeting Status Icons */

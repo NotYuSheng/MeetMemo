@@ -12,6 +12,8 @@ import {
   Trash2,
   Clock,
   AlertCircle,
+  RefreshCw,
+  Edit,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import { useCallback } from "react";
@@ -339,6 +341,7 @@ const MeetingTranscriptionApp = () => {
   const [, setIsSavingNames] = useState(false);
   const [speakerIdentificationLoading, setSpeakerIdentificationLoading] = useState(false);
   const [speakerSuggestions, setSpeakerSuggestions] = useState(null);
+  const [editingText, setEditingText] = useState(null); // Track which transcript entry is being edited
 
   const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
@@ -431,6 +434,8 @@ const MeetingTranscriptionApp = () => {
         setSummary({
           meetingTitle: data.file_name || `Meeting ${uuid}`,
         });
+        // Auto-run speaker identification for loaded meetings
+        identifySpeakers(uuid);
       })
       .catch((err) => console.error("Failed to load past meeting", err))
       .finally(() => setSummaryLoading(false));
@@ -593,6 +598,8 @@ const MeetingTranscriptionApp = () => {
             setSelectedMeetingId(uuid);
             fetchSummary(uuid);
             fetchMeetingList();
+            // Auto-run speaker identification for new transcripts
+            identifySpeakers(uuid);
             return true;
           }
         } else if (
@@ -654,6 +661,11 @@ const MeetingTranscriptionApp = () => {
       } else {
         throw new Error("No transcript or job ID returned");
       }
+      
+      // Auto-run speaker identification for uploaded files  
+      if (data.uuid) {
+        identifySpeakers(data.uuid);
+      }
 
       setSelectedFile(null);
     } catch (err) {
@@ -698,6 +710,8 @@ const MeetingTranscriptionApp = () => {
         setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
+        // Auto-run speaker identification for recorded audio
+        identifySpeakers(data.uuid);
       } else if (data.uuid) {
         // Otherwise, poll for status
         await pollJobStatus(data.uuid);
@@ -826,6 +840,23 @@ const MeetingTranscriptionApp = () => {
       delete updated[formatSpeakerName(originalSpeaker)];
       return Object.keys(updated).length > 0 ? updated : null;
     });
+  };
+
+  const handleTranscriptTextEdit = (entryId, newText) => {
+    if (!selectedMeetingId || !newText.trim()) return;
+    
+    // Update local transcript immediately for responsive UI
+    setTranscript(prevTranscript =>
+      prevTranscript.map(entry =>
+        entry.id === entryId
+          ? { ...entry, text: newText.trim() }
+          : entry
+      )
+    );
+    
+    // TODO: In a real implementation, you might want to save these edits to the backend
+    // For now, changes are only local and will be lost on page reload
+    console.log(`Updated transcript entry ${entryId}:`, newText.trim());
   };
 
   const handleDeleteMeeting = (uuid) => {
@@ -1210,7 +1241,8 @@ const MeetingTranscriptionApp = () => {
                         className="btn btn-primary btn-small"
                         disabled={!selectedMeetingId || speakerIdentificationLoading}
                       >
-                        {speakerIdentificationLoading ? "Identifying..." : "Identify Speakers"}
+                        <RefreshCw className={`btn-icon ${speakerIdentificationLoading ? 'spinning' : ''}`} />
+                        {speakerIdentificationLoading ? "Refreshing..." : "Refresh Speaker Names"}
                       </button>
                       <button
                         onClick={exportTranscriptToTxt}
@@ -1379,17 +1411,19 @@ const MeetingTranscriptionApp = () => {
                             </div>
                           ) : (
                             <div className="speaker-container">
-                              <span
-                                className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
-                              >
-                                {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap)}
-                              </span>
-                              <button
-                                onClick={() => setEditingSpeaker(entry.originalSpeaker)}
-                                className="btn btn-secondary btn-small rename-speaker-btn"
-                              >
-                                Rename
-                              </button>
+                              <div className="speaker-name-row">
+                                <span
+                                  className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
+                                >
+                                  {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap)}
+                                </span>
+                                <button
+                                  onClick={() => setEditingSpeaker(entry.originalSpeaker)}
+                                  className="btn btn-secondary btn-small rename-speaker-btn"
+                                >
+                                  Rename
+                                </button>
+                              </div>
                               {/* Speaker Suggestion */}
                               {speakerSuggestions && speakerSuggestions[formatSpeakerName(entry.speaker)] && (
                                 <div className="speaker-suggestion">
@@ -1420,7 +1454,58 @@ const MeetingTranscriptionApp = () => {
                             {entry.start}s - {entry.end}s
                           </span>
                         </div>
-                        <p className="transcript-text">{entry.text}</p>
+                        {editingText === entry.id ? (
+                          <div className="transcript-edit-container">
+                            <textarea
+                              defaultValue={entry.text}
+                              onBlur={(e) => {
+                                handleTranscriptTextEdit(entry.id, e.target.value);
+                                setEditingText(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleTranscriptTextEdit(entry.id, e.target.value);
+                                  setEditingText(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingText(null);
+                                }
+                              }}
+                              className="transcript-textarea"
+                              autoFocus
+                              rows={Math.max(2, Math.ceil(entry.text.length / 80))}
+                            />
+                            <div className="transcript-edit-actions">
+                              <button
+                                onClick={(e) => {
+                                  const textarea = e.target.closest('.transcript-edit-container').querySelector('textarea');
+                                  handleTranscriptTextEdit(entry.id, textarea.value);
+                                  setEditingText(null);
+                                }}
+                                className="btn btn-success btn-small"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingText(null)}
+                                className="btn btn-secondary btn-small"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="transcript-text-container">
+                            <p className="transcript-text">{entry.text}</p>
+                            <button
+                              onClick={() => setEditingText(entry.id)}
+                              className="btn btn-secondary btn-small edit-text-btn"
+                              title="Edit transcript text"
+                            >
+                              <Edit className="btn-icon" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
