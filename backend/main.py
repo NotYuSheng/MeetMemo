@@ -367,23 +367,31 @@ def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
     # System prompt for speaker identification
     system_prompt = (
         "You are an expert at analyzing meeting transcripts to identify speakers. "
-        "Your task is to suggest likely names or roles for each speaker based on "
-        "the content of their speech, context clues, and conversation patterns. "
-        "IMPORTANT: Respond ONLY with a valid JSON object, no markdown formatting, no code blocks, no explanations. "
-        "The JSON should map speaker IDs to suggested identifications."
+        "Use chain-of-thought reasoning to assess how confident you are about each speaker identification. "
+        "Only suggest identifications when you have strong evidence. If evidence is weak or unclear, "
+        "indicate that the speaker cannot be determined rather than guessing. "
+        "IMPORTANT: Respond ONLY with a valid JSON object, no markdown formatting, no code blocks, no explanations."
     )
     
     # Build user prompt
     user_prompt = (
-        "Please analyze the following meeting transcript and suggest identifications for each speaker. "
-        "Look for clues like:\n"
+        "Please analyze the following meeting transcript using chain-of-thought reasoning:\n\n"
+        "STEP 1: For each speaker, identify evidence such as:\n"
+        "- Names explicitly mentioned by other speakers\n"
         "- Job titles, roles, or responsibilities mentioned\n"
-        "- Names mentioned by other speakers\n"
         "- Speaking patterns and authority levels\n"
         "- Technical expertise or domain knowledge\n"
         "- Meeting facilitation behavior\n\n"
+        "STEP 2: Assess confidence level for each identification:\n"
+        "- STRONG evidence (suggest name): Explicit name mentions, clear job title statements, unambiguous role indicators\n"
+        "- MODERATE evidence (use generic role): Clear role/position but no specific name\n"
+        "- WEAK evidence (cannot determine): Vague hints, assumptions, speculation required\n\n"
+        "STEP 3: Be conservative - only suggest specific names with STRONG evidence.\n"
+        "Use role descriptions for MODERATE evidence (e.g., 'Project Manager', 'Technical Lead').\n"
+        "Use 'Cannot be determined' for WEAK evidence rather than guessing.\n\n"
         "Respond ONLY with a JSON object in this exact format (no code blocks, no markdown):\n"
-        '{"Speaker 1": "John Smith (CEO)", "Speaker 2": "Sarah Johnson (CTO)", "Speaker 3": "Meeting Facilitator"}\n\n'
+        '{"Speaker 1": "John Smith (CEO)", "Speaker 2": "Cannot be determined", "Speaker 3": "Meeting Facilitator"}\n\n'
+        "Use 'Cannot be determined' when evidence is insufficient rather than guessing.\n\n"
     )
     
     if context:

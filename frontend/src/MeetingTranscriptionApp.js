@@ -826,8 +826,20 @@ const MeetingTranscriptionApp = () => {
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success" && data.suggestions) {
-          setSpeakerSuggestions(data.suggestions);
-          console.log("Speaker identification suggestions:", data.suggestions);
+          // Filter out "Cannot be determined" suggestions
+          const filteredSuggestions = Object.fromEntries(
+            Object.entries(data.suggestions).filter(([, suggestion]) => 
+              suggestion && suggestion !== "Cannot be determined" && !suggestion.toLowerCase().includes("cannot be determined")
+            )
+          );
+          setSpeakerSuggestions(filteredSuggestions);
+          console.log("Speaker identification suggestions (filtered):", filteredSuggestions);
+          
+          // Show message if no confident suggestions were made
+          if (Object.keys(filteredSuggestions).length === 0) {
+            console.log("No confident speaker identifications could be made");
+            // Could optionally show a subtle message to user here
+          }
         } else {
           console.error("Speaker identification failed:", data.error || "Unknown error");
           alert(`Speaker identification failed: ${data.error || "Unknown error"}`);
@@ -1458,7 +1470,10 @@ const MeetingTranscriptionApp = () => {
                                 </button>
                               </div>
                               {/* Speaker Suggestion */}
-                              {speakerSuggestions && speakerSuggestions[formatSpeakerName(entry.speaker)] && (
+                              {speakerSuggestions && 
+                               speakerSuggestions[formatSpeakerName(entry.speaker)] && 
+                               speakerSuggestions[formatSpeakerName(entry.speaker)] !== "Cannot be determined" &&
+                               !speakerSuggestions[formatSpeakerName(entry.speaker)].toLowerCase().includes("cannot be determined") && (
                                 <div className="speaker-suggestion">
                                   <span className="suggestion-text">
                                     AI suggests: {speakerSuggestions[formatSpeakerName(entry.speaker)]}
