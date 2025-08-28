@@ -79,6 +79,10 @@ class SummarizeRequest(BaseModel):
     custom_prompt: str = None
     system_prompt: str = None
 
+class SpeakerIdentificationRequest(BaseModel):
+    '''Pydantic model for LLM-based speaker identification requests.'''
+    context: str = None  # Optional context about the meeting/speakers
+
 ##################################### Functions #####################################
 def get_timestamp() -> str:
     '''
@@ -299,16 +303,33 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     model_name = str(os.getenv("LLM_MODEL_NAME"))
 
     # Default system prompt
-    default_system_prompt = "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."
+    default_system_prompt = (
+        "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format. "
+        "IMPORTANT: Always use the exact speaker names provided in the transcript. Never change, substitute, or invent different names for speakers. "
+        "The speaker names in the transcript are ground truth and must be preserved exactly as shown."
+    )
     
     # Default user prompt
     default_user_prompt = (
-        "Please provide a concise summary of the following meeting transcript, "
-        "highlighting participants, key points, action items & next steps."
-        "The summary should contain point forms phrased in concise standard English."
-        "You are to give the final summary in markdown format for easier visualisation."
-        "Do not give the output in an integrated code block i.e.: '```markdown ```"
-        "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself."
+        "Please provide a comprehensive summary of the following meeting transcript with this exact structure:\n\n"
+        "# [Generate a concise, descriptive title that captures the main purpose or topic of the meeting]\n\n"
+        "## Executive Summary\n"
+        "Provide a brief overview of the meeting's main outcomes and key decisions.\n\n"
+        "## Participants\n"
+        "List the meeting participants as they appear in the transcript.\n\n"
+        "## Key Points\n"
+        "Highlight the main discussion topics and important information shared.\n\n"
+        "## Action Items\n"
+        "List specific tasks, assignments, and next steps identified during the meeting.\n\n"
+        "## Next Steps\n"
+        "Outline follow-up activities and future meetings planned.\n\n"
+        "FORMATTING REQUIREMENTS:\n"
+        "- Use markdown format for easier visualization\n"
+        "- Use bullet points where appropriate\n"
+        "- Do not use code blocks (```markdown```)\n"
+        "- Output directly without 'Here is the summary:' preambles\n\n"
+        "CRITICAL: Use the exact speaker names as they appear in the transcript - do not change, shorten, or substitute any names. "
+        "For example, if the transcript shows 'John Smith (CEO)', use exactly 'John Smith (CEO)' in the summary, not 'John' or 'John Smith'."
     )
 
     # Use custom prompts if provided, otherwise use defaults
@@ -344,6 +365,114 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     
     except requests.RequestException as e:
         return f"Error: {e}"
+
+def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
+    """
+    Use LLM to identify and suggest names for speakers in the transcript.
+    
+    Args:
+        transcript: The formatted transcript text with speakers
+        context: Optional context about the meeting or expected participants
+        
+    Returns:
+        dict: Mapping of generic speaker IDs to suggested names
+    """
+    base_url = str(os.getenv("LLM_API_URL"))
+    url = f"{base_url.rstrip('/')}/v1/chat/completions"
+    model_name = str(os.getenv("LLM_MODEL_NAME"))
+    
+    # System prompt for speaker identification
+    system_prompt = (
+        "You are an expert at analyzing meeting transcripts to identify speakers. "
+        "Use chain-of-thought reasoning to assess how confident you are about each speaker identification. "
+        "Only suggest identifications when you have strong evidence. If evidence is weak or unclear, "
+        "indicate that the speaker cannot be determined rather than guessing. "
+        "IMPORTANT: Respond ONLY with a valid JSON object, no markdown formatting, no code blocks, no explanations."
+    )
+    
+    # Build user prompt
+    user_prompt = (
+        "Please analyze the following meeting transcript using chain-of-thought reasoning:\n\n"
+        "STEP 1: For each speaker, identify evidence such as:\n"
+        "- Names explicitly mentioned by other speakers\n"
+        "- Job titles, roles, or responsibilities mentioned\n"
+        "- Speaking patterns and authority levels\n"
+        "- Technical expertise or domain knowledge\n"
+        "- Meeting facilitation behavior\n\n"
+        "STEP 2: Assess confidence level for each identification:\n"
+        "- STRONG evidence (suggest name): Explicit name mentions, clear job title statements, unambiguous role indicators\n"
+        "- MODERATE evidence (use generic role): Clear role/position but no specific name\n"
+        "- WEAK evidence (cannot determine): Vague hints, assumptions, speculation required\n\n"
+        "STEP 3: Be conservative - only suggest specific names with STRONG evidence.\n"
+        "Use role descriptions for MODERATE evidence (e.g., 'Project Manager', 'Technical Lead').\n"
+        "Use 'Cannot be determined' for WEAK evidence rather than guessing.\n\n"
+        "Respond ONLY with a JSON object in this exact format (no code blocks, no markdown):\n"
+        '{"Speaker 1": "John Smith (CEO)", "Speaker 2": "Cannot be determined", "Speaker 3": "Meeting Facilitator"}\n\n'
+        "Use 'Cannot be determined' when evidence is insufficient rather than guessing.\n\n"
+    )
+    
+    if context:
+        user_prompt += f"Additional context about this meeting: {context}\n\n"
+    
+    user_prompt += f"Transcript:\n{transcript}"
+    
+    payload = {
+        "model": model_name,
+        "temperature": 0.1,  # Low temperature for more consistent identification
+        "max_tokens": 1000,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    
+    try:
+        headers = {"Content-Type": "application/json"}
+        api_key = os.getenv("LLM_API_KEY")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        
+        resp = requests.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        response_text = data["choices"][0]["message"]["content"].strip()
+        
+        # Log the raw response for debugging
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: LLM raw response for speaker identification: {response_text[:500]}...")
+        
+        # Parse JSON response with improved error handling
+        try:
+            # First, try direct JSON parsing
+            speaker_suggestions = json.loads(response_text)
+            return {"status": "success", "suggestions": speaker_suggestions}
+        except json.JSONDecodeError:
+            # Try to extract JSON from markdown code block or other wrapping
+            import re
+            
+            # Look for JSON in markdown code blocks
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    speaker_suggestions = json.loads(json_match.group(1))
+                    return {"status": "success", "suggestions": speaker_suggestions}
+                except json.JSONDecodeError:
+                    pass
+            
+            # Look for JSON object without code blocks
+            json_match = re.search(r'\{.*?\}', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    speaker_suggestions = json.loads(json_match.group(0))
+                    return {"status": "success", "suggestions": speaker_suggestions}
+                except json.JSONDecodeError:
+                    pass
+            
+            # If still no valid JSON, return error with raw response for debugging
+            return {"status": "error", "message": "Failed to parse LLM response as JSON", "raw_response": response_text}
+            
+    except requests.RequestException as e:
+        return {"status": "error", "message": f"LLM request failed: {e}"}
 
 def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
@@ -542,7 +671,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
         story.append(Spacer(1, 20))
         
         # Summary Section
-        story.append(Paragraph("📝 Executive Summary", heading_style))
+        story.append(Paragraph("Summary", heading_style))
         
         summary_text = summary_data.get('summary', 'No summary available')
         
@@ -563,6 +692,32 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
             return text
         
         summary_lines = summary_text.split('\n')
+        meeting_title_extracted = None
+        
+        # First pass: extract the title
+        for line in summary_lines:
+            if line.strip().startswith('# '):
+                meeting_title_extracted = line.strip()[2:].strip()
+                # Remove "Meeting Summary:" prefix if present
+                if meeting_title_extracted.lower().startswith('meeting summary:'):
+                    meeting_title_extracted = meeting_title_extracted[16:].strip()
+                break
+        
+        # Display the extracted title if found
+        if meeting_title_extracted:
+            # Add "Title" heading
+            story.append(Paragraph("• Title", ParagraphStyle(
+                'TitleHeading',
+                parent=body_style,
+                fontSize=12,
+                textColor=colors.HexColor('#2980b9'),
+                fontName='Helvetica-Bold',
+                spaceBefore=10
+            )))
+            # Add the actual title content
+            story.append(Paragraph(f"  {meeting_title_extracted}", body_style))
+        
+        # Second pass: process the content
         for line in summary_lines:
             line = line.strip()
             if not line:
@@ -570,7 +725,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
                 continue
                 
             if line.startswith('# '):
-                # Skip title as we already have it
+                # Skip title as we already displayed it above
                 continue
             elif line.startswith('### ') or line.startswith('## '):
                 # Sub-heading
@@ -1122,6 +1277,66 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+
+@app.post("/jobs/{uuid}/identify-speakers")
+def identify_speakers(uuid: str, request: SpeakerIdentificationRequest = None):
+    """
+    Use LLM to identify and suggest names for speakers in a transcript.
+    
+    Args:
+        uuid: The UUID of the transcript
+        request: Optional context about the meeting/speakers
+        
+    Returns:
+        JSON object with speaker identification suggestions
+    """
+    timestamp = get_timestamp()
+    logging.info(f"{timestamp}: Starting LLM speaker identification for UUID {uuid}")
+    
+    try:
+        # Get the transcript
+        get_full_transcript_response = get_file_transcript(uuid)
+        if get_full_transcript_response["status"] == "not found":
+            return {"error": f"Transcript not found for the given UUID: {uuid}.", "status_code": "404"}
+        
+        full_transcript_json = get_full_transcript_response["full_transcript"]
+        
+        # Format the transcript for LLM consumption
+        formatted_transcript = format_transcript_for_llm(full_transcript_json)
+        
+        if not formatted_transcript.strip():
+            return {"error": "Transcript is empty or could not be formatted.", "status_code": "400"}
+        
+        # Extract context from request if provided
+        context = None
+        if request and hasattr(request, 'context'):
+            context = request.context
+        
+        # Use LLM to identify speakers
+        identification_result = identify_speakers_with_llm(formatted_transcript, context)
+        
+        if identification_result["status"] == "success":
+            logging.info(f"{timestamp}: Successfully identified speakers for UUID {uuid}")
+            return {
+                "uuid": uuid,
+                "status": "success",
+                "suggestions": identification_result["suggestions"],
+                "status_code": "200"
+            }
+        else:
+            logging.error(f"{timestamp}: LLM speaker identification failed for UUID {uuid}: {identification_result.get('message', 'Unknown error')}")
+            return {
+                "uuid": uuid,
+                "status": "error",
+                "error": identification_result.get("message", "Speaker identification failed"),
+                "raw_response": identification_result.get("raw_response"),
+                "status_code": "500"
+            }
+            
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Unexpected error during speaker identification for UUID {uuid}: {e}", exc_info=True)
         return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################

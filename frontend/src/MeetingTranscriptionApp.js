@@ -12,6 +12,9 @@ import {
   Trash2,
   Clock,
   AlertCircle,
+  RefreshCw,
+  Edit,
+  RotateCcw,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
 import { useCallback } from "react";
@@ -337,6 +340,10 @@ const MeetingTranscriptionApp = () => {
   }, [isDarkMode]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
   const [, setIsSavingNames] = useState(false);
+  const [speakerIdentificationLoading, setSpeakerIdentificationLoading] = useState(false);
+  const [speakerSuggestions, setSpeakerSuggestions] = useState(null);
+  const [editingText, setEditingText] = useState(null); // Track which transcript entry is being edited
+  const [originalTranscript, setOriginalTranscript] = useState([]); // Store original transcript for reset functionality
 
   const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
@@ -391,8 +398,11 @@ const MeetingTranscriptionApp = () => {
       })
       .then(() => {
         setIsRenaming(false);
-        // Regenerate summary with updated speaker names
-        if (summary && summary.summary) {
+        // Clear current summary and regenerate with updated speaker names
+        setSummary(prev => prev ? { ...prev, summary: null } : null);
+        
+        // Always regenerate summary if one exists, to reflect updated speaker names
+        if (summary) {
           fetchSummary(selectedMeetingId, true);
         }
       })
@@ -415,20 +425,26 @@ const MeetingTranscriptionApp = () => {
 
   const loadPastMeeting = (uuid) => {
     setTranscript([]);
+    setOriginalTranscript([]); // Clear original transcript too
     setSummary(null);
     setSelectedMeetingId(uuid);
     speakerColorMap.current = {};
     setEditingSpeaker(null); // Clear any active speaker editing
+    setEditingText(null); // Clear any active text editing
     setSummaryLoading(true);
 
     fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
       .then((res) => res.json())
       .then((data) => {
         const parsed = JSON.parse(data.full_transcript || "[]");
-        setTranscript(processTranscriptWithSpeakerIds(parsed));
+        const processedTranscript = processTranscriptWithSpeakerIds(parsed);
+        setTranscript(processedTranscript);
+        setOriginalTranscript(processedTranscript); // Store original for reset functionality
         setSummary({
           meetingTitle: data.file_name || `Meeting ${uuid}`,
         });
+        // Auto-run speaker identification for loaded meetings
+        identifySpeakers(uuid);
       })
       .catch((err) => console.error("Failed to load past meeting", err))
       .finally(() => setSummaryLoading(false));
@@ -587,10 +603,14 @@ const MeetingTranscriptionApp = () => {
 
           if (transcriptData.full_transcript) {
             const parsed = JSON.parse(transcriptData.full_transcript || "[]");
-            setTranscript(processTranscriptWithSpeakerIds(parsed));
+            const processedTranscript = processTranscriptWithSpeakerIds(parsed);
+            setTranscript(processedTranscript);
+            setOriginalTranscript(processedTranscript); // Store original for reset functionality
             setSelectedMeetingId(uuid);
             fetchSummary(uuid);
             fetchMeetingList();
+            // Auto-run speaker identification for new transcripts
+            identifySpeakers(uuid);
             return true;
           }
         } else if (
@@ -642,7 +662,9 @@ const MeetingTranscriptionApp = () => {
 
       // If we get a transcript immediately, use it
       if (data.transcript && Array.isArray(data.transcript)) {
-        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        const processedTranscript = processTranscriptWithSpeakerIds(data.transcript);
+        setTranscript(processedTranscript);
+        setOriginalTranscript(processedTranscript); // Store original for reset functionality
         setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
@@ -651,6 +673,11 @@ const MeetingTranscriptionApp = () => {
         await pollJobStatus(data.uuid);
       } else {
         throw new Error("No transcript or job ID returned");
+      }
+      
+      // Auto-run speaker identification for uploaded files  
+      if (data.uuid) {
+        identifySpeakers(data.uuid);
       }
 
       setSelectedFile(null);
@@ -692,10 +719,14 @@ const MeetingTranscriptionApp = () => {
 
       // If we get a transcript immediately, use it
       if (data.transcript && Array.isArray(data.transcript)) {
-        setTranscript(processTranscriptWithSpeakerIds(data.transcript));
+        const processedTranscript = processTranscriptWithSpeakerIds(data.transcript);
+        setTranscript(processedTranscript);
+        setOriginalTranscript(processedTranscript); // Store original for reset functionality
         setSelectedMeetingId(data.uuid);
         fetchSummary(data.uuid);
         fetchMeetingList();
+        // Auto-run speaker identification for recorded audio
+        identifySpeakers(data.uuid);
       } else if (data.uuid) {
         // Otherwise, poll for status
         await pollJobStatus(data.uuid);
@@ -755,6 +786,7 @@ const MeetingTranscriptionApp = () => {
           if (data && data.fileName) {
             setSummary({
               meetingTitle: data.fileName,
+              summary: data.summary || null, // Include the actual summary content
             });
           }
         })
@@ -784,6 +816,87 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
+  const identifySpeakers = (uuid, context = "") => {
+    setSpeakerIdentificationLoading(true);
+    setSpeakerSuggestions(null);
+
+    const requestBody = context.trim() ? { context: context.trim() } : {};
+
+    fetch(`${API_BASE_URL}/jobs/${uuid}/identify-speakers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success" && data.suggestions) {
+          // Filter out "Cannot be determined" suggestions
+          const filteredSuggestions = Object.fromEntries(
+            Object.entries(data.suggestions).filter(([, suggestion]) => 
+              suggestion && suggestion !== "Cannot be determined" && !suggestion.toLowerCase().includes("cannot be determined")
+            )
+          );
+          setSpeakerSuggestions(filteredSuggestions);
+          console.log("Speaker identification suggestions (filtered):", filteredSuggestions);
+          
+          // Show message if no confident suggestions were made
+          if (Object.keys(filteredSuggestions).length === 0) {
+            console.log("No confident speaker identifications could be made");
+            // Could optionally show a subtle message to user here
+          }
+        } else {
+          console.error("Speaker identification failed:", data.error || "Unknown error");
+          alert(`Speaker identification failed: ${data.error || "Unknown error"}`);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to identify speakers:", err);
+        alert("An error occurred while identifying speakers. Please try again.");
+      })
+      .finally(() => {
+        setSpeakerIdentificationLoading(false);
+      });
+  };
+
+  const applySpeakerSuggestion = (originalSpeaker, suggestedName) => {
+    if (!selectedMeetingId || !suggestedName) return;
+    
+    handleSpeakerNameChange(originalSpeaker, suggestedName);
+    // Remove the suggestion after applying it
+    setSpeakerSuggestions(prev => {
+      const updated = { ...prev };
+      delete updated[formatSpeakerName(originalSpeaker)];
+      return Object.keys(updated).length > 0 ? updated : null;
+    });
+  };
+
+  const handleTranscriptTextEdit = (entryId, newText) => {
+    if (!selectedMeetingId || !newText.trim()) return;
+    
+    // Update local transcript immediately for responsive UI
+    setTranscript(prevTranscript =>
+      prevTranscript.map(entry =>
+        entry.id === entryId
+          ? { ...entry, text: newText.trim() }
+          : entry
+      )
+    );
+    
+    // TODO: In a real implementation, you might want to save these edits to the backend
+    // For now, changes are only local and will be lost on page reload
+    console.log(`Updated transcript entry ${entryId}:`, newText.trim());
+  };
+
+  const resetTranscriptEdits = () => {
+    if (!originalTranscript.length) return;
+    
+    if (window.confirm("Are you sure you want to reset all transcript edits? This will revert all text changes back to the original.")) {
+      setTranscript([...originalTranscript]); // Reset to original transcript
+      setEditingText(null); // Clear any active editing
+      console.log("Reset transcript to original version");
+    }
+  };
+
   const handleDeleteMeeting = (uuid) => {
     if (!window.confirm("Are you sure you want to delete this meeting?"))
       return;
@@ -794,8 +907,10 @@ const MeetingTranscriptionApp = () => {
         setMeetingList((prev) => prev.filter((m) => m.uuid !== uuid));
         if (selectedMeetingId === uuid) {
           setTranscript([]);
+          setOriginalTranscript([]); // Clear original transcript too
           setSummary(null);
           setSelectedMeetingId(null);
+          setEditingText(null); // Clear any active text editing
         }
       })
       .catch((err) => console.error("Delete failed:", err));
@@ -1160,13 +1275,32 @@ const MeetingTranscriptionApp = () => {
                 </div>
                 <div className="actions-group">
                   {!showSummary && (
-                    <button
-                      onClick={exportTranscriptToTxt}
-                      className="btn btn-success btn-small"
-                    >
-                      <Download className="btn-icon" />
-                      Export TXT
-                    </button>
+                    <>
+                      <button
+                        onClick={() => selectedMeetingId && identifySpeakers(selectedMeetingId)}
+                        className="btn btn-primary btn-small"
+                        disabled={!selectedMeetingId || speakerIdentificationLoading}
+                      >
+                        <RefreshCw className={`btn-icon ${speakerIdentificationLoading ? 'spinning' : ''}`} />
+                        {speakerIdentificationLoading ? "Refreshing..." : "Refresh Speaker"}
+                      </button>
+                      <button
+                        onClick={resetTranscriptEdits}
+                        className="btn btn-warning btn-small"
+                        disabled={!originalTranscript.length || originalTranscript.length === 0}
+                        title="Reset all transcript edits to original"
+                      >
+                        <RotateCcw className="btn-icon" />
+                        Reset Edits
+                      </button>
+                      <button
+                        onClick={exportTranscriptToTxt}
+                        className="btn btn-success btn-small"
+                      >
+                        <Download className="btn-icon" />
+                        Export TXT
+                      </button>
+                    </>
                   )}
                   {showSummary && (
                     <div className="summary-actions-group">
@@ -1326,24 +1460,104 @@ const MeetingTranscriptionApp = () => {
                             </div>
                           ) : (
                             <div className="speaker-container">
-                              <span
-                                className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
-                              >
-                                {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap)}
-                              </span>
-                              <button
-                                onClick={() => setEditingSpeaker(entry.originalSpeaker)}
-                                className="btn btn-secondary btn-small rename-speaker-btn"
-                              >
-                                Rename
-                              </button>
+                              <div className="speaker-name-row">
+                                <span
+                                  className={`speaker-badge ${getSpeakerColor(entry.speakerId)}`}
+                                >
+                                  {getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap)}
+                                </span>
+                                <button
+                                  onClick={() => setEditingSpeaker(entry.originalSpeaker)}
+                                  className="btn btn-secondary btn-small rename-speaker-btn"
+                                >
+                                  Rename
+                                </button>
+                              </div>
+                              {/* Speaker Suggestion */}
+                              {speakerSuggestions && 
+                               speakerSuggestions[formatSpeakerName(entry.speaker)] && 
+                               speakerSuggestions[formatSpeakerName(entry.speaker)] !== "Cannot be determined" &&
+                               !speakerSuggestions[formatSpeakerName(entry.speaker)].toLowerCase().includes("cannot be determined") && (
+                                <div className="speaker-suggestion">
+                                  <span className="suggestion-text">
+                                    AI suggests: {speakerSuggestions[formatSpeakerName(entry.speaker)]}
+                                  </span>
+                                  <button
+                                    onClick={() => applySpeakerSuggestion(entry.originalSpeaker, speakerSuggestions[formatSpeakerName(entry.speaker)])}
+                                    className="btn btn-success btn-small apply-suggestion-btn"
+                                  >
+                                    Apply
+                                  </button>
+                                  <button
+                                    onClick={() => setSpeakerSuggestions(prev => {
+                                      const updated = { ...prev };
+                                      delete updated[formatSpeakerName(entry.speaker)];
+                                      return Object.keys(updated).length > 0 ? updated : null;
+                                    })}
+                                    className="btn btn-secondary btn-small dismiss-suggestion-btn"
+                                  >
+                                    Dismiss
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                           <span className="timestamp">
                             {entry.start}s - {entry.end}s
                           </span>
                         </div>
-                        <p className="transcript-text">{entry.text}</p>
+                        {editingText === entry.id ? (
+                          <div className="transcript-edit-container">
+                            <textarea
+                              defaultValue={entry.text}
+                              onBlur={(e) => {
+                                handleTranscriptTextEdit(entry.id, e.target.value);
+                                setEditingText(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleTranscriptTextEdit(entry.id, e.target.value);
+                                  setEditingText(null);
+                                } else if (e.key === "Escape") {
+                                  setEditingText(null);
+                                }
+                              }}
+                              className="transcript-textarea"
+                              autoFocus
+                              rows={Math.max(2, Math.ceil(entry.text.length / 80))}
+                            />
+                            <div className="transcript-edit-actions">
+                              <button
+                                onClick={(e) => {
+                                  const textarea = e.target.closest('.transcript-edit-container').querySelector('textarea');
+                                  handleTranscriptTextEdit(entry.id, textarea.value);
+                                  setEditingText(null);
+                                }}
+                                className="btn btn-success btn-small"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingText(null)}
+                                className="btn btn-secondary btn-small"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="transcript-text-container">
+                            <p className="transcript-text">{entry.text}</p>
+                            <button
+                              onClick={() => setEditingText(entry.id)}
+                              className="btn btn-secondary btn-small edit-text-btn"
+                              title="Edit transcript text"
+                            >
+                              <Edit className="btn-icon" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
