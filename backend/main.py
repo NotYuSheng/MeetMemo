@@ -705,14 +705,17 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
         
         # Display the extracted title if found
         if meeting_title_extracted:
-            story.append(Paragraph(f"• {meeting_title_extracted}", ParagraphStyle(
-                'MeetingTitle',
+            # Add "Title" heading
+            story.append(Paragraph("• Title", ParagraphStyle(
+                'TitleHeading',
                 parent=body_style,
                 fontSize=12,
                 textColor=colors.HexColor('#2980b9'),
                 fontName='Helvetica-Bold',
                 spaceBefore=10
             )))
+            # Add the actual title content
+            story.append(Paragraph(f"  {meeting_title_extracted}", body_style))
         
         # Second pass: process the content
         for line in summary_lines:
