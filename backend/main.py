@@ -303,16 +303,22 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     model_name = str(os.getenv("LLM_MODEL_NAME"))
 
     # Default system prompt
-    default_system_prompt = "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format."
+    default_system_prompt = (
+        "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format. "
+        "IMPORTANT: Always use the exact speaker names provided in the transcript. Never change, substitute, or invent different names for speakers. "
+        "The speaker names in the transcript are ground truth and must be preserved exactly as shown."
+    )
     
     # Default user prompt
     default_user_prompt = (
         "Please provide a concise summary of the following meeting transcript, "
-        "highlighting participants, key points, action items & next steps."
-        "The summary should contain point forms phrased in concise standard English."
-        "You are to give the final summary in markdown format for easier visualisation."
-        "Do not give the output in an integrated code block i.e.: '```markdown ```"
-        "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself."
+        "highlighting participants, key points, action items & next steps. "
+        "The summary should contain point forms phrased in concise standard English. "
+        "You are to give the final summary in markdown format for easier visualisation. "
+        "Do not give the output in an integrated code block i.e.: '```markdown ``` "
+        "Output the summary directly. Do not add a statement like 'Here is the summary:' before the summary itself. "
+        "CRITICAL: Use the exact speaker names as they appear in the transcript - do not change, shorten, or substitute any names. "
+        "For example, if the transcript shows 'John Smith (CEO)', use exactly 'John Smith (CEO)' in the summary, not 'John' or 'John Smith'."
     )
 
     # Use custom prompts if provided, otherwise use defaults
