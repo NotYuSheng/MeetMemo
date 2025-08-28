@@ -85,7 +85,24 @@ const PDFViewer = ({ selectedMeetingId, onPdfLoaded }) => {
       setError(null);
       
       try {
-        const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`);
+        const currentTime = new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric', 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        
+        const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            generated_on: currentTime
+          })
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch PDF: ${response.status}`);
@@ -791,7 +808,24 @@ const MeetingTranscriptionApp = () => {
     
     try {
       // Call backend ReportLab PDF generation endpoint
-      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`);
+      const currentTime = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generated_on: currentTime
+        })
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to generate PDF: ${response.status}`);
