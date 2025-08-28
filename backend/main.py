@@ -14,7 +14,7 @@ from threading import Lock
 import requests
 import whisper
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pyannote.audio import Pipeline
 from pydantic import BaseModel
@@ -350,7 +350,7 @@ def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = audio.set_frame_rate(sample_rate).set_channels(1)  # 16kHz mono
     audio.export(output_path, format="wav")
 
-def generate_professional_pdf(summary_data: dict, transcript_data: list) -> BytesIO:
+def generate_professional_pdf(summary_data: dict, transcript_data: list, generated_on: str = None) -> BytesIO:
     """
     Generate a professional PDF using ReportLab with summary and transcript data.
     """
@@ -515,7 +515,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list) -> Byte
         # Create info table
         meeting_info = [
             ['File Name:', summary_data.get('meetingTitle', 'Untitled Meeting')],
-            ['Generated On:', datetime.now().strftime('%B %d, %Y at %I:%M %p')],
+            ['Generated On:', generated_on or datetime.now().strftime('%B %d, %Y at %I:%M %p')],
             ['Document Type:', 'Meeting Summary & Transcript']
         ]
         
@@ -1151,8 +1151,8 @@ def get_logs():
     """Placeholder function for getting logs."""
     return {"logs": []}
 
-@app.get("/jobs/{uuid}/pdf")
-def export_professional_pdf(uuid: str):
+@app.post("/jobs/{uuid}/pdf")
+async def export_professional_pdf(uuid: str, request: Request = None):
     """
     Generate and return a professional PDF with summary and transcript for the given UUID.
     """
@@ -1169,8 +1169,17 @@ def export_professional_pdf(uuid: str):
         transcript_json = transcript_response.get('full_transcript', '[]')
         transcript_data = json.loads(transcript_json) if transcript_json else []
         
+        # Get timestamp from request body if provided
+        generated_on = None
+        if request:
+            try:
+                body = await request.json()
+                generated_on = body.get('generated_on')
+            except:
+                pass
+        
         # Generate professional PDF
-        pdf_buffer = generate_professional_pdf(summary_data, transcript_data)
+        pdf_buffer = generate_professional_pdf(summary_data, transcript_data, generated_on)
         
         # Create filename
         safe_filename = summary_data['meetingTitle'].replace(' ', '_').replace('/', '_')
