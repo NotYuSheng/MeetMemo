@@ -701,15 +701,13 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
         
         # Display the extracted title if found
         if meeting_title_extracted:
-            story.append(Paragraph(meeting_title_extracted, ParagraphStyle(
+            story.append(Paragraph(f"• {meeting_title_extracted}", ParagraphStyle(
                 'MeetingTitle',
-                parent=heading_style,
-                fontSize=16,
-                textColor=colors.HexColor('#1a1a1a'),
+                parent=body_style,
+                fontSize=12,
+                textColor=colors.HexColor('#2980b9'),
                 fontName='Helvetica-Bold',
-                alignment=1,  # Center alignment
-                spaceBefore=10,
-                spaceAfter=15
+                spaceBefore=10
             )))
         
         # Second pass: process the content
