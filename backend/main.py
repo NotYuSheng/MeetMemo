@@ -698,6 +698,9 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
         for line in summary_lines:
             if line.strip().startswith('# '):
                 meeting_title_extracted = line.strip()[2:].strip()
+                # Remove "Meeting Summary:" prefix if present
+                if meeting_title_extracted.lower().startswith('meeting summary:'):
+                    meeting_title_extracted = meeting_title_extracted[16:].strip()
                 break
         
         # Display the extracted title if found
