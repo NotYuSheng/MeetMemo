@@ -79,6 +79,10 @@ class SummarizeRequest(BaseModel):
     custom_prompt: str = None
     system_prompt: str = None
 
+class SpeakerIdentificationRequest(BaseModel):
+    '''Pydantic model for LLM-based speaker identification requests.'''
+    context: str = None  # Optional context about the meeting/speakers
+
 ##################################### Functions #####################################
 def get_timestamp() -> str:
     '''
@@ -344,6 +348,79 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
     
     except requests.RequestException as e:
         return f"Error: {e}"
+
+def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
+    """
+    Use LLM to identify and suggest names for speakers in the transcript.
+    
+    Args:
+        transcript: The formatted transcript text with speakers
+        context: Optional context about the meeting or expected participants
+        
+    Returns:
+        dict: Mapping of generic speaker IDs to suggested names
+    """
+    base_url = str(os.getenv("LLM_API_URL"))
+    url = f"{base_url.rstrip('/')}/v1/chat/completions"
+    model_name = str(os.getenv("LLM_MODEL_NAME"))
+    
+    # System prompt for speaker identification
+    system_prompt = (
+        "You are an expert at analyzing meeting transcripts to identify speakers. "
+        "Your task is to suggest likely names or roles for each speaker based on "
+        "the content of their speech, context clues, and conversation patterns. "
+        "Respond with a JSON object mapping speaker IDs to suggested identifications."
+    )
+    
+    # Build user prompt
+    user_prompt = (
+        "Please analyze the following meeting transcript and suggest identifications for each speaker. "
+        "Look for clues like:\n"
+        "- Job titles, roles, or responsibilities mentioned\n"
+        "- Names mentioned by other speakers\n"
+        "- Speaking patterns and authority levels\n"
+        "- Technical expertise or domain knowledge\n"
+        "- Meeting facilitation behavior\n\n"
+        "Respond with a JSON object in this format:\n"
+        '{"Speaker 1": "John Smith (CEO)", "Speaker 2": "Sarah Johnson (CTO)", "Speaker 3": "Meeting Facilitator"}\n\n'
+    )
+    
+    if context:
+        user_prompt += f"Additional context about this meeting: {context}\n\n"
+    
+    user_prompt += f"Transcript:\n{transcript}"
+    
+    payload = {
+        "model": model_name,
+        "temperature": 0.1,  # Low temperature for more consistent identification
+        "max_tokens": 1000,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    
+    try:
+        headers = {"Content-Type": "application/json"}
+        api_key = os.getenv("LLM_API_KEY")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        
+        resp = requests.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        response_text = data["choices"][0]["message"]["content"].strip()
+        
+        # Parse JSON response
+        try:
+            speaker_suggestions = json.loads(response_text)
+            return {"status": "success", "suggestions": speaker_suggestions}
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return the raw response for debugging
+            return {"status": "error", "message": "Failed to parse LLM response as JSON", "raw_response": response_text}
+            
+    except requests.RequestException as e:
+        return {"status": "error", "message": f"LLM request failed: {e}"}
 
 def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
@@ -1122,6 +1199,66 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+
+@app.post("/jobs/{uuid}/identify-speakers")
+def identify_speakers(uuid: str, request: SpeakerIdentificationRequest = None):
+    """
+    Use LLM to identify and suggest names for speakers in a transcript.
+    
+    Args:
+        uuid: The UUID of the transcript
+        request: Optional context about the meeting/speakers
+        
+    Returns:
+        JSON object with speaker identification suggestions
+    """
+    timestamp = get_timestamp()
+    logging.info(f"{timestamp}: Starting LLM speaker identification for UUID {uuid}")
+    
+    try:
+        # Get the transcript
+        get_full_transcript_response = get_file_transcript(uuid)
+        if get_full_transcript_response["status"] == "not found":
+            return {"error": f"Transcript not found for the given UUID: {uuid}.", "status_code": "404"}
+        
+        full_transcript_json = get_full_transcript_response["full_transcript"]
+        
+        # Format the transcript for LLM consumption
+        formatted_transcript = format_transcript_for_llm(full_transcript_json)
+        
+        if not formatted_transcript.strip():
+            return {"error": "Transcript is empty or could not be formatted.", "status_code": "400"}
+        
+        # Extract context from request if provided
+        context = None
+        if request and hasattr(request, 'context'):
+            context = request.context
+        
+        # Use LLM to identify speakers
+        identification_result = identify_speakers_with_llm(formatted_transcript, context)
+        
+        if identification_result["status"] == "success":
+            logging.info(f"{timestamp}: Successfully identified speakers for UUID {uuid}")
+            return {
+                "uuid": uuid,
+                "status": "success",
+                "suggestions": identification_result["suggestions"],
+                "status_code": "200"
+            }
+        else:
+            logging.error(f"{timestamp}: LLM speaker identification failed for UUID {uuid}: {identification_result.get('message', 'Unknown error')}")
+            return {
+                "uuid": uuid,
+                "status": "error",
+                "error": identification_result.get("message", "Speaker identification failed"),
+                "raw_response": identification_result.get("raw_response"),
+                "status_code": "500"
+            }
+            
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Unexpected error during speaker identification for UUID {uuid}: {e}", exc_info=True)
         return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################

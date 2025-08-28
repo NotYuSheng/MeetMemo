@@ -337,6 +337,8 @@ const MeetingTranscriptionApp = () => {
   }, [isDarkMode]);
   const [editingSpeaker, setEditingSpeaker] = useState(null);
   const [, setIsSavingNames] = useState(false);
+  const [speakerIdentificationLoading, setSpeakerIdentificationLoading] = useState(false);
+  const [speakerSuggestions, setSpeakerSuggestions] = useState(null);
 
   const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
@@ -784,6 +786,48 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
+  const identifySpeakers = (uuid, context = "") => {
+    setSpeakerIdentificationLoading(true);
+    setSpeakerSuggestions(null);
+
+    const requestBody = context.trim() ? { context: context.trim() } : {};
+
+    fetch(`${API_BASE_URL}/jobs/${uuid}/identify-speakers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success" && data.suggestions) {
+          setSpeakerSuggestions(data.suggestions);
+          console.log("Speaker identification suggestions:", data.suggestions);
+        } else {
+          console.error("Speaker identification failed:", data.error || "Unknown error");
+          alert(`Speaker identification failed: ${data.error || "Unknown error"}`);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to identify speakers:", err);
+        alert("An error occurred while identifying speakers. Please try again.");
+      })
+      .finally(() => {
+        setSpeakerIdentificationLoading(false);
+      });
+  };
+
+  const applySpeakerSuggestion = (originalSpeaker, suggestedName) => {
+    if (!selectedMeetingId || !suggestedName) return;
+    
+    handleSpeakerNameChange(originalSpeaker, suggestedName);
+    // Remove the suggestion after applying it
+    setSpeakerSuggestions(prev => {
+      const updated = { ...prev };
+      delete updated[formatSpeakerName(originalSpeaker)];
+      return Object.keys(updated).length > 0 ? updated : null;
+    });
+  };
+
   const handleDeleteMeeting = (uuid) => {
     if (!window.confirm("Are you sure you want to delete this meeting?"))
       return;
@@ -1160,13 +1204,22 @@ const MeetingTranscriptionApp = () => {
                 </div>
                 <div className="actions-group">
                   {!showSummary && (
-                    <button
-                      onClick={exportTranscriptToTxt}
-                      className="btn btn-success btn-small"
-                    >
-                      <Download className="btn-icon" />
-                      Export TXT
-                    </button>
+                    <>
+                      <button
+                        onClick={() => selectedMeetingId && identifySpeakers(selectedMeetingId)}
+                        className="btn btn-primary btn-small"
+                        disabled={!selectedMeetingId || speakerIdentificationLoading}
+                      >
+                        {speakerIdentificationLoading ? "Identifying..." : "Identify Speakers"}
+                      </button>
+                      <button
+                        onClick={exportTranscriptToTxt}
+                        className="btn btn-success btn-small"
+                      >
+                        <Download className="btn-icon" />
+                        Export TXT
+                      </button>
+                    </>
                   )}
                   {showSummary && (
                     <div className="summary-actions-group">
@@ -1337,6 +1390,30 @@ const MeetingTranscriptionApp = () => {
                               >
                                 Rename
                               </button>
+                              {/* Speaker Suggestion */}
+                              {speakerSuggestions && speakerSuggestions[formatSpeakerName(entry.speaker)] && (
+                                <div className="speaker-suggestion">
+                                  <span className="suggestion-text">
+                                    AI suggests: {speakerSuggestions[formatSpeakerName(entry.speaker)]}
+                                  </span>
+                                  <button
+                                    onClick={() => applySpeakerSuggestion(entry.originalSpeaker, speakerSuggestions[formatSpeakerName(entry.speaker)])}
+                                    className="btn btn-success btn-small apply-suggestion-btn"
+                                  >
+                                    Apply
+                                  </button>
+                                  <button
+                                    onClick={() => setSpeakerSuggestions(prev => {
+                                      const updated = { ...prev };
+                                      delete updated[formatSpeakerName(entry.speaker)];
+                                      return Object.keys(updated).length > 0 ? updated : null;
+                                    })}
+                                    className="btn btn-secondary btn-small dismiss-suggestion-btn"
+                                  >
+                                    Dismiss
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                           <span className="timestamp">
