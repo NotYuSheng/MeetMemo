@@ -398,8 +398,11 @@ const MeetingTranscriptionApp = () => {
       })
       .then(() => {
         setIsRenaming(false);
-        // Regenerate summary with updated speaker names
-        if (summary && summary.summary) {
+        // Clear current summary and regenerate with updated speaker names
+        setSummary(prev => prev ? { ...prev, summary: null } : null);
+        
+        // Always regenerate summary if one exists, to reflect updated speaker names
+        if (summary) {
           fetchSummary(selectedMeetingId, true);
         }
       })
@@ -783,6 +786,7 @@ const MeetingTranscriptionApp = () => {
           if (data && data.fileName) {
             setSummary({
               meetingTitle: data.fileName,
+              summary: data.summary || null, // Include the actual summary content
             });
           }
         })
