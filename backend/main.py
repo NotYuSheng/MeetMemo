@@ -692,6 +692,28 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
             return text
         
         summary_lines = summary_text.split('\n')
+        meeting_title_extracted = None
+        
+        # First pass: extract the title
+        for line in summary_lines:
+            if line.strip().startswith('# '):
+                meeting_title_extracted = line.strip()[2:].strip()
+                break
+        
+        # Display the extracted title if found
+        if meeting_title_extracted:
+            story.append(Paragraph(meeting_title_extracted, ParagraphStyle(
+                'MeetingTitle',
+                parent=heading_style,
+                fontSize=16,
+                textColor=colors.HexColor('#1a1a1a'),
+                fontName='Helvetica-Bold',
+                alignment=1,  # Center alignment
+                spaceBefore=10,
+                spaceAfter=15
+            )))
+        
+        # Second pass: process the content
         for line in summary_lines:
             line = line.strip()
             if not line:
@@ -699,7 +721,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
                 continue
                 
             if line.startswith('# '):
-                # Skip title as we already have it
+                # Skip title as we already displayed it above
                 continue
             elif line.startswith('### ') or line.startswith('## '):
                 # Sub-heading
