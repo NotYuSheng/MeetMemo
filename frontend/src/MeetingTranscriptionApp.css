@@ -644,6 +644,7 @@ body {
 .transcript-text {
   color: var(--text);
   line-height: 1.625;
+  flex: 1; /* Take up remaining space to push edit button to the right */
 }
 
 .speaker-badge {
@@ -1991,7 +1992,7 @@ input:checked + .toggle-slider::after {
 /* Transcript Text Editing Styles */
 .transcript-text-container {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
   position: relative;
 }
@@ -2006,8 +2007,6 @@ input:checked + .toggle-slider::after {
   padding: 0.25rem !important;
   min-height: unset !important;
   flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 0.0625rem; /* Align with center of first line (line-height 1.625 compensation) */
 }
 
 .transcript-edit-container {
