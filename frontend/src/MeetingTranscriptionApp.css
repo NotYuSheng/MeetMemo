@@ -615,7 +615,6 @@ body {
 }
 
 .transcript-container {
-  min-height: 20rem;
   max-height: 30rem;
   overflow-y: auto;
   display: flex;
@@ -1572,8 +1571,15 @@ body {
 .transcript-container,
 .summary-content {
   flex: 1 1 auto;
-  min-height: 0;
   overflow-y: auto; /* inner scrollbar appears when needed  */
+}
+
+.summary-content {
+  min-height: 0;
+}
+
+.transcript-container {
+  min-height: 20rem !important; /* Ensure transcript tab always has adequate height */
 }
 
 /* Conditional expansion for PDF content */
