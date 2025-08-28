@@ -646,11 +646,20 @@ body {
   flex: 1; /* Take up remaining space to push edit button to the right */
 }
 
+.transcript-text.clickable {
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.transcript-text.clickable:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+  border: 1px dashed rgba(0, 123, 255, 0.3);
+}
+
 .transcript-content {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
 }
 
 .transcript-text.editable {
@@ -660,25 +669,12 @@ body {
   background: var(--bg);
   outline: none;
   min-height: 1.5rem;
-  flex: 1;
+  cursor: text;
 }
 
 .transcript-text.editable:focus {
   border-color: #0056b3;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.edit-text-btn {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  margin-left: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  align-self: flex-start;
-}
-
-.transcript-entry:hover .edit-text-btn {
-  opacity: 1;
 }
 
 .save-status {
