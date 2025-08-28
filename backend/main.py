@@ -670,8 +670,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
         story.append(info_table)
         story.append(Spacer(1, 20))
         
-        # Summary Section
-        story.append(Paragraph("📝 Summary", heading_style))
+        # Summary Section - title will be extracted from LLM content
         
         summary_text = summary_data.get('summary', 'No summary available')
         
