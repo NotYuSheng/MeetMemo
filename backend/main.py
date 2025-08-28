@@ -369,7 +369,8 @@ def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
         "You are an expert at analyzing meeting transcripts to identify speakers. "
         "Your task is to suggest likely names or roles for each speaker based on "
         "the content of their speech, context clues, and conversation patterns. "
-        "Respond with a JSON object mapping speaker IDs to suggested identifications."
+        "IMPORTANT: Respond ONLY with a valid JSON object, no markdown formatting, no code blocks, no explanations. "
+        "The JSON should map speaker IDs to suggested identifications."
     )
     
     # Build user prompt
@@ -381,7 +382,7 @@ def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
         "- Speaking patterns and authority levels\n"
         "- Technical expertise or domain knowledge\n"
         "- Meeting facilitation behavior\n\n"
-        "Respond with a JSON object in this format:\n"
+        "Respond ONLY with a JSON object in this exact format (no code blocks, no markdown):\n"
         '{"Speaker 1": "John Smith (CEO)", "Speaker 2": "Sarah Johnson (CTO)", "Speaker 3": "Meeting Facilitator"}\n\n'
     )
     
@@ -411,12 +412,38 @@ def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
         data = resp.json()
         response_text = data["choices"][0]["message"]["content"].strip()
         
-        # Parse JSON response
+        # Log the raw response for debugging
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: LLM raw response for speaker identification: {response_text[:500]}...")
+        
+        # Parse JSON response with improved error handling
         try:
+            # First, try direct JSON parsing
             speaker_suggestions = json.loads(response_text)
             return {"status": "success", "suggestions": speaker_suggestions}
         except json.JSONDecodeError:
-            # If JSON parsing fails, return the raw response for debugging
+            # Try to extract JSON from markdown code block or other wrapping
+            import re
+            
+            # Look for JSON in markdown code blocks
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    speaker_suggestions = json.loads(json_match.group(1))
+                    return {"status": "success", "suggestions": speaker_suggestions}
+                except json.JSONDecodeError:
+                    pass
+            
+            # Look for JSON object without code blocks
+            json_match = re.search(r'\{.*?\}', response_text, re.DOTALL)
+            if json_match:
+                try:
+                    speaker_suggestions = json.loads(json_match.group(0))
+                    return {"status": "success", "suggestions": speaker_suggestions}
+                except json.JSONDecodeError:
+                    pass
+            
+            # If still no valid JSON, return error with raw response for debugging
             return {"status": "error", "message": "Failed to parse LLM response as JSON", "raw_response": response_text}
             
     except requests.RequestException as e:
