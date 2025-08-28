@@ -2013,6 +2013,7 @@ input:checked + .toggle-slider::after {
   padding: 0.25rem !important;
   min-height: unset !important;
   flex-shrink: 0;
+  margin-left: 0.5rem; /* Add space from the text */
 }
 
 .transcript-edit-container {
