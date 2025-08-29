@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Mic,
   Square,
@@ -17,7 +17,6 @@ import {
   RotateCcw,
 } from "lucide-react";
 import "./MeetingTranscriptionApp.css";
-import { useCallback } from "react";
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
@@ -342,8 +341,10 @@ const MeetingTranscriptionApp = () => {
   const [, setIsSavingNames] = useState(false);
   const [speakerIdentificationLoading, setSpeakerIdentificationLoading] = useState(false);
   const [speakerSuggestions, setSpeakerSuggestions] = useState(null);
-  const [editingText, setEditingText] = useState(null); // Track which transcript entry is being edited
   const [originalTranscript, setOriginalTranscript] = useState([]); // Store original transcript for reset functionality
+  const [editingTranscriptEntry, setEditingTranscriptEntry] = useState(null);
+  const [isSavingTranscript, setIsSavingTranscript] = useState(false);
+  const [transcriptSaveStatus, setTranscriptSaveStatus] = useState(null);
 
   const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
@@ -415,6 +416,112 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
+  // Debounced function to save transcript changes
+  const debounceTimeoutRef = useRef(null);
+  
+  const saveTranscriptToServer = useCallback(async (updatedTranscript) => {
+    if (!selectedMeetingId) return;
+    
+    setIsSavingTranscript(true);
+    setTranscriptSaveStatus('saving');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/transcript`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: updatedTranscript })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save transcript');
+      }
+      
+      setTranscriptSaveStatus('saved');
+      setTimeout(() => setTranscriptSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error saving transcript:', error);
+      setTranscriptSaveStatus('error');
+      setTimeout(() => setTranscriptSaveStatus(null), 3000);
+    } finally {
+      setIsSavingTranscript(false);
+    }
+  }, [selectedMeetingId]);
+
+  const debouncedSaveTranscript = useCallback((updatedTranscript) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      saveTranscriptToServer(updatedTranscript);
+    }, 1000); // 1 second delay
+  }, [saveTranscriptToServer]);
+
+  const handleTranscriptTextChange = (entryId, newText) => {
+    const updatedTranscript = transcript.map(entry => 
+      entry.id === entryId ? { ...entry, text: newText } : entry
+    );
+    
+    setTranscript(updatedTranscript);
+    debouncedSaveTranscript(updatedTranscript);
+  };
+
+  // Debounced function to save transcript changes
+  const debounceTimeoutRef = useRef(null);
+  
+  const saveTranscriptToServer = useCallback(async (updatedTranscript) => {
+    if (!selectedMeetingId) return;
+    
+    setIsSavingTranscript(true);
+    setTranscriptSaveStatus('saving');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/transcript`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: updatedTranscript })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save transcript');
+      }
+      
+      setTranscriptSaveStatus('saved');
+      setTimeout(() => setTranscriptSaveStatus(null), 2000);
+    } catch (error) {
+      console.error('Error saving transcript:', error);
+      setTranscriptSaveStatus('error');
+      setTimeout(() => setTranscriptSaveStatus(null), 3000);
+    } finally {
+      setIsSavingTranscript(false);
+    }
+  }, [selectedMeetingId]);
+
+  const debouncedSaveTranscript = useCallback((updatedTranscript) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      saveTranscriptToServer(updatedTranscript);
+    }, 1000); // 1 second delay
+  }, [saveTranscriptToServer]);
+
+  const handleTranscriptTextChange = (entryId, newText) => {
+    const updatedTranscript = transcript.map(entry => 
+      entry.id === entryId ? { ...entry, text: newText } : entry
+    );
+    
+    setTranscript(updatedTranscript);
+    debouncedSaveTranscript(updatedTranscript);
+  };
+
+  const toggleTextEditing = (entryId) => {
+    setEditingTranscriptEntry(
+      editingTranscriptEntry === entryId ? null : entryId
+    );
+  };
+
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => !prev);
     document.documentElement.setAttribute(
@@ -430,7 +537,8 @@ const MeetingTranscriptionApp = () => {
     setSelectedMeetingId(uuid);
     speakerColorMap.current = {};
     setEditingSpeaker(null); // Clear any active speaker editing
-    setEditingText(null); // Clear any active text editing
+    setEditingTranscriptEntry(null); // Clear any active transcript editing
+    setTranscriptSaveStatus(null); // Clear any save status
     setSummaryLoading(true);
 
     fetch(`${API_BASE_URL}/jobs/${uuid}/transcript`)
@@ -1425,6 +1533,13 @@ const MeetingTranscriptionApp = () => {
                 )
               ) : (
                 <div className="transcript-container">
+                  {transcriptSaveStatus && (
+                    <div className={`save-status save-status-${transcriptSaveStatus}`}>
+                      {transcriptSaveStatus === 'saving' && 'Saving changes...'}
+                      {transcriptSaveStatus === 'saved' && '✓ Changes saved'}
+                      {transcriptSaveStatus === 'error' && '⚠ Error saving changes'}
+                    </div>
+                  )}
                   {transcript.length > 0 ? (
                     transcript.map((entry) => (
                       <div key={entry.id} className="transcript-entry">
@@ -1506,58 +1621,41 @@ const MeetingTranscriptionApp = () => {
                             {entry.start}s - {entry.end}s
                           </span>
                         </div>
-                        {editingText === entry.id ? (
-                          <div className="transcript-edit-container">
-                            <textarea
-                              defaultValue={entry.text}
+                        <div className="transcript-content">
+                          {editingTranscriptEntry === entry.id ? (
+                            <div
+                              className="transcript-text editable"
+                              contentEditable
+                              suppressContentEditableWarning={true}
+                              autoFocus
                               onBlur={(e) => {
-                                handleTranscriptTextEdit(entry.id, e.target.value);
-                                setEditingText(null);
+                                const newText = e.target.textContent;
+                                handleTranscriptTextChange(entry.id, newText);
+                                setEditingTranscriptEntry(null);
                               }}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
+                                if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault();
-                                  handleTranscriptTextEdit(entry.id, e.target.value);
-                                  setEditingText(null);
-                                } else if (e.key === "Escape") {
-                                  setEditingText(null);
+                                  const newText = e.target.textContent;
+                                  handleTranscriptTextChange(entry.id, newText);
+                                  setEditingTranscriptEntry(null);
+                                } else if (e.key === 'Escape') {
+                                  e.target.textContent = entry.text; // Restore original text
+                                  setEditingTranscriptEntry(null);
                                 }
                               }}
-                              className="transcript-textarea"
-                              autoFocus
-                              rows={Math.max(2, Math.ceil(entry.text.length / 80))}
+                              dangerouslySetInnerHTML={{ __html: entry.text }}
                             />
-                            <div className="transcript-edit-actions">
-                              <button
-                                onClick={(e) => {
-                                  const textarea = e.target.closest('.transcript-edit-container').querySelector('textarea');
-                                  handleTranscriptTextEdit(entry.id, textarea.value);
-                                  setEditingText(null);
-                                }}
-                                className="btn btn-success btn-small"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingText(null)}
-                                className="btn btn-secondary btn-small"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="transcript-text-container">
-                            <p className="transcript-text">{entry.text}</p>
-                            <button
-                              onClick={() => setEditingText(entry.id)}
-                              className="btn btn-secondary btn-small edit-text-btn"
-                              title="Edit transcript text"
+                          ) : (
+                            <p 
+                              className="transcript-text clickable"
+                              onClick={() => toggleTextEditing(entry.id)}
+                              title="Click to edit transcript text"
                             >
-                              <Edit className="btn-icon" />
-                            </button>
-                          </div>
-                        )}
+                              {entry.text}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))
                   ) : (

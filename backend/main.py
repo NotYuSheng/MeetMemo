@@ -67,12 +67,17 @@ DEVICE = "cuda:0"
 
 # Ensure required directories exist
 os.makedirs("transcripts", exist_ok=True)
+os.makedirs("transcripts/edited", exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ###################################### Classes ######################################
 class SpeakerNameMapping(BaseModel):
     '''Pydantic model for mapping old speaker names to new ones.'''
     mapping: dict[str, str]
+
+class TranscriptUpdateRequest(BaseModel):
+    '''Pydantic model for updating transcript content.'''
+    transcript: list[dict]
 
 class SummarizeRequest(BaseModel):
     '''Pydantic model for summarization requests with optional custom prompts.'''
@@ -1007,21 +1012,32 @@ def get_job_status(uuid: str):
 def get_file_transcript(uuid: str) -> dict:
     """
     Returns the raw full transcript for the given UUID.
+    Prioritizes edited transcript over original if it exists.
     """
     try:
         uuid = normalize_uuid(uuid)
         file_name = get_file_name(uuid)["file_name"]
-        file_path = f"transcripts/{file_name}.json"
+        
+        # Check for edited transcript first
+        edited_file_path = f"transcripts/edited/{file_name}.json"
+        original_file_path = f"transcripts/{file_name}.json"
+        
         timestamp = get_timestamp()
         logging.info(f"{timestamp}: Retrieving transcript for UUID: {uuid}, file name: {file_name}")
         
-        if os.path.exists(file_path):
-            full_transcript = []
-            with open(file_path, "r", encoding="utf-8") as f:
+        # Prioritize edited transcript if it exists
+        if os.path.exists(edited_file_path):
+            with open(edited_file_path, "r", encoding="utf-8") as f:
                 full_transcript = f.read()
             timestamp = get_timestamp()
-            logging.info(f"{timestamp}: Successfully retrieved raw transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript, "file_name": file_name, "status_code":"200"}
+            logging.info(f"{timestamp}: Successfully retrieved edited transcript for UUID: {uuid}, file name: {file_name}")
+            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript, "file_name": file_name, "status_code":"200", "is_edited": True}
+        elif os.path.exists(original_file_path):
+            with open(original_file_path, "r", encoding="utf-8") as f:
+                full_transcript = f.read()
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Successfully retrieved original transcript for UUID: {uuid}, file name: {file_name}")
+            return {"uuid": uuid, "status": "exists", "full_transcript": full_transcript, "file_name": file_name, "status_code":"200", "is_edited": False}
         else:
             timestamp = get_timestamp()
             logging.error(f"{timestamp}: {file_name} transcript not found.")
@@ -1337,6 +1353,61 @@ def identify_speakers(uuid: str, request: SpeakerIdentificationRequest = None):
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Unexpected error during speaker identification for UUID {uuid}: {e}", exc_info=True)
+        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+
+@app.patch("/jobs/{uuid}/transcript")
+def update_transcript(uuid: str, request: TranscriptUpdateRequest) -> dict:
+    """
+    Updates the transcript content for the given UUID.
+    Saves edited transcript to transcripts/edited/ directory, preserving original.
+    """
+    try:
+        uuid = normalize_uuid(uuid)
+        timestamp = get_timestamp()
+        
+        # 1. Get the filename associated with the UUID
+        filename_response = get_file_name(uuid)
+        if "error" in filename_response:
+            logging.error(f"{timestamp}: No file found for UUID {uuid} during transcript update attempt.")
+            return {"error": f"UUID {uuid} not found", "status_code": "404"}
+            
+        file_name = filename_response["file_name"]
+        
+        # 2. Ensure edited transcripts directory exists
+        os.makedirs("transcripts/edited", exist_ok=True)
+        
+        # 3. Save the edited transcript
+        edited_transcript_path = os.path.join("transcripts/edited", f"{file_name}.json")
+        temp_file_path = edited_transcript_path + ".tmp"
+        
+        with open(temp_file_path, "w", encoding="utf-8") as f:
+            json.dump(request.transcript, f, indent=4)
+        
+        # Atomically replace the edited transcript file
+        os.replace(temp_file_path, edited_transcript_path)
+        
+        # 4. Invalidate cached summary since transcript content has changed
+        summary_dir = Path("summary")
+        summary_path = summary_dir / f"{uuid}.txt"
+        if summary_path.exists():
+            try:
+                summary_path.unlink()
+                logging.info(f"{timestamp}: Invalidated cached summary for UUID {uuid} due to transcript edit")
+            except Exception as e:
+                logging.warning(f"{timestamp}: Failed to invalidate cached summary for UUID {uuid}: {e}")
+        
+        logging.info(f"{timestamp}: Successfully saved edited transcript for UUID {uuid}, file: {file_name}")
+        return {
+            "uuid": uuid, 
+            "status": "success", 
+            "message": "Transcript updated successfully.",
+            "status_code": "200",
+            "file_name": file_name
+        }
+
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: An unexpected error occurred while updating transcript for UUID {uuid}: {e}", exc_info=True)
         return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
 
 ##################################### Functionality check #####################################
