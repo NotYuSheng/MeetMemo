@@ -1036,23 +1036,90 @@ const MeetingTranscriptionApp = () => {
   };
 
 
-  const exportTranscriptToTxt = () => {
+  const exportTranscriptToJson = () => {
     if (transcript.length === 0) return;
-    let textContent = "Meeting Transcript\n\n";
-    transcript.forEach((entry) => {
-      const speaker = getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap);
-      textContent += `${speaker}: ${entry.text}\n\n`;
-    });
+    
+    const transcriptData = transcript.map((entry) => ({
+      speaker: getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap),
+      text: entry.text,
+      start: entry.start,
+      end: entry.end,
+      speakerId: entry.speakerId
+    }));
 
-    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
+    const jsonContent = JSON.stringify({
+      filename: summary?.meetingTitle || "Meeting Transcript",
+      transcript: transcriptData,
+      exportedAt: new Date().toISOString()
+    }, null, 2);
+
+    const blob = new Blob([jsonContent], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "meeting-transcript.txt";
+    link.download = "meeting-transcript.json";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const exportSummaryToMarkdown = async () => {
+    if (!summary || !summary.meetingTitle || !selectedMeetingId) return;
+    
+    try {
+      const currentTime = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/markdown`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generated_on: currentTime
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate markdown: ${response.status}`);
+      }
+      
+      // Get the markdown blob and trigger download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename from response headers or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'meeting-summary.md';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Failed to export markdown:', error);
+      alert(`Failed to export markdown: ${error.message}`);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -1352,11 +1419,11 @@ const MeetingTranscriptionApp = () => {
                         Reset Edits
                       </button>
                       <button
-                        onClick={exportTranscriptToTxt}
+                        onClick={exportTranscriptToJson}
                         className="btn btn-success btn-small"
                       >
                         <Download className="btn-icon" />
-                        Export TXT
+                        Export JSON
                       </button>
                     </>
                   )}
@@ -1367,6 +1434,13 @@ const MeetingTranscriptionApp = () => {
                         className="btn btn-secondary btn-small"
                       >
                         {showPromptInputs ? "Hide Prompts" : "Custom Prompts"}
+                      </button>
+                      <button
+                        onClick={exportSummaryToMarkdown}
+                        className="btn btn-success btn-small"
+                      >
+                        <Download className="btn-icon" />
+                        Export Markdown
                       </button>
                       <button
                         onClick={exportToPDF}

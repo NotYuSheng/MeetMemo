@@ -1653,5 +1653,71 @@ async def export_professional_pdf(uuid: str, request: Request = None):
         logging.error(f"Failed to generate PDF for UUID {uuid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
 
+@app.post("/jobs/{uuid}/markdown")
+async def export_markdown_summary(uuid: str, request: Request = None):
+    """
+    Generate and return a markdown file with summary and transcript for the given UUID.
+    """
+    try:
+        # Get summary data
+        summary_response = summarise_job(uuid)
+        meeting_title = summary_response.get('fileName', 'Untitled Meeting')
+        summary_content = summary_response.get('summary', 'No summary available')
+        
+        # Get transcript data
+        transcript_response = get_file_transcript(uuid)
+        transcript_json = transcript_response.get('full_transcript', '[]')
+        transcript_data = json.loads(transcript_json) if transcript_json else []
+        
+        # Get timestamp from request body if provided
+        generated_on = None
+        if request:
+            try:
+                body = await request.json()
+                generated_on = body.get('generated_on')
+            except:
+                pass
+        
+        # Use current timestamp if not provided
+        if not generated_on:
+            generated_on = datetime.now().strftime('%B %d, %Y at %I:%M %p')
+        
+        # Generate markdown content
+        markdown_content = f"# {meeting_title}\n\n"
+        markdown_content += f"*Generated on {generated_on}*\n\n"
+        
+        # Add summary section
+        if summary_content and summary_content != 'No summary available':
+            markdown_content += f"## Summary\n\n{summary_content}\n\n"
+        else:
+            markdown_content += "## Summary\n\n*Summary is being generated. Please wait and try exporting again.*\n\n"
+        
+        # Add transcript section if available
+        if transcript_data:
+            markdown_content += "## Transcript\n\n"
+            for entry in transcript_data:
+                speaker = format_speaker_name(entry.get('speaker', 'Unknown Speaker'))
+                text = entry.get('text', '')
+                start_time = entry.get('start', '0.00')
+                end_time = entry.get('end', '0.00')
+                markdown_content += f"**{speaker}** *({start_time}s - {end_time}s)*: {text}\n\n"
+        
+        # Create filename
+        safe_filename = meeting_title.replace(' ', '_').replace('/', '_')
+        filename = f"meetmemo_{safe_filename}_{uuid[:8]}.md"
+        
+        # Create BytesIO object with markdown content
+        markdown_buffer = BytesIO(markdown_content.encode('utf-8'))
+        
+        return StreamingResponse(
+            markdown_buffer,
+            media_type="text/markdown",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logging.error(f"Failed to generate markdown for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate markdown: {str(e)}")
+
 # Start the file cleanup scheduler when the application starts
 start_cleanup_scheduler()
