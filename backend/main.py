@@ -6,6 +6,8 @@ import os
 import re
 import tempfile
 import uuid
+import time
+import threading
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -14,7 +16,7 @@ from threading import Lock
 import requests
 import whisper
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, Request
+from fastapi import FastAPI, UploadFile, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pyannote.audio import Pipeline
 from pydantic import BaseModel
@@ -68,6 +70,7 @@ DEVICE = "cuda:0"
 # Ensure required directories exist
 os.makedirs("transcripts", exist_ok=True)
 os.makedirs("transcripts/edited", exist_ok=True)
+os.makedirs("summary", exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ###################################### Classes ######################################
@@ -170,7 +173,7 @@ def format_transcript_for_llm(transcript_json: str) -> str:
 
 def get_unique_filename(directory: str, desired_filename: str, exclude_path: str = None) -> str:
     """
-    Generate a unique filename by appending a counter if needed.
+    Generate a unique filename by appending " (Copy)" if needed.
     
     Args:
         directory: Directory to check for existing files
@@ -184,13 +187,18 @@ def get_unique_filename(directory: str, desired_filename: str, exclude_path: str
     filename = original_filename
     file_path = os.path.join(directory, filename)
     
-    # Handle filename collisions by appending counter
-    counter = 1
-    while os.path.exists(file_path) and file_path != exclude_path:
+    # Handle filename collisions by appending " (Copy)" before the extension
+    if os.path.exists(file_path) and file_path != exclude_path:
         name, ext = os.path.splitext(original_filename)
-        filename = f"{name}_{counter}{ext}"
+        filename = f"{name} (Copy){ext}"
         file_path = os.path.join(directory, filename)
-        counter += 1
+        
+        # If " (Copy)" also exists, append numbers after Copy
+        counter = 2
+        while os.path.exists(file_path) and file_path != exclude_path:
+            filename = f"{name} (Copy {counter}){ext}"
+            file_path = os.path.join(directory, filename)
+            counter += 1
     
     return filename
 
@@ -483,6 +491,130 @@ def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_frame_rate(sample_rate).set_channels(1)  # 16kHz mono
     audio.export(output_path, format="wav")
+
+def cleanup_expired_files():
+    """
+    Clean up files older than 12 hours including audio files, transcripts, and summaries.
+    Also removes their entries from the CSV tracking file.
+    """
+    try:
+        current_time = time.time()
+        expiry_time = 12 * 60 * 60  # 12 hours in seconds
+        
+        files_to_remove = []
+        
+        # Get list of files to check from CSV
+        if not os.path.exists(CSV_FILE):
+            return
+            
+        with CSV_LOCK:
+            rows = []
+            expired_uuids = set()
+            
+            # Read existing CSV and identify expired entries
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    uuid_val = row.get("uuid", "")
+                    file_name = row.get("file_name", "")
+                    
+                    if not uuid_val or not file_name:
+                        continue
+                    
+                    # Check if audio file exists and is expired
+                    audio_file_path = os.path.join(UPLOAD_DIR, file_name)
+                    
+                    if os.path.exists(audio_file_path):
+                        file_age = current_time - os.path.getctime(audio_file_path)
+                        if file_age > expiry_time:
+                            expired_uuids.add(uuid_val)
+                            files_to_remove.append(audio_file_path)
+                        else:
+                            # Keep non-expired files
+                            rows.append(row)
+                    else:
+                        # Audio file doesn't exist, remove from CSV
+                        expired_uuids.add(uuid_val)
+            
+            # Clean up associated files for expired UUIDs
+            # We need to track filename per UUID for cleanup
+            uuid_to_filename = {}
+            with open(CSV_FILE, "r", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    uuid_to_filename[row.get("uuid", "")] = row.get("file_name", "")
+            
+            for uuid_val in expired_uuids:
+                file_name = uuid_to_filename.get(uuid_val, "")
+                if file_name:
+                    # Remove transcript files
+                    transcript_path = os.path.join("transcripts", f"{file_name}.json")
+                    edited_transcript_path = os.path.join("transcripts", "edited", f"{file_name}.json")
+                    
+                    if os.path.exists(transcript_path):
+                        files_to_remove.append(transcript_path)
+                        
+                    if os.path.exists(edited_transcript_path):
+                        files_to_remove.append(edited_transcript_path)
+                
+                # Remove summary files
+                summary_path = os.path.join("summary", f"{uuid_val}.txt")
+                if os.path.exists(summary_path):
+                    files_to_remove.append(summary_path)
+            
+            # Update CSV with remaining entries
+            if len(rows) != len(list(csv.DictReader(open(CSV_FILE, "r", newline="")))):
+                with open(CSV_FILE, "w", newline="") as f:
+                    if rows:
+                        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    else:
+                        # Write empty CSV with header
+                        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+                        writer.writeheader()
+        
+        # Remove the expired files
+        removed_count = 0
+        for file_path in files_to_remove:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    removed_count += 1
+            except Exception as e:
+                timestamp = get_timestamp()
+                logging.warning(f"{timestamp}: Failed to remove expired file {file_path}: {e}")
+        
+        if removed_count > 0 or expired_uuids:
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Cleaned up {removed_count} expired files and {len(expired_uuids)} expired entries")
+            
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error during file cleanup: {e}", exc_info=True)
+
+def start_cleanup_scheduler():
+    """
+    Start a background thread that runs file cleanup every hour.
+    """
+    def cleanup_worker():
+        while True:
+            try:
+                cleanup_expired_files()
+                # Sleep for 1 hour before next cleanup
+                time.sleep(3600)
+            except Exception as e:
+                timestamp = get_timestamp()
+                logging.error(f"{timestamp}: Error in cleanup worker: {e}", exc_info=True)
+                # Sleep for 10 minutes before retrying if there's an error
+                time.sleep(600)
+    
+    # Start cleanup thread as daemon so it stops when main process stops
+    cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
+    cleanup_thread.start()
+    
+    timestamp = get_timestamp()
+    logging.info(f"{timestamp}: Started file cleanup scheduler (runs every hour, expires files after 12 hours)")
 
 def generate_professional_pdf(summary_data: dict, transcript_data: list, generated_on: str = None) -> BytesIO:
     """
@@ -931,20 +1063,59 @@ def delete_job(uuid: str) -> dict:
         with open(CSV_FILE, "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerows(rows)
+    # Delete all associated files
+    files_deleted = []
+    
+    # Delete audio file
     try:
-        os.remove(os.path.join(UPLOAD_DIR, file_name))
+        audio_path = os.path.join(UPLOAD_DIR, file_name)
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            files_deleted.append(f"audio file: {file_name}")
     except FileNotFoundError:
         timestamp = get_timestamp()
-        logging.warning(f"{timestamp}: File {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
-    try:  
-        os.remove(os.path.join("transcripts", f"{file_name}.json"))
+        logging.warning(f"{timestamp}: Audio file {file_name} not found in {UPLOAD_DIR}. It may have already been deleted.")
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error deleting audio file {file_name}: {e}")
+    
+    # Delete original transcript
+    try:
+        transcript_path = os.path.join("transcripts", f"{file_name}.json")
+        if os.path.exists(transcript_path):
+            os.remove(transcript_path)
+            files_deleted.append(f"transcript: {file_name}.json")
     except FileNotFoundError:
         timestamp = get_timestamp()
         logging.warning(f"{timestamp}: Transcript {file_name}.json not found in transcripts directory. It may have already been deleted.")
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error deleting transcript {file_name}.json: {e}")
+    
+    # Delete edited transcript if it exists
+    try:
+        edited_transcript_path = os.path.join("transcripts", "edited", f"{file_name}.json")
+        if os.path.exists(edited_transcript_path):
+            os.remove(edited_transcript_path)
+            files_deleted.append(f"edited transcript: edited/{file_name}.json")
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error deleting edited transcript {file_name}.json: {e}")
+    
+    # Delete summary file if it exists
+    try:
+        summary_path = os.path.join("summary", f"{uuid}.txt")
+        if os.path.exists(summary_path):
+            os.remove(summary_path)
+            files_deleted.append(f"summary: {uuid}.txt")
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error deleting summary {uuid}.txt: {e}")
 
     timestamp = get_timestamp()
-    logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}")
-    return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and file {file_name} deleted successfully.", "status_code": "204"}
+    deleted_files_msg = ", ".join(files_deleted) if files_deleted else "no files found"
+    logging.info(f"{timestamp}: Deleted job with UUID: {uuid}, file name: {file_name}. Files removed: {deleted_files_msg}")
+    return {"uuid": uuid, "status": "success", "message": f"Job with UUID {uuid} and associated files deleted successfully.", "status_code": "204"}
 
 @app.get("/jobs/{uuid}/filename")
 def get_file_name(uuid: str) -> dict:
@@ -1481,3 +1652,6 @@ async def export_professional_pdf(uuid: str, request: Request = None):
     except Exception as e:
         logging.error(f"Failed to generate PDF for UUID {uuid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
+
+# Start the file cleanup scheduler when the application starts
+start_cleanup_scheduler()
