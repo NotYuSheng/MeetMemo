@@ -4,11 +4,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: meetmemo-backend
-    environment:
-      - HF_TOKEN=${HF_TOKEN:-CHANGEME}
-      - LLM_API_URL=${LLM_API_URL:-CHANGEME}
-      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
-      - PYTHONUNBUFFERED=1
     volumes:
       - audiofiles:/app/audiofiles
       - logs:/app/logs
@@ -17,13 +12,13 @@ services:
       - whisper_cache:/root/.cache/whisper
     ports:
       - "8000:8000"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    runtime: nvidia
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-CHANGEME}
+      - LLM_API_URL=${LLM_API_URL:-CHANGEME}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=2
     networks:
       - meetmemo-network
 

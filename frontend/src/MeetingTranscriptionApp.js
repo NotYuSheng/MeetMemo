@@ -466,56 +466,6 @@ const MeetingTranscriptionApp = () => {
     debouncedSaveTranscript(updatedTranscript);
   };
 
-  // Debounced function to save transcript changes
-  const debounceTimeoutRef = useRef(null);
-  
-  const saveTranscriptToServer = useCallback(async (updatedTranscript) => {
-    if (!selectedMeetingId) return;
-    
-    setIsSavingTranscript(true);
-    setTranscriptSaveStatus('saving');
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/transcript`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: updatedTranscript })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save transcript');
-      }
-      
-      setTranscriptSaveStatus('saved');
-      setTimeout(() => setTranscriptSaveStatus(null), 2000);
-    } catch (error) {
-      console.error('Error saving transcript:', error);
-      setTranscriptSaveStatus('error');
-      setTimeout(() => setTranscriptSaveStatus(null), 3000);
-    } finally {
-      setIsSavingTranscript(false);
-    }
-  }, [selectedMeetingId]);
-
-  const debouncedSaveTranscript = useCallback((updatedTranscript) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    
-    debounceTimeoutRef.current = setTimeout(() => {
-      saveTranscriptToServer(updatedTranscript);
-    }, 1000); // 1 second delay
-  }, [saveTranscriptToServer]);
-
-  const handleTranscriptTextChange = (entryId, newText) => {
-    const updatedTranscript = transcript.map(entry => 
-      entry.id === entryId ? { ...entry, text: newText } : entry
-    );
-    
-    setTranscript(updatedTranscript);
-    debouncedSaveTranscript(updatedTranscript);
-  };
-
   const toggleTextEditing = (entryId) => {
     setEditingTranscriptEntry(
       editingTranscriptEntry === entryId ? null : entryId
@@ -1000,7 +950,7 @@ const MeetingTranscriptionApp = () => {
     
     if (window.confirm("Are you sure you want to reset all transcript edits? This will revert all text changes back to the original.")) {
       setTranscript([...originalTranscript]); // Reset to original transcript
-      setEditingText(null); // Clear any active editing
+      setEditingTranscriptEntry(null); // Clear any active editing
       console.log("Reset transcript to original version");
     }
   };
@@ -1018,7 +968,7 @@ const MeetingTranscriptionApp = () => {
           setOriginalTranscript([]); // Clear original transcript too
           setSummary(null);
           setSelectedMeetingId(null);
-          setEditingText(null); // Clear any active text editing
+          setEditingTranscriptEntry(null); // Clear any active text editing
         }
       })
       .catch((err) => console.error("Delete failed:", err));
