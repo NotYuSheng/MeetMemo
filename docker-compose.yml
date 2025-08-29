@@ -18,7 +18,7 @@ services:
       - LLM_API_URL=${LLM_API_URL:-CHANGEME}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
       - PYTHONUNBUFFERED=1
-      - NVIDIA_VISIBLE_DEVICES=2
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
     networks:
       - meetmemo-network
 
