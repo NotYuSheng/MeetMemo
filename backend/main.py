@@ -768,6 +768,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
     
     # Transcript Section
     if transcript_data:
+        story.append(PageBreak())  # Start Full Transcript on a new page
         story.append(Paragraph("💬 Full Transcript", heading_style))
         story.append(Spacer(1, 10))
         
