@@ -946,6 +946,17 @@ body {
   text-align: justify;
 }
 
+.summary-text ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.summary-text ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  counter-reset: item;
+}
+
 .summary-text h2 + p,
 .summary-text h2 + ul,
 .summary-text h2 + ol {
@@ -967,17 +978,6 @@ body {
 }
 
 /* Enhanced List Styling */
-.summary-text ul {
-  margin: 1rem 0;
-  padding-left: 1.5rem;
-}
-
-.summary-text ol {
-  margin: 1rem 0;
-  padding-left: 1.5rem;
-  counter-reset: item;
-}
-
 .summary-text li {
   margin: 0.5rem 0;
   line-height: 1.6;
@@ -1351,6 +1351,16 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
+.summary-text h2.collapsible-heading + p,
+.summary-text h2.collapsible-heading + ul,
+.summary-text h2.collapsible-heading + ol,
+.summary-text h2.collapsible-heading ~ p,
+.summary-text h2.collapsible-heading ~ ul,
+.summary-text h2.collapsible-heading ~ ol {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
 /* Section containers with subtle shadows */
 .summary-text h2:not(.summary-section-default) {
   background: rgb(255 255 255 / 50%);
@@ -1452,15 +1462,6 @@ body {
 }
 
 /* Smooth collapse animation for content */
-.summary-text h2.collapsible-heading + p,
-.summary-text h2.collapsible-heading + ul,
-.summary-text h2.collapsible-heading + ol,
-.summary-text h2.collapsible-heading ~ p,
-.summary-text h2.collapsible-heading ~ ul,
-.summary-text h2.collapsible-heading ~ ol {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
 
 /* Copy success feedback (you could add a toast notification instead) */
 .copy-section-btn.copied {
