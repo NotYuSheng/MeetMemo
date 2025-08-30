@@ -200,9 +200,12 @@ const MeetingTranscriptionApp = () => {
         setMeetingList(list);
       })
       .catch((err) => {
-        const errorInfo = apiLogger.handleApiError(err, 'fetching meeting list');
+        const errorInfo = apiLogger.handleApiError(
+          err,
+          "fetching meeting list",
+        );
         mainLogger.error("Failed to fetch meeting list", err, {
-          userFriendlyMessage: errorInfo.userFriendlyMessage
+          userFriendlyMessage: errorInfo.userFriendlyMessage,
         });
         // Could show a toast notification here instead of console.error
       });
@@ -298,19 +301,19 @@ const MeetingTranscriptionApp = () => {
         throw new Error("No transcript or job ID returned");
       }
     } catch (err) {
-      const errorInfo = apiLogger.handleApiError(err, 'audio processing', { 
+      const errorInfo = apiLogger.handleApiError(err, "audio processing", {
         audioFileName: audioFile.name,
         audioFileSize: audioFile.size,
-        selectedModel
+        selectedModel,
       });
-      
+
       mainLogger.error("Failed to process audio file", err, {
         audioFileName: audioFile.name,
         audioFileSize: audioFile.size,
         selectedModel,
-        userFriendlyMessage: errorInfo.userFriendlyMessage
+        userFriendlyMessage: errorInfo.userFriendlyMessage,
       });
-      
+
       alert(`Failed to process audio: ${errorInfo.userFriendlyMessage}`);
     } finally {
       setIsProcessing(false);
