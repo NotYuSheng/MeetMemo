@@ -98,6 +98,14 @@ backend/transcripts/
 frontend/package.json
 
 # -----------------------------
+# SSL Certificates
+# -----------------------------
+*.pem
+*.key
+*.crt
+*.csr
+
+# -----------------------------
 # Code Assist Tools
 # -----------------------------
 .claude/*

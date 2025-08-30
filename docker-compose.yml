@@ -31,12 +31,13 @@ services:
       - meetmemo-network
 
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     container_name: meetmemo-nginx
     ports:
-      - "3000:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - "80:80"
+      - "443:443"
     depends_on:
       - meetmemo-frontend
       - meetmemo-backend
