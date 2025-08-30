@@ -1012,9 +1012,9 @@ const MeetingTranscriptionApp = () => {
       const link = document.createElement('a');
       link.href = url;
       
-      // Generate filename from response headers or use default
+      // Generate filename from response headers or use professional default
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'meetmemo-summary.pdf';
+      let filename = generateProfessionalFilename(summary.meetingTitle, 'pdf');
       
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
@@ -1035,6 +1035,31 @@ const MeetingTranscriptionApp = () => {
     }
   };
 
+
+  const generateProfessionalFilename = (meetingTitle, type, includeDate = true) => {
+    // Clean the meeting title for filename use
+    const cleanTitle = (meetingTitle || "Meeting")
+      .replace(/\.(wav|mp3|mp4|m4a|flac|webm)$/i, '') // Remove audio extensions
+      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .substring(0, 50) // Limit length
+      .toLowerCase();
+    
+    const dateStr = includeDate ? new Date().toISOString().split('T')[0] : '';
+    
+    switch (type) {
+      case 'json':
+        return `${cleanTitle}_transcript${dateStr ? `_${dateStr}` : ''}.json`;
+      case 'markdown':
+        return `${cleanTitle}_summary${dateStr ? `_${dateStr}` : ''}.md`;
+      case 'md':  // Also support 'md' for markdown
+        return `${cleanTitle}_summary${dateStr ? `_${dateStr}` : ''}.md`;
+      case 'pdf':
+        return `${cleanTitle}_summary${dateStr ? `_${dateStr}` : ''}.pdf`;
+      default:
+        return `${cleanTitle}_export${dateStr ? `_${dateStr}` : ''}.${type}`;
+    }
+  };
 
   const exportTranscriptToJson = () => {
     if (transcript.length === 0) return;
@@ -1057,7 +1082,7 @@ const MeetingTranscriptionApp = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "meeting-transcript.json";
+    link.download = generateProfessionalFilename(summary?.meetingTitle, 'json');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1099,9 +1124,9 @@ const MeetingTranscriptionApp = () => {
       const link = document.createElement('a');
       link.href = url;
       
-      // Generate filename from response headers or use default
+      // Generate filename from response headers or use professional default
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'meeting-summary.md';
+      let filename = generateProfessionalFilename(summary.meetingTitle, 'md');
       
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
