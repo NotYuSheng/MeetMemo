@@ -45,6 +45,12 @@ jobs:
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
+          # Only commit and push if this is a PR (not main branch)
+          if [ "$BRANCH_NAME" = "main" ]; then
+            echo "Skipping commit on main branch - this should only run on PRs"
+            exit 0
+          fi
+          
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
