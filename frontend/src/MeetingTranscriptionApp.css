@@ -1291,9 +1291,9 @@ body {
   margin-bottom: 0;
 }
 
-.summary-text h2.summary-section-actions + p,
-.summary-text h2.summary-section-actions + ul,
-.summary-text h2.summary-section-actions + ol {
+.summary-content .summary-text h2.summary-section-actions + p,
+.summary-content .summary-text h2.summary-section-actions + ul,
+.summary-content .summary-text h2.summary-section-actions + ol {
   background: rgb(34 197 94 / 2%);
   border-left: 3px solid rgb(34 197 94 / 20%);
   padding: 0.75rem 1rem;
@@ -1301,9 +1301,9 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.summary-text h2.summary-section-decisions + p,
-.summary-text h2.summary-section-decisions + ul,
-.summary-text h2.summary-section-decisions + ol {
+.summary-content .summary-text h2.summary-section-decisions + p,
+.summary-content .summary-text h2.summary-section-decisions + ul,
+.summary-content .summary-text h2.summary-section-decisions + ol {
   background: rgb(59 130 246 / 2%);
   border-left: 3px solid rgb(59 130 246 / 20%);
   padding: 0.75rem 1rem;
@@ -1311,9 +1311,9 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.summary-text h2.summary-section-issues + p,
-.summary-text h2.summary-section-issues + ul,
-.summary-text h2.summary-section-issues + ol {
+.summary-content .summary-text h2.summary-section-issues + p,
+.summary-content .summary-text h2.summary-section-issues + ul,
+.summary-content .summary-text h2.summary-section-issues + ol {
   background: rgb(239 68 68 / 2%);
   border-left: 3px solid rgb(239 68 68 / 20%);
   padding: 0.75rem 1rem;
@@ -1321,9 +1321,9 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.summary-text h2.summary-section-highlights + p,
-.summary-text h2.summary-section-highlights + ul,
-.summary-text h2.summary-section-highlights + ol {
+.summary-content .summary-text h2.summary-section-highlights + p,
+.summary-content .summary-text h2.summary-section-highlights + ul,
+.summary-content .summary-text h2.summary-section-highlights + ol {
   background: rgb(245 158 11 / 2%);
   border-left: 3px solid rgb(245 158 11 / 20%);
   padding: 0.75rem 1rem;
@@ -1331,9 +1331,9 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.summary-text h2.summary-section-next-steps + p,
-.summary-text h2.summary-section-next-steps + ul,
-.summary-text h2.summary-section-next-steps + ol {
+.summary-content .summary-text h2.summary-section-next-steps + p,
+.summary-content .summary-text h2.summary-section-next-steps + ul,
+.summary-content .summary-text h2.summary-section-next-steps + ol {
   background: rgb(139 92 246 / 2%);
   border-left: 3px solid rgb(139 92 246 / 20%);
   padding: 0.75rem 1rem;
@@ -1341,9 +1341,9 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.summary-text h2.summary-section-participants + p,
-.summary-text h2.summary-section-participants + ul,
-.summary-text h2.summary-section-participants + ol {
+.summary-content .summary-text h2.summary-section-participants + p,
+.summary-content .summary-text h2.summary-section-participants + ul,
+.summary-content .summary-text h2.summary-section-participants + ol {
   background: rgb(6 182 212 / 2%);
   border-left: 3px solid rgb(6 182 212 / 20%);
   padding: 0.75rem 1rem;
@@ -1351,12 +1351,12 @@ body {
   border-radius: 0 0.375rem 0.375rem 0;
 }
 
-.summary-text h2.collapsible-heading + p,
-.summary-text h2.collapsible-heading + ul,
-.summary-text h2.collapsible-heading + ol,
-.summary-text h2.collapsible-heading ~ p,
-.summary-text h2.collapsible-heading ~ ul,
-.summary-text h2.collapsible-heading ~ ol {
+.summary-content .summary-text h2.collapsible-heading + p,
+.summary-content .summary-text h2.collapsible-heading + ul,
+.summary-content .summary-text h2.collapsible-heading + ol,
+.summary-content .summary-text h2.collapsible-heading ~ p,
+.summary-content .summary-text h2.collapsible-heading ~ ul,
+.summary-content .summary-text h2.collapsible-heading ~ ol {
   transition: all 0.3s ease;
   overflow: hidden;
 }
