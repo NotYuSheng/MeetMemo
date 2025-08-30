@@ -38,9 +38,7 @@
   min-height: 200px;
 }
 
-.pdf-loading-state .spinner {
-  margin-bottom: 1rem;
-}
+/* Removed - this rule is already covered by .spinner below */
 
 .pdf-error-state .empty-icon {
   color: var(--btn-danger);
@@ -265,7 +263,7 @@ body {
 }
 
 .btn.btn-discrete {
-  background: var(--btn-discrete) !important;
+  background: var(--btn-discrete);
   color: #fff;
   padding: 0.5rem;
   width: 2.5rem;
@@ -273,17 +271,17 @@ body {
   flex-shrink: 0;
 }
 
-.btn.btn-discrete:hover {
-  background: var(--btn-discrete-hover) !important;
-}
-
 .btn.btn-discrete.btn-disabled,
 .btn.btn-discrete:disabled {
-  background: var(--btn-discrete) !important;
+  background: var(--btn-discrete);
   opacity: 0.5;
   min-width: 2.5rem;
   width: 2.5rem;
   padding: 0.5rem;
+}
+
+.btn.btn-discrete:hover:not(:disabled) {
+  background: var(--btn-discrete-hover);
 }
 
 .btn-icon {
@@ -297,15 +295,15 @@ body {
 }
 
 .btn.btn-discrete-prominent {
-  background: var(--btn-discrete-prominent) !important;
+  background: var(--btn-discrete-prominent);
   color: #fff;
   padding: 0.5rem 1rem;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.btn.btn-discrete-prominent:hover {
-  background: var(--btn-discrete-prominent-hover) !important;
+.btn.btn-discrete-prominent:hover:not(:disabled) {
+  background: var(--btn-discrete-prominent-hover);
 }
 
 .btn.btn-discrete-prominent .btn-icon {
@@ -598,7 +596,8 @@ body {
   color: var(--text);
 }
 
-.spinner {
+.spinner,
+.pdf-loading-state .spinner {
   width: 1rem;
   height: 1rem;
   border: 2px solid transparent;
@@ -606,6 +605,10 @@ body {
   border-radius: 50%;
   margin-right: 0.5rem;
   animation: spin 1s linear infinite;
+}
+
+.pdf-loading-state .spinner {
+  margin-bottom: 1rem;
 }
 
 @keyframes spin {
@@ -620,6 +623,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 20rem; /* Ensure transcript tab always has adequate height */
 }
 
 .transcript-entry {
@@ -654,8 +658,8 @@ body {
 }
 
 .transcript-text.clickable:hover {
-  background-color: rgba(0, 123, 255, 0.1);
-  border: 1px dashed rgba(0, 123, 255, 0.3);
+  background-color: rgb(0 123 255 / 10%);
+  border: 1px dashed rgb(0 123 255 / 30%);
 }
 
 .transcript-content {
@@ -674,7 +678,7 @@ body {
 
 .transcript-text.editable:focus {
   border-color: #0056b3;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 0 0 2px rgb(0 123 255 / 25%);
 }
 
 .save-status {
@@ -718,8 +722,9 @@ body {
 
 .speaker-container {
   display: flex;
-  align-items: center;
   gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .speaker-afblue {
@@ -776,6 +781,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 2%);
 }
 
 .meeting-info {
@@ -884,7 +892,7 @@ body {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--text);
-  margin: 2rem 0 1rem 0;
+  margin: 2rem 0 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--btn-primary);
   font-family: Barlow, sans-serif;
@@ -894,7 +902,7 @@ body {
   font-size: 1.4rem;
   font-weight: 600;
   color: var(--text);
-  margin: 1.75rem 0 0.75rem 0;
+  margin: 1.75rem 0 0.75rem;
   padding-left: 0.75rem;
   border-left: 4px solid var(--btn-primary);
   font-family: Barlow, sans-serif;
@@ -904,7 +912,7 @@ body {
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--btn-primary);
-  margin: 1.5rem 0 0.5rem 0;
+  margin: 1.5rem 0 0.5rem;
   font-family: Barlow, sans-serif;
 }
 
@@ -912,7 +920,7 @@ body {
   font-size: 1.1rem;
   font-weight: 500;
   color: var(--text);
-  margin: 1.25rem 0 0.5rem 0;
+  margin: 1.25rem 0 0.5rem;
   font-family: Barlow, sans-serif;
 }
 
@@ -920,7 +928,7 @@ body {
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-muted);
-  margin: 1rem 0 0.5rem 0;
+  margin: 1rem 0 0.5rem;
   font-family: Barlow, sans-serif;
 }
 
@@ -947,6 +955,7 @@ body {
 .summary-text ol {
   margin: 1rem 0;
   padding-left: 1.5rem;
+  counter-reset: item;
 }
 
 .summary-text li {
@@ -971,10 +980,6 @@ body {
 .summary-text ol li {
   list-style: none;
   counter-increment: item;
-}
-
-.summary-text ol {
-  counter-reset: item;
 }
 
 .summary-text ol li::before {
@@ -1027,7 +1032,7 @@ body {
   border-left: 4px solid var(--btn-primary);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
-  background-color: rgba(41, 152, 213, 0.05);
+  background-color: rgb(41 152 213 / 5%);
   border-radius: 0 0.375rem 0.375rem 0;
   font-style: italic;
 }
@@ -1045,15 +1050,15 @@ body {
 
 /* Enhanced Title Section Styling */
 .summary-content > p:first-of-type {
-  background: linear-gradient(135deg, rgba(41, 152, 213, 0.08) 0%, rgba(41, 152, 213, 0.03) 100%);
-  border: 1px solid rgba(41, 152, 213, 0.15);
+  background: linear-gradient(135deg, rgb(41 152 213 / 8%) 0%, rgb(41 152 213 / 3%) 100%);
+  border: 1px solid rgb(41 152 213 / 15%);
   border-radius: 0.75rem;
   padding: 1.25rem;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(41, 152, 213, 0.05);
+  box-shadow: 0 2px 4px rgb(41 152 213 / 5%);
 }
 
 .summary-content > p:first-of-type strong {
@@ -1067,28 +1072,23 @@ body {
 .rename-btn {
   margin-left: auto;
   transition: all 0.2s ease;
-  background: #f8f9fa !important;
-  border: 1px solid #e9ecef !important;
-  color: #6c757d !important;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  color: #6c757d;
 }
 
-.rename-btn:hover {
-  background: #e9ecef !important;
-  border: 1px solid #dee2e6 !important;
-  color: #5a6268 !important;
+.rename-btn:hover:not(:disabled) {
+  background: #e9ecef;
+  border: 1px solid #dee2e6;
+  color: #5a6268;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
-/* Summary Content Container Enhancements */
-.summary-content {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.02);
-}
+/* Summary Content Container Enhancements - moved to earlier .summary-content rule */
 
 [data-theme="dark"] .summary-content {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgb(0 0 0 / 10%);
 }
 
 /* Section Dividers */
@@ -1136,12 +1136,12 @@ body {
 }
 
 /* Color-coded section styling */
-.summary-section-actions {
-  color: #22c55e !important; /* Green for actions/tasks */
+.summary-text .summary-section-actions {
+  color: #22c55e; /* Green for actions/tasks */
   position: relative;
 }
 
-.summary-section-actions::after {
+.summary-text .summary-section-actions::after {
   content: "";
   position: absolute;
   left: -1rem;
@@ -1152,12 +1152,12 @@ body {
   opacity: 0.3;
 }
 
-.summary-section-decisions {
-  color: #3b82f6 !important; /* Blue for decisions */
+.summary-text .summary-section-decisions {
+  color: #3b82f6; /* Blue for decisions */
   position: relative;
 }
 
-.summary-section-decisions::after {
+.summary-text .summary-section-decisions::after {
   content: "";
   position: absolute;
   left: -1rem;
@@ -1168,12 +1168,12 @@ body {
   opacity: 0.3;
 }
 
-.summary-section-issues {
-  color: #ef4444 !important; /* Red for issues/concerns */
+.summary-text .summary-section-issues {
+  color: #ef4444; /* Red for issues/concerns */
   position: relative;
 }
 
-.summary-section-issues::after {
+.summary-text .summary-section-issues::after {
   content: "";
   position: absolute;
   left: -1rem;
@@ -1184,12 +1184,12 @@ body {
   opacity: 0.3;
 }
 
-.summary-section-highlights {
-  color: #f59e0b !important; /* Amber for highlights */
+.summary-text .summary-section-highlights {
+  color: #f59e0b; /* Amber for highlights */
   position: relative;
 }
 
-.summary-section-highlights::after {
+.summary-text .summary-section-highlights::after {
   content: "";
   position: absolute;
   left: -1rem;
@@ -1200,12 +1200,12 @@ body {
   opacity: 0.3;
 }
 
-.summary-section-next-steps {
-  color: #8b5cf6 !important; /* Purple for next steps */
+.summary-text .summary-section-next-steps {
+  color: #8b5cf6; /* Purple for next steps */
   position: relative;
 }
 
-.summary-section-next-steps::after {
+.summary-text .summary-section-next-steps::after {
   content: "";
   position: absolute;
   left: -1rem;
@@ -1216,12 +1216,12 @@ body {
   opacity: 0.3;
 }
 
-.summary-section-participants {
-  color: #06b6d4 !important; /* Cyan for participants */
+.summary-text .summary-section-participants {
+  color: #06b6d4; /* Cyan for participants */
   position: relative;
 }
 
-.summary-section-participants::after {
+.summary-text .summary-section-participants::after {
   content: "";
   position: absolute;
   left: -1rem;
@@ -1236,8 +1236,8 @@ body {
 .summary-text h2.summary-section-actions + p,
 .summary-text h2.summary-section-actions + ul,
 .summary-text h2.summary-section-actions + ol {
-  background: rgba(34, 197, 94, 0.02);
-  border-left: 3px solid rgba(34, 197, 94, 0.2);
+  background: rgb(34 197 94 / 2%);
+  border-left: 3px solid rgb(34 197 94 / 20%);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -1246,8 +1246,8 @@ body {
 .summary-text h2.summary-section-decisions + p,
 .summary-text h2.summary-section-decisions + ul,
 .summary-text h2.summary-section-decisions + ol {
-  background: rgba(59, 130, 246, 0.02);
-  border-left: 3px solid rgba(59, 130, 246, 0.2);
+  background: rgb(59 130 246 / 2%);
+  border-left: 3px solid rgb(59 130 246 / 20%);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -1256,8 +1256,8 @@ body {
 .summary-text h2.summary-section-issues + p,
 .summary-text h2.summary-section-issues + ul,
 .summary-text h2.summary-section-issues + ol {
-  background: rgba(239, 68, 68, 0.02);
-  border-left: 3px solid rgba(239, 68, 68, 0.2);
+  background: rgb(239 68 68 / 2%);
+  border-left: 3px solid rgb(239 68 68 / 20%);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -1266,8 +1266,8 @@ body {
 .summary-text h2.summary-section-highlights + p,
 .summary-text h2.summary-section-highlights + ul,
 .summary-text h2.summary-section-highlights + ol {
-  background: rgba(245, 158, 11, 0.02);
-  border-left: 3px solid rgba(245, 158, 11, 0.2);
+  background: rgb(245 158 11 / 2%);
+  border-left: 3px solid rgb(245 158 11 / 20%);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -1276,8 +1276,8 @@ body {
 .summary-text h2.summary-section-next-steps + p,
 .summary-text h2.summary-section-next-steps + ul,
 .summary-text h2.summary-section-next-steps + ol {
-  background: rgba(139, 92, 246, 0.02);
-  border-left: 3px solid rgba(139, 92, 246, 0.2);
+  background: rgb(139 92 246 / 2%);
+  border-left: 3px solid rgb(139 92 246 / 20%);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -1286,8 +1286,8 @@ body {
 .summary-text h2.summary-section-participants + p,
 .summary-text h2.summary-section-participants + ul,
 .summary-text h2.summary-section-participants + ol {
-  background: rgba(6, 182, 212, 0.02);
-  border-left: 3px solid rgba(6, 182, 212, 0.2);
+  background: rgb(6 182 212 / 2%);
+  border-left: 3px solid rgb(6 182 212 / 20%);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
   border-radius: 0 0.375rem 0.375rem 0;
@@ -1295,17 +1295,17 @@ body {
 
 /* Section containers with subtle shadows */
 .summary-text h2:not(.summary-section-default) {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgb(255 255 255 / 50%);
   backdrop-filter: blur(10px);
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  margin: 2rem 0 1rem 0;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 5%);
+  margin: 2rem 0 1rem;
 }
 
 [data-theme="dark"] .summary-text h2:not(.summary-section-default) {
-  background: rgba(0, 0, 0, 0.2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 20%);
 }
 
 /* Collapsible Section Functionality */
@@ -1385,12 +1385,12 @@ body {
 }
 
 .collapsible-heading:hover {
-  background-color: rgba(41, 152, 213, 0.05) !important;
+  background-color: rgb(41 152 213 / 5%);
   transform: translateX(4px);
 }
 
 .collapsible-heading:hover::before {
-  opacity: 0.6 !important;
+  opacity: 0.6;
 }
 
 /* Smooth collapse animation for content */
@@ -1406,12 +1406,12 @@ body {
 
 /* Copy success feedback (you could add a toast notification instead) */
 .copy-section-btn.copied {
-  background-color: #22c55e !important;
-  color: white !important;
+  background-color: #22c55e;
+  color: white;
 }
 
 /* Responsive improvements for mobile */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .collapse-toggle {
     padding: 0.5rem;
   }
@@ -1476,7 +1476,7 @@ body {
   border-left: 4px solid var(--btn-primary);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
-  background-color: rgba(41, 152, 213, 0.05);
+  background-color: rgb(41 152 213 / 5%);
   border-radius: 0 0.375rem 0.375rem 0;
   font-style: italic;
 }
@@ -1543,63 +1543,63 @@ body {
 }
 
 .btn.btn-past-1 {
-  background: #2998d5 !important;
-  color: #fff !important;
+  background: #2998d5;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn.btn-past-1 {
-  background: #2998d5 !important;
-  color: #fff !important;
+  background: #2998d5;
+  color: #fff;
 }
 
 .btn.btn-past-2 {
-  background: #2880bb !important;
-  color: #fff !important;
+  background: #2880bb;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn.btn-past-2 {
-  background: #2880bb !important;
-  color: #fff !important;
+  background: #2880bb;
+  color: #fff;
 }
 
 .btn.btn-past-3 {
-  background: #2769a2 !important;
-  color: #fff !important;
+  background: #2769a2;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn.btn-past-3 {
-  background: #2769a2 !important;
-  color: #fff !important;
+  background: #2769a2;
+  color: #fff;
 }
 
 .btn.btn-past-4 {
-  background: #265289 !important;
-  color: #fff !important;
+  background: #265289;
+  color: #fff;
 }
 
 [data-theme="dark"] .btn.btn-past-4 {
-  background: #265289 !important;
-  color: #fff !important;
+  background: #265289;
+  color: #fff;
 }
 
-.btn.btn-past-1:hover {
-  background: #1b75bb !important;
-  color: #fff !important;
+.btn.btn-past-1:hover:not(:disabled) {
+  background: #1b75bb;
+  color: #fff;
 }
 
-.btn.btn-past-2:hover {
-  background: #1e6a9b !important;
-  color: #fff !important;
+.btn.btn-past-2:hover:not(:disabled) {
+  background: #1e6a9b;
+  color: #fff;
 }
 
-.btn.btn-past-3:hover {
-  background: #1e5288 !important;
-  color: #fff !important;
+.btn.btn-past-3:hover:not(:disabled) {
+  background: #1e5288;
+  color: #fff;
 }
 
-.btn.btn-past-4:hover {
-  background: #1e3f70 !important;
-  color: #fff !important;
+.btn.btn-past-4:hover:not(:disabled) {
+  background: #1e3f70;
+  color: #fff;
 }
 
 * {
@@ -1633,15 +1633,10 @@ body {
 .summary-content {
   flex: 1 1 auto;
   overflow-y: auto; /* inner scrollbar appears when needed  */
-}
-
-.summary-content {
   min-height: 0;
 }
 
-.transcript-container {
-  min-height: 20rem !important; /* Ensure transcript tab always has adequate height */
-}
+/* This rule was moved to the main .transcript-container selector above */
 
 /* Conditional expansion for PDF content */
 .pdf-expanded .summary-content {
@@ -2037,18 +2032,12 @@ input:checked + .toggle-slider::after {
 
 .apply-suggestion-btn,
 .dismiss-suggestion-btn {
-  padding: 0.25rem 0.5rem !important;
-  font-size: 0.75rem !important;
-  min-height: unset !important;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  min-height: unset;
 }
 
-.speaker-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-direction: column;
-  align-items: flex-start;
-}
+/* Moved to earlier .speaker-container rule */
 
 .speaker-name-row {
   display: flex;
@@ -2071,8 +2060,8 @@ input:checked + .toggle-slider::after {
 .edit-text-btn {
   opacity: 0.3;
   transition: opacity 0.2s ease;
-  padding: 0.15rem !important; /* Reduced internal padding */
-  min-height: unset !important;
+  padding: 0.15rem; /* Reduced internal padding */
+  min-height: unset;
   flex-shrink: 0;
   margin-left: 0.5rem; /* Add space from the text */
   margin-right: 0.75rem; /* Add space from the right edge */
@@ -2134,12 +2123,4 @@ input:checked + .toggle-slider::after {
   color: var(--btn-danger);
 }
 
-/* Disabled button styles */
-.btn-disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-disabled:hover {
-  opacity: 0.6;
-}
+/* Disabled button styles - moved to earlier .btn-disabled rule */
