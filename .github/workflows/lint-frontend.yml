@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   lint:
@@ -61,7 +62,7 @@ jobs:
           fi
 
           # Create a unique branch name for the lint fixes
-          LINT_BRANCH="auto-lint-fixes-$(date +%s)"
+          LINT_BRANCH="chore/auto-lint-fixes-$(date +%s)"
           
           git checkout -b $LINT_BRANCH
           git add .
