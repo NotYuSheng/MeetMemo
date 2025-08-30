@@ -649,6 +649,30 @@ body {
   box-shadow: var(--shadow-sm);
   margin-bottom: 0.5rem;
   border-radius: 0.25rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.transcript-entry:hover {
+  background: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 95%) 0%,
+    rgb(248 250 252 / 90%) 100%
+  );
+  box-shadow: var(--shadow-lg);
+  border-left-color: var(--btn-primary);
+  border-left-width: 6px;
+  transform: translateX(4px);
+  border-radius: 0.375rem;
+}
+
+[data-theme="dark"] .transcript-entry:hover {
+  background: linear-gradient(
+    135deg,
+    rgb(74 78 80 / 95%) 0%,
+    rgb(61 65 67 / 90%) 100%
+  );
+  border-left-color: var(--btn-primary);
 }
 
 .transcript-header {
@@ -667,13 +691,20 @@ body {
 .transcript-text.clickable {
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .transcript-text.clickable:hover {
-  background-color: rgb(0 123 255 / 10%);
-  border: 1px dashed rgb(0 123 255 / 30%);
+  background: linear-gradient(
+    135deg,
+    rgb(41 152 213 / 8%) 0%,
+    rgb(41 152 213 / 4%) 100%
+  );
+  border: 1px solid rgb(41 152 213 / 20%);
+  box-shadow: 0 2px 4px rgb(41 152 213 / 10%);
+  transform: translateY(-1px);
 }
 
 .transcript-content {
@@ -1939,7 +1970,7 @@ input:checked + .toggle-slider::after {
 }
 
 .model-select {
-  background-color: white;
+  background: rgb(255 255 255 / 80%);
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   padding: 0.375rem 0.75rem;
@@ -1954,8 +1985,7 @@ input:checked + .toggle-slider::after {
 }
 
 [data-theme="dark"] .model-select {
-  background-color: #4a4e50;
-  color: #fff;
+  background: rgb(255 255 255 / 5%);
 }
 
 .model-select:focus {
@@ -2074,17 +2104,28 @@ input:checked + .toggle-slider::after {
 }
 
 .edit-text-btn {
-  opacity: 0.3;
-  transition: opacity 0.2s ease;
-  padding: 0.15rem; /* Reduced internal padding */
+  opacity: 0;
+  transition: all 0.3s ease;
+  padding: 0.25rem;
   min-height: unset;
   flex-shrink: 0;
-  margin-left: 0.5rem; /* Add space from the text */
-  margin-right: 0.75rem; /* Add space from the right edge */
+  margin-left: 0.5rem;
+  margin-right: 0.75rem;
+  background: linear-gradient(135deg, var(--btn-bg) 0%, var(--btn-hover) 100%);
+  border-radius: 6px;
+  transform: scale(0.9);
 }
 
 .transcript-text-container:hover .edit-text-btn {
   opacity: 1;
+  transform: scale(1);
+}
+
+.edit-text-btn:hover {
+  background: var(--btn-primary) !important;
+  color: white !important;
+  box-shadow: var(--shadow-md);
+  transform: scale(1.05);
 }
 
 .transcript-edit-container {
