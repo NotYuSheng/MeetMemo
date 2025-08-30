@@ -42,6 +42,7 @@ jobs:
       env:
         CI: false
         GENERATE_SOURCEMAP: false
+        PUBLIC_URL: /MeetMemo
       run: |
         cd frontend
         npm run build
