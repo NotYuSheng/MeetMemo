@@ -877,7 +877,14 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
             
             return text
         
+        # Strip trailing whitespace and newlines to prevent empty pages
+        summary_text = summary_text.rstrip()
         summary_lines = summary_text.split('\n')
+        
+        # Remove trailing empty lines from the list to prevent empty pages
+        while summary_lines and not summary_lines[-1].strip():
+            summary_lines.pop()
+            
         meeting_title_extracted = None
         
         # First pass: extract the title
@@ -900,8 +907,8 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
                 fontName='Helvetica-Bold',
                 spaceBefore=10
             )))
-            # Add the actual title content
-            story.append(Paragraph(f"  {meeting_title_extracted}", body_style))
+            # Add the actual title content (bolded)
+            story.append(Paragraph(f"  <b>{meeting_title_extracted}</b>", body_style))
         
         # Second pass: process the content
         for line in summary_lines:
