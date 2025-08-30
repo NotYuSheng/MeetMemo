@@ -40,6 +40,13 @@
 
 /* Removed - this rule is already covered by .spinner below */
 
+.empty-icon {
+  margin: 0 auto 1rem;
+  height: 3rem;
+  width: 3rem;
+  color: var(--border);
+}
+
 .pdf-error-state .empty-icon {
   color: var(--btn-danger);
   margin-bottom: 1rem;
@@ -288,6 +295,10 @@ body {
   margin-right: 0.5rem;
   height: 1rem;
   width: 1rem;
+}
+
+.edit-text-btn .btn-icon {
+  margin-right: 0; /* Remove right margin from icon since there's no text */
 }
 
 .btn.btn-discrete .btn-icon {
@@ -753,13 +764,6 @@ body {
   color: var(--text-muted);
 }
 
-.empty-icon {
-  margin: 0 auto 1rem;
-  height: 3rem;
-  width: 3rem;
-  color: var(--border);
-}
-
 .empty-title {
   font-size: 1.125rem;
   font-family: Barlow, sans-serif;
@@ -1061,6 +1065,34 @@ body {
   box-shadow: 0 2px 4px rgb(41 152 213 / 5%);
 }
 
+.content-renderer strong {
+  font-weight: 600;
+}
+
+.content-renderer em {
+  font-style: italic;
+}
+
+.content-renderer code {
+  background: rgb(41 152 213 / 10%);
+  color: var(--text);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-family: Consolas, Monaco, monospace;
+}
+
+.content-renderer a {
+  color: var(--btn-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.content-renderer a:hover {
+  color: var(--btn-primary-hover);
+  text-decoration: underline;
+}
+
 .summary-content > p:first-of-type strong {
   font-size: 1.1rem;
   color: var(--btn-primary);
@@ -1087,6 +1119,14 @@ body {
 
 /* Summary Content Container Enhancements - moved to earlier .summary-content rule */
 
+.transcript-container,
+.summary-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+[data-theme="dark"] .transcript-container,
 [data-theme="dark"] .summary-content {
   background: rgb(0 0 0 / 10%);
 }
@@ -1510,37 +1550,7 @@ body {
 }
 
 /* Ensure inline formatting works correctly */
-.content-renderer strong {
-  font-weight: 600;
-  color: var(--text);
-}
 
-.content-renderer em {
-  font-style: italic;
-  color: var(--text-muted);
-}
-
-.content-renderer code {
-  background-color: var(--alt-bg);
-  color: var(--btn-primary);
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-}
-
-.content-renderer a {
-  color: var(--btn-primary);
-  text-decoration: none;
-  font-weight: 500;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.content-renderer a:hover {
-  border-bottom-color: var(--btn-primary);
-  color: var(--text);
-}
 
 .btn.btn-past-1 {
   background: #2998d5;
@@ -1627,13 +1637,6 @@ body {
 /* Conditional expansion for PDF viewer */
 .pdf-expanded .left-column .card:last-child {
   min-height: 1200px; /* Allow enough height for PDF viewer */
-}
-
-.transcript-container,
-.summary-content {
-  flex: 1 1 auto;
-  overflow-y: auto; /* inner scrollbar appears when needed  */
-  min-height: 0;
 }
 
 /* This rule was moved to the main .transcript-container selector above */
@@ -2053,10 +2056,6 @@ input:checked + .toggle-slider::after {
   position: relative;
 }
 
-.transcript-text-container:hover .edit-text-btn {
-  opacity: 1;
-}
-
 .edit-text-btn {
   opacity: 0.3;
   transition: opacity 0.2s ease;
@@ -2067,8 +2066,8 @@ input:checked + .toggle-slider::after {
   margin-right: 0.75rem; /* Add space from the right edge */
 }
 
-.edit-text-btn .btn-icon {
-  margin-right: 0; /* Remove right margin from icon since there's no text */
+.transcript-text-container:hover .edit-text-btn {
+  opacity: 1;
 }
 
 .transcript-edit-container {
