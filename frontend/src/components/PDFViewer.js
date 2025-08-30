@@ -52,10 +52,12 @@ const PDFViewer = ({ selectedMeetingId, onPdfLoaded }) => {
         setPdfBlobUrl(blobUrl);
         if (onPdfLoaded) onPdfLoaded(true);
       } catch (err) {
-        const errorInfo = pdfLogger.handleApiError(err, 'PDF generation', { selectedMeetingId });
-        pdfLogger.error("Error fetching PDF", err, { 
+        const errorInfo = pdfLogger.handleApiError(err, "PDF generation", {
           selectedMeetingId,
-          userFriendlyMessage: errorInfo.userFriendlyMessage
+        });
+        pdfLogger.error("Error fetching PDF", err, {
+          selectedMeetingId,
+          userFriendlyMessage: errorInfo.userFriendlyMessage,
         });
         setError(errorInfo.userFriendlyMessage);
       } finally {
