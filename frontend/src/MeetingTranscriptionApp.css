@@ -628,13 +628,17 @@ body {
   }
 }
 
+/* Use .summary-content styling for both containers */
 .transcript-container {
-  max-height: 30rem;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  min-height: 20rem; /* Ensure transcript tab always has adequate height */
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 2%);
+  max-height: 30rem;
+  overflow-y: auto;
+  min-height: 20rem;
 }
 
 .transcript-entry {
@@ -1972,20 +1976,15 @@ input:checked + .toggle-slider::after {
   color: #fff;
 }
 
-/* Actions Group - General */
-.actions-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-/* Summary Actions Group */
+/* Unified Actions Group - for both transcript and summary */
+.actions-group,
 .summary-actions-group {
   display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 /* Rename Buttons Group */
