@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Hash, AlertCircle } from "lucide-react";
+import { pdfLogger } from "../utils/logger";
 
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
 
 const PDFViewer = ({ selectedMeetingId, onPdfLoaded }) => {
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
@@ -51,8 +52,12 @@ const PDFViewer = ({ selectedMeetingId, onPdfLoaded }) => {
         setPdfBlobUrl(blobUrl);
         if (onPdfLoaded) onPdfLoaded(true);
       } catch (err) {
-        console.error("Error fetching PDF:", err);
-        setError(err.message);
+        const errorInfo = pdfLogger.handleApiError(err, 'PDF generation', { selectedMeetingId });
+        pdfLogger.error("Error fetching PDF", err, { 
+          selectedMeetingId,
+          userFriendlyMessage: errorInfo.userFriendlyMessage
+        });
+        setError(errorInfo.userFriendlyMessage);
       } finally {
         setIsLoading(false);
       }

@@ -1009,7 +1009,9 @@ def get_jobs() -> dict:
         return {"csv_list": jobs}
 
     except Exception as e:
-        return {"error": str(e)}
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Unexpected error during job list retrieval: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while retrieving job list")
 
 
 @app.post("/jobs")
@@ -1079,10 +1081,18 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
     # Catch any errors when trying to transcribe & diarize recording
     except Exception as e:
         timestamp = get_timestamp()
-        file_name = file.filename
-        logging.error(f"{timestamp}: Error processing file {file_name}: {e}", exc_info=True)
-        update_status(job_uuid, "500")
-        return {"uuid": job_uuid, "file_name": file_name, "error": str(e), "status_code": "500"}
+        file_name = getattr(file, 'filename', 'unknown')
+        logging.error(f"{timestamp}: Unexpected error during audio processing for file {file_name}: {e}", exc_info=True)
+        
+        try:
+            update_status(job_uuid, "500")
+        except Exception as status_error:
+            logging.error(f"{timestamp}: Failed to update status for job {job_uuid}: {status_error}", exc_info=True)
+        
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error during audio processing. Please try again or contact support if the issue persists."
+        )
 
 @app.delete("/jobs/{uuid}")
 def delete_job(uuid: str) -> dict:
@@ -1265,8 +1275,8 @@ def get_file_transcript(uuid: str) -> dict:
             return {"uuid": uuid, "status": "not found", "status_code":"404"}
     except Exception as e: 
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error retrieving {file_name} transcript.")
-        return {"uuid": uuid, "status": "error", "error":e, "status_code":"500",}
+        logging.error(f"{timestamp}: Unexpected error during transcript retrieval for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while retrieving transcript")
 
 @app.delete("/jobs/{uuid}/summary")
 def delete_summary(uuid: str) -> dict:
@@ -1302,8 +1312,8 @@ def delete_summary(uuid: str) -> dict:
             }
     except Exception as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error deleting summary for UUID: {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+        logging.error(f"{timestamp}: Unexpected error during summary deletion for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while deleting summary")
 
 @app.post("/jobs/{uuid}/summarise")
 def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]:
@@ -1360,8 +1370,8 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
         timestamp = get_timestamp()
 
         if "Error" in summary:
-            logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}")
-            return {"uuid": uuid, "file_name": file_name, "status": "error", "summary": summary, "status_code": "500"}
+            logging.error(f"{timestamp}: LLM service error during summarization for UUID: {uuid}, file name: {file_name}: {summary}", exc_info=True)
+            raise HTTPException(status_code=503, detail="Summary service temporarily unavailable. Please try again later.")
         else:
             # Save summary to file
             try:
@@ -1380,8 +1390,11 @@ def summarise_job(uuid: str, request: SummarizeRequest = None) -> dict[str, str]
 
     except Exception as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error summarising transcript for UUID: {uuid}, file name: {file_name}: {e}", exc_info=True)
-        return {"uuid": uuid, "file_name": file_name, "error": str(e), "status_code": "500", "summary": ""}  # type: ignore
+        logging.error(f"{timestamp}: Unexpected error during transcript summarization for UUID: {uuid}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error during summary generation. Please try again or contact support if the issue persists."
+        )
 
 @app.patch("/jobs/{uuid}/rename")
 def rename_job(uuid: str, new_name: str) -> dict:
@@ -1509,12 +1522,12 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
 
     except json.JSONDecodeError as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Error decoding JSON for UUID {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": "Invalid transcript file format.", "status_code": "500"}
+        logging.error(f"{timestamp}: JSON decode error during speaker renaming for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid transcript file format")
     except Exception as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: An unexpected error occurred while renaming speakers for UUID {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+        logging.error(f"{timestamp}: Unexpected error during speaker renaming for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while renaming speakers")
 
 @app.post("/jobs/{uuid}/identify-speakers")
 def identify_speakers(uuid: str, request: SpeakerIdentificationRequest = None):
@@ -1574,7 +1587,7 @@ def identify_speakers(uuid: str, request: SpeakerIdentificationRequest = None):
     except Exception as e:
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Unexpected error during speaker identification for UUID {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+        raise HTTPException(status_code=500, detail="Internal server error during speaker identification")
 
 @app.patch("/jobs/{uuid}/transcript")
 def update_transcript(uuid: str, request: TranscriptUpdateRequest) -> dict:
@@ -1628,8 +1641,8 @@ def update_transcript(uuid: str, request: TranscriptUpdateRequest) -> dict:
 
     except Exception as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: An unexpected error occurred while updating transcript for UUID {uuid}: {e}", exc_info=True)
-        return {"uuid": uuid, "status": "error", "error": str(e), "status_code": "500"}
+        logging.error(f"{timestamp}: Unexpected error during transcript update for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while updating transcript")
 
 ##################################### Functionality check #####################################
 @app.get("/health")
@@ -1650,8 +1663,8 @@ def health_check():
             return {"status": "ok", "status_code": "200"}
     except Exception as e:
         timestamp = get_timestamp()
-        logging.error(f"{timestamp}: Health check failed: {e}")
-        return {"status": "error", "error": str(e), "status_code": "500"}
+        logging.error(f"{timestamp}: Unexpected error during health check: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during health check")
 
 
 def get_logs():
@@ -1698,8 +1711,9 @@ async def export_professional_pdf(uuid: str, request: Request = None):
         )
         
     except Exception as e:
-        logging.error(f"Failed to generate PDF for UUID {uuid}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Unexpected error during PDF generation for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during PDF generation")
 
 @app.post("/jobs/{uuid}/markdown")
 async def export_markdown_summary(uuid: str, request: Request = None):
@@ -1763,8 +1777,9 @@ async def export_markdown_summary(uuid: str, request: Request = None):
         )
         
     except Exception as e:
-        logging.error(f"Failed to generate markdown for UUID {uuid}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to generate markdown: {str(e)}")
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Unexpected error during markdown generation for UUID {uuid}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during markdown generation")
 
 # Start the file cleanup scheduler when the application starts
 start_cleanup_scheduler()
