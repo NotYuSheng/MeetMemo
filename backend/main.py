@@ -357,39 +357,70 @@ def summarise_transcript(transcript: str, custom_prompt: str = None, system_prom
         custom_prompt: Optional custom user prompt. If None, uses default prompt.
         system_prompt: Optional custom system prompt. If None, uses default system prompt.
     """
+    
+    # Validate transcript content quality
+    transcript_text = transcript.strip()
+    if not transcript_text:
+        return "# No Content Available\n\nThe recording appears to be empty or could not be transcribed. Please ensure the audio file contains clear speech and try again."
+    
+    # Check for meaningful content (more than just repeated words or very short phrases)
+    words = transcript_text.split()
+    unique_words = set(word.lower().strip('.,!?;:') for word in words)
+    
+    # If transcript is very short or lacks meaningful content
+    if len(words) < 10 or len(unique_words) < 5:
+        # Extract any actual spoken words for the summary
+        spoken_content = ' '.join(words)
+        return f"""# Brief Recording Summary
+
+## Content
+This appears to be a very short recording with limited content.
+
+**Transcribed content:** "{spoken_content}"
+
+## Note
+The recording was too brief to generate a detailed meeting summary. For better results, please ensure recordings contain substantial conversation with multiple speakers discussing specific topics, decisions, or action items."""
 
     base_url = str(os.getenv("LLM_API_URL"))
     url = f"{base_url.rstrip('/')}/v1/chat/completions"
     model_name = str(os.getenv("LLM_MODEL_NAME"))
 
-    # Default system prompt
+    # Enhanced system prompt with better handling of edge cases
     default_system_prompt = (
         "You are a helpful assistant that summarizes meeting transcripts. You will give a concise summary of the key points, decisions made, and any action items, outputting it in markdown format. "
         "IMPORTANT: Always use the exact speaker names provided in the transcript. Never change, substitute, or invent different names for speakers. "
-        "The speaker names in the transcript are ground truth and must be preserved exactly as shown."
+        "The speaker names in the transcript are ground truth and must be preserved exactly as shown. "
+        "CRITICAL: Only summarize what is actually present in the transcript. Do not invent or hallucinate content, participants, decisions, or action items that are not explicitly mentioned. "
+        "If the transcript lacks sufficient content for a full business meeting summary, adapt your response to match the actual content level."
     )
     
-    # Default user prompt
+    # Default user prompt with adaptive structure
     default_user_prompt = (
-        "Please provide a comprehensive summary of the following meeting transcript with this exact structure:\n\n"
-        "# [Generate a concise, descriptive title that captures the main purpose or topic of the meeting]\n\n"
-        "## Executive Summary\n"
-        "Provide a brief overview of the meeting's main outcomes and key decisions.\n\n"
-        "## Participants\n"
-        "List the meeting participants as they appear in the transcript.\n\n"
-        "## Key Points\n"
-        "Highlight the main discussion topics and important information shared.\n\n"
-        "## Action Items\n"
-        "List specific tasks, assignments, and next steps identified during the meeting.\n\n"
-        "## Next Steps\n"
-        "Outline follow-up activities and future meetings planned.\n\n"
-        "FORMATTING REQUIREMENTS:\n"
-        "- Use markdown format for easier visualization\n"
-        "- Use bullet points where appropriate\n"
-        "- Do not use code blocks (```markdown```)\n"
-        "- Output directly without 'Here is the summary:' preambles\n\n"
-        "CRITICAL: Use the exact speaker names as they appear in the transcript - do not change, shorten, or substitute any names. "
-        "For example, if the transcript shows 'John Smith (CEO)', use exactly 'John Smith (CEO)' in the summary, not 'John' or 'John Smith'."
+        "Analyze the following transcript and provide an appropriate summary. Follow these guidelines:\n\n"
+        "1. **If this is a substantial meeting with multiple topics/decisions:**\n"
+        "   Use this structure:\n"
+        "   # [Descriptive title based on actual content]\n"
+        "   ## Executive Summary\n"
+        "   ## Participants\n"
+        "   ## Key Points\n"
+        "   ## Action Items (only if explicitly mentioned)\n"
+        "   ## Next Steps (only if explicitly discussed)\n\n"
+        "2. **If this is a brief conversation or casual discussion:**\n"
+        "   Use a simpler structure:\n"
+        "   # [Simple title describing the interaction]\n"
+        "   ## Overview\n"
+        "   ## Participants\n"
+        "   ## Main Topics Discussed\n\n"
+        "3. **If this is just a few words or a test recording:**\n"
+        "   Provide a minimal summary acknowledging the limited content.\n\n"
+        "CRITICAL RULES:\n"
+        "- Only include sections that have actual content from the transcript\n"
+        "- Use exact speaker names as they appear - never change or invent names\n"
+        "- Do not hallucinate participants, decisions, or action items not in the transcript\n"
+        "- If there are no clear action items or next steps, omit those sections\n"
+        "- Match your response complexity to the actual content level\n"
+        "- Use markdown format without code blocks\n"
+        "- Be honest about limited content rather than inventing details\n\n"
     )
 
     # Use custom prompts if provided, otherwise use defaults
