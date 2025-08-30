@@ -2,7 +2,7 @@ const Header = ({ isDarkMode, onToggleDarkMode }) => {
   return (
     <div className="header-card">
       <h1 className="header-title">
-        <img src="/logo.png" alt="MeetMemo Logo" className="header-logo" />{" "}
+        <img src={process.env.PUBLIC_URL + "/logo.png"} alt="MeetMemo Logo" className="header-logo" />{" "}
         MeetMemo
       </h1>
       <label className="theme-toggle" style={{ float: "right" }}>
