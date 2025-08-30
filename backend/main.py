@@ -952,8 +952,6 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
                 processed_line = process_markdown_text(line)
                 story.append(Paragraph(processed_line, body_style))
         
-        story.append(Spacer(1, 30))
-    
     # Transcript Section
     if transcript_data:
         story.append(PageBreak())  # Start Full Transcript on a new page
