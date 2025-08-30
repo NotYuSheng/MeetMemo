@@ -14,8 +14,7 @@ const Header = ({ isDarkMode, onToggleDarkMode }) => {
         <span className="toggle-slider"></span>
       </label>
       <p className="header-subtitle">
-        Record, transcribe, and summarize your meetings with AI-powered
-        insights
+        Record, transcribe, and summarize your meetings with AI-powered insights
       </p>
     </div>
   );

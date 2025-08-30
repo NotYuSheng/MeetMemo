@@ -10,7 +10,6 @@
   overflow: hidden;
 }
 
-
 .pdf-viewer {
   width: 85%;
   min-height: 1200px;
@@ -890,7 +889,12 @@ body {
 /* Enhanced Summary Typography */
 .summary-text {
   color: var(--text);
-  font-family: Barlow, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    Barlow,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   line-height: 1.7;
   font-size: 0.95rem;
 }
@@ -932,7 +936,8 @@ body {
   font-family: Barlow, sans-serif;
 }
 
-.summary-text h5, .summary-text h6 {
+.summary-text h5,
+.summary-text h6 {
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-muted);
@@ -964,7 +969,7 @@ body {
 }
 
 .summary-text h3 + p,
-.summary-text h3 + ul, 
+.summary-text h3 + ul,
 .summary-text h3 + ol {
   margin-top: 0.25rem;
 }
@@ -1012,7 +1017,10 @@ body {
 }
 
 /* Nested lists */
-.summary-text ul ul, .summary-text ol ol, .summary-text ul ol, .summary-text ol ul {
+.summary-text ul ul,
+.summary-text ol ol,
+.summary-text ul ol,
+.summary-text ol ul {
   margin: 0.25rem 0;
 }
 
@@ -1029,7 +1037,9 @@ body {
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
   font-size: 0.9rem;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family:
+    "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New",
+    monospace;
 }
 
 .summary-text pre {
@@ -1079,7 +1089,11 @@ body {
 
 /* Enhanced Title Section Styling */
 .summary-content > p:first-of-type {
-  background: linear-gradient(135deg, rgb(41 152 213 / 8%) 0%, rgb(41 152 213 / 3%) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(41 152 213 / 8%) 0%,
+    rgb(41 152 213 / 3%) 100%
+  );
   border: 1px solid rgb(41 152 213 / 15%);
   border-radius: 0.75rem;
   padding: 1.25rem;
@@ -1474,29 +1488,29 @@ body {
   .collapse-toggle {
     padding: 0.5rem;
   }
-  
+
   .copy-section-btn {
     opacity: 1;
     transform: none;
     padding: 0.5rem;
   }
-  
+
   .collapsible-heading {
     gap: 0.75rem;
   }
-  
+
   .custom-heading {
     font-size: 0.95rem;
   }
-  
+
   .summary-text h1 {
     font-size: 1.5rem;
   }
-  
+
   .summary-text h2 {
     font-size: 1.2rem;
   }
-  
+
   .summary-text h3 {
     font-size: 1.1rem;
   }
@@ -1553,11 +1567,12 @@ body {
   background-color: transparent;
   padding: 0;
   color: var(--text);
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family:
+    "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New",
+    monospace;
 }
 
 /* Ensure inline formatting works correctly */
-
 
 .btn.btn-past-1 {
   background: #2998d5;
@@ -2108,8 +2123,13 @@ input:checked + .toggle-slider::after {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Meeting Status Icons */

@@ -17,7 +17,7 @@ const SummaryView = ({
   onExportPDF,
   onRename,
   isPdfLoaded,
-  onPdfLoaded
+  onPdfLoaded,
 }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState("");
@@ -52,7 +52,7 @@ const SummaryView = ({
 
   return (
     <div className="summary-content">
-      <div className="summary-actions-group" style={{ marginBottom: '1rem' }}>
+      <div className="summary-actions-group" style={{ marginBottom: "1rem" }}>
         <button
           onClick={onTogglePromptInputs}
           className="btn btn-secondary btn-small"
@@ -66,10 +66,7 @@ const SummaryView = ({
           <Download className="btn-icon" />
           Export Markdown
         </button>
-        <button
-          onClick={onExportPDF}
-          className="btn btn-success btn-small"
-        >
+        <button onClick={onExportPDF} className="btn btn-success btn-small">
           <Download className="btn-icon" />
           Export PDF
         </button>
@@ -79,9 +76,7 @@ const SummaryView = ({
       {showPromptInputs && (
         <div className="custom-prompts-section">
           <div className="prompt-input-group">
-            <label htmlFor="system-prompt">
-              System Prompt (Optional):
-            </label>
+            <label htmlFor="system-prompt">System Prompt (Optional):</label>
             <textarea
               id="system-prompt"
               value={systemPrompt}
@@ -152,8 +147,8 @@ const SummaryView = ({
         </p>
       )}
       <div className="summary-pdf">
-        <PDFViewer 
-          selectedMeetingId={selectedMeetingId} 
+        <PDFViewer
+          selectedMeetingId={selectedMeetingId}
           onPdfLoaded={onPdfLoaded}
         />
       </div>

@@ -4,7 +4,7 @@ const MeetingsList = ({
   meetingList,
   selectedMeetingId,
   onMeetingSelect,
-  onMeetingDelete
+  onMeetingDelete,
 }) => {
   const truncateFileName = (name, maxLength = 35) => {
     if (!name) return "";
@@ -26,7 +26,7 @@ const MeetingsList = ({
           const colorClass = `btn-past-${pattern[index % pattern.length]}`;
           const isProcessing = meeting.status_code === "202";
           const hasError = meeting.status_code === "500";
-          
+
           return (
             <div key={meeting.uuid} className="meeting-entry">
               <button
@@ -43,7 +43,9 @@ const MeetingsList = ({
               >
                 {truncateFileName(meeting.name)}
                 {isProcessing && <Clock className="btn-icon status-icon" />}
-                {hasError && <AlertCircle className="btn-icon status-icon error-icon" />}
+                {hasError && (
+                  <AlertCircle className="btn-icon status-icon error-icon" />
+                )}
               </button>
               <button
                 className="btn btn-discrete btn-small delete-meeting-btn"

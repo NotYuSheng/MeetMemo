@@ -12,7 +12,7 @@ import {
   formatSpeakerName,
   getDisplaySpeakerName,
   processTranscriptWithSpeakerIds,
-  generateProfessionalFilename
+  generateProfessionalFilename,
 } from "./utils/helpers";
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
@@ -35,7 +35,8 @@ const MeetingTranscriptionApp = () => {
   const [speakerNameMaps, setSpeakerNameMaps] = useState({});
   const speakerNameMapRef = useRef({});
   const [isPdfLoaded, setIsPdfLoaded] = useState(false);
-  const [speakerIdentificationLoading, setSpeakerIdentificationLoading] = useState(false);
+  const [speakerIdentificationLoading, setSpeakerIdentificationLoading] =
+    useState(false);
   const [speakerSuggestions, setSpeakerSuggestions] = useState(null);
   const [transcriptSaveStatus, setTranscriptSaveStatus] = useState(null);
   const [, setIsSavingTranscript] = useState(false);
@@ -255,9 +256,11 @@ const MeetingTranscriptionApp = () => {
 
       // Check for HTTP 413 error (Request Entity Too Large)
       if (response.status === 413) {
-        throw new Error("File too large. Please upload a file smaller than 100MB.");
+        throw new Error(
+          "File too large. Please upload a file smaller than 100MB.",
+        );
       }
-      
+
       if (!response.ok) {
         throw new Error(`Upload failed with status ${response.status}`);
       }
@@ -271,7 +274,9 @@ const MeetingTranscriptionApp = () => {
 
       // If we get a transcript immediately, use it
       if (data.transcript && Array.isArray(data.transcript)) {
-        const processedTranscript = processTranscriptWithSpeakerIds(data.transcript);
+        const processedTranscript = processTranscriptWithSpeakerIds(
+          data.transcript,
+        );
         setTranscript(processedTranscript);
         setOriginalTranscript(processedTranscript);
         setSelectedMeetingId(data.uuid);
@@ -380,14 +385,23 @@ const MeetingTranscriptionApp = () => {
       .then((data) => {
         if (data.status === "success" && data.suggestions) {
           const filteredSuggestions = Object.fromEntries(
-            Object.entries(data.suggestions).filter(([, suggestion]) => 
-              suggestion && suggestion !== "Cannot be determined" && !suggestion.toLowerCase().includes("cannot be determined")
-            )
+            Object.entries(data.suggestions).filter(
+              ([, suggestion]) =>
+                suggestion &&
+                suggestion !== "Cannot be determined" &&
+                !suggestion.toLowerCase().includes("cannot be determined"),
+            ),
           );
           setSpeakerSuggestions(filteredSuggestions);
-          console.log("Speaker identification suggestions (filtered):", filteredSuggestions);
+          console.log(
+            "Speaker identification suggestions (filtered):",
+            filteredSuggestions,
+          );
         } else {
-          console.error("Speaker identification failed:", data.error || "Unknown error");
+          console.error(
+            "Speaker identification failed:",
+            data.error || "Unknown error",
+          );
         }
       })
       .catch((err) => {
@@ -400,29 +414,31 @@ const MeetingTranscriptionApp = () => {
 
   const handleSpeakerNameChange = (originalSpeaker, newName) => {
     if (!newName) return;
-    
+
     setTranscript((prevTranscript) =>
       prevTranscript.map((entry) =>
-        entry.originalSpeaker === originalSpeaker ? { ...entry, speaker: newName } : entry,
+        entry.originalSpeaker === originalSpeaker
+          ? { ...entry, speaker: newName }
+          : entry,
       ),
     );
-    
+
     const updatedMapping = {
       ...currentSpeakerNameMap,
       [originalSpeaker]: newName,
     };
-    
-    setSpeakerNameMaps(prev => ({
+
+    setSpeakerNameMaps((prev) => ({
       ...prev,
-      [selectedMeetingId]: updatedMapping
+      [selectedMeetingId]: updatedMapping,
     }));
-    
+
     handleSubmitSpeakerNames(updatedMapping);
   };
 
   const handleSubmitSpeakerNames = (mappingOverride = null) => {
     if (!selectedMeetingId) return;
-    
+
     const currentSpeakerNameMap = mappingOverride || speakerNameMapRef.current;
 
     fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/speakers`, {
@@ -435,7 +451,7 @@ const MeetingTranscriptionApp = () => {
         return res.json();
       })
       .then(() => {
-        setSummary(prev => prev ? { ...prev, summary: null } : null);
+        setSummary((prev) => (prev ? { ...prev, summary: null } : null));
         if (summary) {
           fetchSummary(selectedMeetingId, true);
         }
@@ -446,58 +462,67 @@ const MeetingTranscriptionApp = () => {
       });
   };
 
-  const saveTranscriptToServer = useCallback(async (updatedTranscript) => {
-    if (!selectedMeetingId) return;
-    
-    setIsSavingTranscript(true);
-    setTranscriptSaveStatus('saving');
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/transcript`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: updatedTranscript })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save transcript');
-      }
-      
-      setTranscriptSaveStatus('saved');
-      setTimeout(() => setTranscriptSaveStatus(null), 2000);
-    } catch (error) {
-      console.error('Error saving transcript:', error);
-      setTranscriptSaveStatus('error');
-      setTimeout(() => setTranscriptSaveStatus(null), 3000);
-    } finally {
-      setIsSavingTranscript(false);
-    }
-  }, [selectedMeetingId]);
+  const saveTranscriptToServer = useCallback(
+    async (updatedTranscript) => {
+      if (!selectedMeetingId) return;
 
-  const debouncedSaveTranscript = useCallback((updatedTranscript) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    
-    debounceTimeoutRef.current = setTimeout(() => {
-      saveTranscriptToServer(updatedTranscript);
-    }, 1000);
-  }, [saveTranscriptToServer]);
+      setIsSavingTranscript(true);
+      setTranscriptSaveStatus("saving");
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/jobs/${selectedMeetingId}/transcript`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transcript: updatedTranscript }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to save transcript");
+        }
+
+        setTranscriptSaveStatus("saved");
+        setTimeout(() => setTranscriptSaveStatus(null), 2000);
+      } catch (error) {
+        console.error("Error saving transcript:", error);
+        setTranscriptSaveStatus("error");
+        setTimeout(() => setTranscriptSaveStatus(null), 3000);
+      } finally {
+        setIsSavingTranscript(false);
+      }
+    },
+    [selectedMeetingId],
+  );
+
+  const debouncedSaveTranscript = useCallback(
+    (updatedTranscript) => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        saveTranscriptToServer(updatedTranscript);
+      }, 1000);
+    },
+    [saveTranscriptToServer],
+  );
 
   const handleTranscriptTextChange = (entryId, newText) => {
-    const updatedTranscript = transcript.map(entry => 
-      entry.id === entryId ? { ...entry, text: newText } : entry
+    const updatedTranscript = transcript.map((entry) =>
+      entry.id === entryId ? { ...entry, text: newText } : entry,
     );
-    
+
     setTranscript(updatedTranscript);
     debouncedSaveTranscript(updatedTranscript);
   };
 
   const applySpeakerSuggestion = (originalSpeaker, suggestedName) => {
     if (!selectedMeetingId || !suggestedName) return;
-    
+
     handleSpeakerNameChange(originalSpeaker, suggestedName);
-    setSpeakerSuggestions(prev => {
+    setSpeakerSuggestions((prev) => {
       const updated = { ...prev };
       delete updated[formatSpeakerName(originalSpeaker)];
       return Object.keys(updated).length > 0 ? updated : null;
@@ -505,7 +530,7 @@ const MeetingTranscriptionApp = () => {
   };
 
   const dismissSpeakerSuggestion = (speakerName) => {
-    setSpeakerSuggestions(prev => {
+    setSpeakerSuggestions((prev) => {
       const updated = { ...prev };
       delete updated[speakerName];
       return Object.keys(updated).length > 0 ? updated : null;
@@ -514,8 +539,12 @@ const MeetingTranscriptionApp = () => {
 
   const resetTranscriptEdits = () => {
     if (!originalTranscript.length) return;
-    
-    if (window.confirm("Are you sure you want to reset all transcript edits? This will revert all text changes back to the original.")) {
+
+    if (
+      window.confirm(
+        "Are you sure you want to reset all transcript edits? This will revert all text changes back to the original.",
+      )
+    ) {
       setTranscript([...originalTranscript]);
       console.log("Reset transcript to original version");
     }
@@ -558,26 +587,36 @@ const MeetingTranscriptionApp = () => {
 
   const exportTranscriptToJson = () => {
     if (transcript.length === 0) return;
-    
+
     const transcriptData = transcript.map((entry) => ({
-      speaker: getDisplaySpeakerName(entry.speaker, entry.originalSpeaker, currentSpeakerNameMap),
+      speaker: getDisplaySpeakerName(
+        entry.speaker,
+        entry.originalSpeaker,
+        currentSpeakerNameMap,
+      ),
       text: entry.text,
       start: entry.start,
       end: entry.end,
-      speakerId: entry.speakerId
+      speakerId: entry.speakerId,
     }));
 
-    const jsonContent = JSON.stringify({
-      filename: summary?.meetingTitle || "Meeting Transcript",
-      transcript: transcriptData,
-      exportedAt: new Date().toISOString()
-    }, null, 2);
+    const jsonContent = JSON.stringify(
+      {
+        filename: summary?.meetingTitle || "Meeting Transcript",
+        transcript: transcriptData,
+        exportedAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    );
 
-    const blob = new Blob([jsonContent], { type: "application/json;charset=utf-8" });
+    const blob = new Blob([jsonContent], {
+      type: "application/json;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = generateProfessionalFilename(summary?.meetingTitle, 'json');
+    link.download = generateProfessionalFilename(summary?.meetingTitle, "json");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -586,110 +625,114 @@ const MeetingTranscriptionApp = () => {
 
   const exportSummaryToMarkdown = async () => {
     if (!summary || !summary.meetingTitle || !selectedMeetingId) return;
-    
+
     try {
-      const currentTime = new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric', 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
+      const currentTime = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
       });
-      
-      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/markdown`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+
+      const response = await fetch(
+        `${API_BASE_URL}/jobs/${selectedMeetingId}/markdown`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            generated_on: currentTime,
+          }),
         },
-        body: JSON.stringify({
-          generated_on: currentTime
-        })
-      });
-      
+      );
+
       if (!response.ok) {
         throw new Error(`Failed to generate markdown: ${response.status}`);
       }
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
+
+      const link = document.createElement("a");
       link.href = url;
-      
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = generateProfessionalFilename(summary.meetingTitle, 'md');
-      
+
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = generateProfessionalFilename(summary.meetingTitle, "md");
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch) {
           filename = filenameMatch[1];
         }
       }
-      
+
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
     } catch (error) {
-      console.error('Failed to export markdown:', error);
+      console.error("Failed to export markdown:", error);
       alert(`Failed to export markdown: ${error.message}`);
     }
   };
 
   const exportToPDF = async () => {
     if (!summary || !selectedMeetingId) return;
-    
+
     try {
-      const currentTime = new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric', 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
+      const currentTime = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
       });
-      
-      const response = await fetch(`${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+
+      const response = await fetch(
+        `${API_BASE_URL}/jobs/${selectedMeetingId}/pdf`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            generated_on: currentTime,
+          }),
         },
-        body: JSON.stringify({
-          generated_on: currentTime
-        })
-      });
-      
+      );
+
       if (!response.ok) {
         throw new Error(`Failed to generate PDF: ${response.status}`);
       }
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
+
+      const link = document.createElement("a");
       link.href = url;
-      
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = generateProfessionalFilename(summary.meetingTitle, 'pdf');
-      
+
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = generateProfessionalFilename(summary.meetingTitle, "pdf");
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch) {
           filename = filenameMatch[1];
         }
       }
-      
+
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
     } catch (error) {
-      console.error('Failed to export PDF:', error);
+      console.error("Failed to export PDF:", error);
       alert(`Failed to export PDF: ${error.message}`);
     }
   };
@@ -712,14 +755,14 @@ const MeetingTranscriptionApp = () => {
   }, []);
 
   return (
-    <div className={`app-container ${isPdfLoaded ? 'pdf-expanded' : ''}`}>
+    <div className={`app-container ${isPdfLoaded ? "pdf-expanded" : ""}`}>
       <div className="max-width-container">
         <Header isDarkMode={isDarkMode} onToggleDarkMode={toggleDarkMode} />
 
         <div className="main-grid">
           {/* Left Column */}
           <div className="left-column">
-            <AudioControls 
+            <AudioControls
               onAudioProcessed={handleAudioProcessed}
               isProcessing={isProcessing}
               selectedModel={selectedModel}
@@ -748,7 +791,7 @@ const MeetingTranscriptionApp = () => {
               </div>
 
               {showSummary ? (
-                <SummaryView 
+                <SummaryView
                   summary={summary}
                   summaryLoading={summaryLoading}
                   selectedMeetingId={selectedMeetingId}
@@ -757,7 +800,9 @@ const MeetingTranscriptionApp = () => {
                   showPromptInputs={showPromptInputs}
                   onCustomPromptChange={setCustomPrompt}
                   onSystemPromptChange={setSystemPrompt}
-                  onTogglePromptInputs={() => setShowPromptInputs(!showPromptInputs)}
+                  onTogglePromptInputs={() =>
+                    setShowPromptInputs(!showPromptInputs)
+                  }
                   onRegenerateSummary={(uuid) => fetchSummary(uuid, true)}
                   onExportMarkdown={exportSummaryToMarkdown}
                   onExportPDF={exportToPDF}
@@ -792,7 +837,7 @@ const MeetingTranscriptionApp = () => {
 
           {/* Right Column – Past Meetings */}
           <div className="right-column">
-            <MeetingsList 
+            <MeetingsList
               meetingList={meetingList}
               selectedMeetingId={selectedMeetingId}
               onMeetingSelect={loadPastMeeting}
