@@ -618,12 +618,15 @@ body {
 }
 
 .transcript-container {
-  max-height: 30rem;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  min-height: 20rem; /* Ensure transcript tab always has adequate height */
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 2%);
+  max-height: 30rem;
+  overflow-y: auto;
+  min-height: 20rem;
 }
 
 .transcript-entry {
@@ -1087,6 +1090,7 @@ body {
 
 /* Summary Content Container Enhancements - moved to earlier .summary-content rule */
 
+[data-theme="dark"] .transcript-container,
 [data-theme="dark"] .summary-content {
   background: rgb(0 0 0 / 10%);
 }
@@ -1970,11 +1974,23 @@ input:checked + .toggle-slider::after {
 }
 
 /* Actions Group - General */
+.transcript-container .actions-group,
+.summary-content .summary-actions-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Fallback for general actions groups */
 .actions-group {
   display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* Summary Actions Group */
@@ -1983,6 +1999,7 @@ input:checked + .toggle-slider::after {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* Rename Buttons Group */
