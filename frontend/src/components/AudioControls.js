@@ -1,19 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import {
-  Mic,
-  Square,
-  Pause,
-  Play,
-  Upload,
-  Send,
-  Trash2,
-} from "lucide-react";
+import { Mic, Square, Pause, Play, Upload, Send, Trash2 } from "lucide-react";
 
-const AudioControls = ({ 
-  onAudioProcessed, 
-  isProcessing, 
-  selectedModel, 
-  onModelChange 
+const AudioControls = ({
+  onAudioProcessed,
+  isProcessing,
+  selectedModel,
+  onModelChange,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -38,7 +30,9 @@ const AudioControls = ({
     try {
       // Check if getUserMedia is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("getUserMedia is not supported in this browser. Please use a modern browser or enable microphone permissions.");
+        throw new Error(
+          "getUserMedia is not supported in this browser. Please use a modern browser or enable microphone permissions.",
+        );
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -61,24 +55,28 @@ const AudioControls = ({
       setIsRecording(true);
     } catch (error) {
       console.error("Error starting recording:", error);
-      
+
       // Provide user-friendly error messages
       let errorMessage = "Failed to access microphone. ";
-      
+
       if (error.name === "NotAllowedError") {
-        errorMessage += "Please allow microphone access in your browser settings and try again.";
+        errorMessage +=
+          "Please allow microphone access in your browser settings and try again.";
       } else if (error.name === "NotFoundError") {
-        errorMessage += "No microphone found. Please connect a microphone and try again.";
+        errorMessage +=
+          "No microphone found. Please connect a microphone and try again.";
       } else if (error.name === "NotSupportedError") {
-        errorMessage += "Your browser doesn't support audio recording. Please use Chrome, Firefox, or Safari.";
+        errorMessage +=
+          "Your browser doesn't support audio recording. Please use Chrome, Firefox, or Safari.";
       } else if (error.name === "NotReadableError") {
         errorMessage += "Microphone is already in use by another application.";
       } else if (error.message.includes("getUserMedia")) {
-        errorMessage += "Please use HTTPS or localhost to access the microphone.";
+        errorMessage +=
+          "Please use HTTPS or localhost to access the microphone.";
       } else {
         errorMessage += error.message;
       }
-      
+
       alert(errorMessage);
     }
   };
@@ -218,9 +216,7 @@ const AudioControls = ({
               <button
                 onClick={isPaused ? resumeRecording : pauseRecording}
                 className="btn btn-discrete"
-                title={
-                  isPaused ? "Resume Recording" : "Pause Recording"
-                }
+                title={isPaused ? "Resume Recording" : "Pause Recording"}
               >
                 {isPaused ? (
                   <Play className="btn-icon" />
@@ -313,22 +309,14 @@ const AudioControls = ({
           <h3 className="audio-preview-title">
             Upload Preview - {selectedFile.name}
           </h3>
-          <audio
-            ref={uploadPlayerRef}
-            controls
-            className="audio-player"
-          />
+          <audio ref={uploadPlayerRef} controls className="audio-player" />
         </div>
       )}
 
       {recordedAudio && (
         <div className="audio-preview">
           <h3 className="audio-preview-title">Recording Preview</h3>
-          <audio
-            ref={audioPlayerRef}
-            controls
-            className="audio-player"
-          />
+          <audio ref={audioPlayerRef} controls className="audio-player" />
         </div>
       )}
 
