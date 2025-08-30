@@ -15,7 +15,9 @@ import {
   generateProfessionalFilename,
 } from "./utils/helpers";
 
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+import { mainLogger, apiLogger } from "./utils/logger";
+
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
 
 const MeetingTranscriptionApp = () => {
   const [transcript, setTranscript] = useState([]);
@@ -197,7 +199,13 @@ const MeetingTranscriptionApp = () => {
         }));
         setMeetingList(list);
       })
-      .catch((err) => console.error("Failed to fetch meeting list", err));
+      .catch((err) => {
+        const errorInfo = apiLogger.handleApiError(err, 'fetching meeting list');
+        mainLogger.error("Failed to fetch meeting list", err, {
+          userFriendlyMessage: errorInfo.userFriendlyMessage
+        });
+        // Could show a toast notification here instead of console.error
+      });
   };
 
   const pollJobStatus = async (uuid, maxAttempts = 30) => {
@@ -234,7 +242,7 @@ const MeetingTranscriptionApp = () => {
         // Job still processing, wait and retry
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
-        console.error("Error polling job status:", error);
+        apiLogger.error("Error polling job status", error, { uuid, attempt });
         throw error;
       }
     }
@@ -290,8 +298,20 @@ const MeetingTranscriptionApp = () => {
         throw new Error("No transcript or job ID returned");
       }
     } catch (err) {
-      console.error("Failed to process audio:", err);
-      alert(`Failed to process audio: ${err.message}`);
+      const errorInfo = apiLogger.handleApiError(err, 'audio processing', { 
+        audioFileName: audioFile.name,
+        audioFileSize: audioFile.size,
+        selectedModel
+      });
+      
+      mainLogger.error("Failed to process audio file", err, {
+        audioFileName: audioFile.name,
+        audioFileSize: audioFile.size,
+        selectedModel,
+        userFriendlyMessage: errorInfo.userFriendlyMessage
+      });
+      
+      alert(`Failed to process audio: ${errorInfo.userFriendlyMessage}`);
     } finally {
       setIsProcessing(false);
     }
