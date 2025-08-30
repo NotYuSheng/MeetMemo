@@ -203,6 +203,53 @@ def get_unique_filename(directory: str, desired_filename: str, exclude_path: str
     return filename
 
 
+def generate_professional_filename(meeting_title: str, file_type: str, include_date: bool = True) -> str:
+    """
+    Generate a professional filename for export files.
+    
+    Args:
+        meeting_title: The meeting title/filename
+        file_type: The file type (pdf, markdown, json)
+        include_date: Whether to include date in filename
+    
+    Returns:
+        A professional filename string
+    """
+    import re
+    from datetime import datetime
+    
+    # Clean the meeting title for filename use
+    clean_title = (meeting_title or "meeting")
+    
+    # Remove audio file extensions if present
+    clean_title = re.sub(r'\.(wav|mp3|mp4|m4a|flac|webm)$', '', clean_title, flags=re.IGNORECASE)
+    
+    # Replace invalid filename characters with hyphens
+    clean_title = re.sub(r'[<>:"/\\|?*]', '', clean_title)
+    clean_title = re.sub(r'\s+', '-', clean_title)  # Replace spaces with hyphens
+    clean_title = clean_title.strip('-')  # Remove leading/trailing hyphens
+    clean_title = clean_title[:50].lower()  # Limit length and convert to lowercase
+    
+    # Add date if requested
+    date_str = datetime.now().strftime('%Y-%m-%d') if include_date else ''
+    
+    # Generate filename based on type - standardized naming
+    if file_type == 'pdf':
+        base_name = f"{clean_title}_summary"
+    elif file_type == 'markdown':
+        base_name = f"{clean_title}_summary"
+    elif file_type == 'json':
+        base_name = f"{clean_title}_transcript"
+    else:
+        base_name = f"{clean_title}_export"
+    
+    # Combine with date and extension
+    if date_str:
+        return f"{base_name}_{date_str}.{file_type}"
+    else:
+        return f"{base_name}.{file_type}"
+
+
 def upload_audio(uuid: str, file: UploadFile) -> str:
     """
     Uploads the audio file to the desired directory,
@@ -663,7 +710,9 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
         rightMargin=inch,
         leftMargin=inch,
         topMargin=inch,
-        bottomMargin=inch*1.2  # Extra space for footer
+        bottomMargin=inch*1.2,  # Extra space for footer
+        title=summary_data.get('meetingTitle', 'MeetMemo Meeting Report'),
+        author='MeetMemo AI'
     )
     
     # Define page template
@@ -1639,9 +1688,8 @@ async def export_professional_pdf(uuid: str, request: Request = None):
         # Generate professional PDF
         pdf_buffer = generate_professional_pdf(summary_data, transcript_data, generated_on)
         
-        # Create filename
-        safe_filename = summary_data['meetingTitle'].replace(' ', '_').replace('/', '_')
-        filename = f"meetmemo_{safe_filename}_{uuid[:8]}.pdf"
+        # Create professional filename
+        filename = generate_professional_filename(summary_data['meetingTitle'], 'pdf')
         
         return StreamingResponse(
             BytesIO(pdf_buffer.read()),
@@ -1702,9 +1750,8 @@ async def export_markdown_summary(uuid: str, request: Request = None):
                 end_time = entry.get('end', '0.00')
                 markdown_content += f"**{speaker}** *({start_time}s - {end_time}s)*: {text}\n\n"
         
-        # Create filename
-        safe_filename = meeting_title.replace(' ', '_').replace('/', '_')
-        filename = f"meetmemo_{safe_filename}_{uuid[:8]}.md"
+        # Create professional filename
+        filename = generate_professional_filename(meeting_title, 'markdown')
         
         # Create BytesIO object with markdown content
         markdown_buffer = BytesIO(markdown_content.encode('utf-8'))
