@@ -100,5 +100,5 @@ frontend/package.json
 # -----------------------------
 # Code Assist Tools
 # -----------------------------
-.claude
+.claude/*
 CLAUDE.md
