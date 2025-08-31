@@ -1089,7 +1089,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         # Transcription & diarization of text
         hf_token = os.getenv("HF_TOKEN")
         pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization", 
+            "pyannote/speaker-diarization-3.1", 
             use_auth_token=hf_token
         )
         asr = model.transcribe(file_path, language="en")

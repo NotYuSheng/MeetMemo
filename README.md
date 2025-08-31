@@ -48,8 +48,7 @@ MeetMemo is a containerized application with three main services:
 2. **Accept Hugging Face model licenses:**
    
    Visit these pages and accept the licenses (fill in any required fields):
-   - [Speaker Diarization](https://huggingface.co/pyannote/speaker-diarization)
-   - [Segmentation](https://huggingface.co/pyannote/segmentation)  
+   - [Speaker Diarization 3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
    - [Segmentation 3.0](https://huggingface.co/pyannote/segmentation-3.0)
 
 3. **Create Hugging Face access token:**
@@ -126,6 +125,7 @@ docker compose logs -f meetmemo-backend # View backend logs
 - **GPU not detected**: Verify NVIDIA Docker runtime is installed
 - **Model download fails**: Check Hugging Face token and license acceptance
 - **Audio upload issues**: Ensure supported file format (WAV recommended)
+- **PyTorch Lightning warning**: If you see checkpoint upgrade warnings, run the suggested upgrade command in the container
 
 ### Performance Tips
 - **Faster processing**: Use smaller Whisper models (base, small)
