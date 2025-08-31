@@ -1,71 +1,156 @@
 # MeetMemo
 
-MeetMemo is designed to record or upload meeting audio, producing diarized transcripts and concise summaries by using LLMs.
+MeetMemo is an AI-powered meeting transcription application that combines cutting-edge technologies to provide accurate speech-to-text conversion, speaker identification (diarization), and intelligent summarization. Perfect for meetings, interviews, lectures, and any audio content requiring detailed transcription and analysis.
+
+## Key Features
+
+- **Audio Recording & Upload**: Record meetings directly in the browser or upload existing audio files
+- **Advanced Speech Recognition**: Powered by OpenAI's Whisper for high-accuracy transcription  
+- **Speaker Diarization**: Automatically identify and label different speakers using PyAnnote.audio
+- **AI-Powered Summarization**: Generate concise summaries with key points and action items using LLMs
+- **Real-time Processing**: Monitor transcription progress with live status updates
+- **Speaker Management**: Edit and customize speaker names for better organization
+- **Export Options**: Download transcripts and summaries as PDF or text files
+- **HTTPS Support**: Secure SSL setup with auto-generated certificates
+- **Dark/Light Mode**: Toggle between themes for comfortable viewing
+
+## Architecture
+
+MeetMemo is a containerized application with three main services:
+
+- **Backend**: FastAPI server with Whisper, PyAnnote, and LLM integration
+- **Frontend**: React 19 application with modern UI components
+- **Nginx**: Reverse proxy with SSL termination and request routing
+
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+### Required Software
+- **Docker**: [Install Docker](https://docs.docker.com/get-docker/)
+- **Docker Compose**: [Install Docker Compose](https://docs.docker.com/compose/install/)
 
-- **Docker:** [Get Docker](https://docs.docker.com/get-docker/)
-- **Docker Compose:** [Get Docker Compose](https://docs.docker.com/compose/install/)
-- **NVIDIA GPU:** The backend service is configured to use a GPU for faster processing.
-- **Hugging Face Account:** You'll need a Hugging Face account and an access token to use the PyAnnote models.
+### Hardware Requirements
+- **NVIDIA GPU**: Required for optimal performance (CUDA-compatible)
+- **RAM**: Minimum 8GB recommended (16GB+ for large files)
+- **Storage**: At least 10GB free space for models and audio files
 
-## Installation and Setup
+### External Services
+- **Hugging Face Account**: Required for PyAnnote model access
+- **LLM API**: External LLM service for summarization (OpenAI, Anthropic, etc.)
 
-1.  **Clone the repository:**
+## Quick Start
 
-    ```bash
-    git clone https://github.com/notyusheng/MeetMemo.git
-    cd MeetMemo
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/notyusheng/MeetMemo.git
+   cd MeetMemo
+   ```
 
-2.  **Accept the Model License on Hugging Face.**
+2. **Accept Hugging Face model licenses:**
+   
+   Visit these pages and accept the licenses (fill in any required fields):
+   - [Speaker Diarization](https://huggingface.co/pyannote/speaker-diarization)
+   - [Segmentation](https://huggingface.co/pyannote/segmentation)  
+   - [Segmentation 3.0](https://huggingface.co/pyannote/segmentation-3.0)
 
-    Before you can download the pipeline, you must visit the model pages and fill in the fields (You can just put anything you want in the fields) on each gated license:
+3. **Create Hugging Face access token:**
+   - Go to [Hugging Face tokens page](https://huggingface.co/settings/tokens)
+   - Click "New token", choose `Read` scope, and copy the token
 
-    Speaker Diarization: https://huggingface.co/pyannote/speaker-diarization
+4. **Set up environment file:**
+   ```bash
+   cp example.env .env
+   ```
+   
+   Edit `.env` and update the required variables:
+   ```env
+   HF_TOKEN=your_huggingface_token_here
+   LLM_API_URL=your_llm_url_here
+   LLM_MODEL_NAME=your_llm_model_name_here
+   LLM_API_KEY=your_llm_api_key_here
+   ```
 
-    Segmentation (required by diarization): https://huggingface.co/pyannote/segmentation
+5. **Build and run:**
+   ```bash
+   docker compose build
+   docker compose up
+   ```
 
-    Segmentation 3.0 (required by diarization): https://huggingface.co/pyannote/segmentation-3.0
-
-3.  **Create a Hugging Face Access Token:**
-
-    - Go to your Hugging Face [tokens page](https://huggingface.co/settings/tokens).
-    - Click "New token", choose the `Read` scope, and copy the generated token.
-
-4.  **Set up your environment file:**
-
-    - Create a `.env` file in the root directory by copying the example:
-
-      ```bash
-      cp example.env .env
-      ```
-
-    - Open the `.env` file and update the `HF_TOKEN` variable with your newly generated Hugging Face token:
-
-      ```env
-      HF_TOKEN=your_huggingface_token_here
-      ```
-    - Update the `LLM_API_URL` and `LLM_MODEL_NAME` variables to allow the backend to communicate with the LLM model you are using for summarisation of the transcripts.
-        ```env
-        LLM_API_URL=your_llm_url_here
-        LLM_MODEL_NAME=your_llm_model_name_here
-        ```
-
-5.  **Build and run the application:**
-
-    ```bash
-    docker compose build
-    docker compose up
-    ```
-
-    This will build the Docker images for the backend and frontend and start the services.
+6. **Access the application:**
+   
+   Open your browser and navigate to `https://localhost` or `http://localhost:3000/MeetMemo`
 
 ## Usage
 
-Once the application is running, you can access the app at `http://localhost:3000/MeetMemo`. 
+### Basic Workflow
+1. **Upload/Record**: Upload an audio file or record directly in the browser
+2. **Transcribe**: Click "Start Transcription" to begin processing  
+3. **Review**: View the diarized transcript with speaker labels
+4. **Customize**: Edit speaker names for better identification
+5. **Summarize**: Generate AI-powered summaries with key insights
+6. **Export**: Download transcripts and summaries for future reference
+
+### Advanced Features
+- **Speaker Management**: Click speaker labels to rename them
+- **Custom Prompts**: Use custom prompts for tailored summarization
+- **Job Management**: Track multiple transcription jobs
+- **Export Options**: Multiple format support for transcripts and summaries
+
+## Development
+
+### Frontend Development
+```bash
+cd frontend
+npm install
+npm start          # Start development server
+npm run build      # Build for production
+npm test           # Run tests
+```
+
+### Backend Development  
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py     # Run FastAPI server directly
+```
+
+### Docker Development
+```bash
+docker compose build                    # Build containers
+docker compose up -d                   # Run in detached mode
+docker compose logs -f meetmemo-backend # View backend logs
+```
+
+## Troubleshooting
+
+### Common Issues
+- **GPU not detected**: Verify NVIDIA Docker runtime is installed
+- **Model download fails**: Check Hugging Face token and license acceptance
+- **Audio upload issues**: Ensure supported file format (WAV recommended)
+
+### Performance Tips
+- **Faster processing**: Use smaller Whisper models (base, small)
+- **Higher accuracy**: Use larger models (medium, large) with quality audio input
+
+## Security
+
+- All audio processing happens locally except LLM summarization
+- Files stored in secure Docker volumes
+- HTTPS support with auto-generated SSL certificates
+- No authentication required for local deployment
 
 ## License
 
 This project is licensed under the MIT License.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/notyusheng/MeetMemo/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/notyusheng/MeetMemo/discussions)
