@@ -1,6 +1,6 @@
 # MeetMemo
 
-MeetMemo is a meeting transcription app that runs entirely offline. It converts speech to text, separates speakers (diarization), and generates summaries of discussions. You can also configure custom prompts and connect it to your local LLM server. Use it for meetings, interviews, lectures, or any audio where you need a clear transcript and summary.
+A meeting transcription app that runs entirely offline. It converts speech to text, separates speakers (diarization), and generates summaries of discussions. You can also configure custom prompts and connect it to your local LLM server. Use it for meetings, interviews, lectures, or any audio where you need a clear transcript and summary.
 
 ## Demo
 
