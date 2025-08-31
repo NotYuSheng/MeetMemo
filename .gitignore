@@ -104,9 +104,3 @@ frontend/package.json
 *.key
 *.crt
 *.csr
-
-# -----------------------------
-# Code Assist Tools
-# -----------------------------
-.claude/*
-CLAUDE.md
