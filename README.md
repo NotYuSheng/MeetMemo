@@ -2,6 +2,14 @@
 
 MeetMemo is an AI-powered meeting transcription application that combines cutting-edge technologies to provide accurate speech-to-text conversion, speaker identification (diarization), and intelligent summarization. Perfect for meetings, interviews, lectures, and any audio content requiring detailed transcription and analysis.
 
+## Demo
+
+<div align="center">
+
+![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/MeetMemo_Demo.gif) <br>
+
+</div>
+
 ## Key Features
 
 - **Audio Recording & Upload**: Record meetings directly in the browser or upload existing audio files (MP3, WAV, M4A, FLAC, etc.)
