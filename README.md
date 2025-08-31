@@ -6,7 +6,7 @@ MeetMemo is an AI-powered meeting transcription application that combines cuttin
 
 <div align="center">
 
-![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/DEMO.gif) <br>
+![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/MeetMemo_Demo.gif) <br>
 
 </div>
 
