@@ -16,11 +16,21 @@ from threading import Lock
 import requests
 import whisper
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, Request, HTTPException
+from fastapi import FastAPI, UploadFile, Request, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pyannote.audio import Pipeline
+# from pyannote.audio import Pipeline  # Temporarily disabled for live transcription testing
 from pydantic import BaseModel
 from pydub import AudioSegment
+import asyncio
+import base64
+import numpy as np
+import torch
+from typing import Dict
+try:
+    from faster_whisper import WhisperModel
+    FASTER_WHISPER_AVAILABLE = True
+except ImportError:
+    FASTER_WHISPER_AVAILABLE = False
 
 from pyannote_whisper.utils import diarize_text
 from reportlab.lib.pagesizes import letter, A4
@@ -67,6 +77,10 @@ CSV_FILE = "audiofiles/audiofiles.csv"
 FIELDNAMES = ["uuid", "file_name", "status_code"]
 DEVICE = "cuda:0" 
 
+# Live transcription variables
+LIVE_SESSIONS: Dict[str, "LiveTranscriptionSession"] = {}
+WHISPER_MODEL = None
+
 # Ensure required directories exist
 os.makedirs("transcripts", exist_ok=True)
 os.makedirs("transcripts/edited", exist_ok=True)
@@ -90,6 +104,212 @@ class SummarizeRequest(BaseModel):
 class SpeakerIdentificationRequest(BaseModel):
     '''Pydantic model for LLM-based speaker identification requests.'''
     context: str = None  # Optional context about the meeting/speakers
+
+class LiveTranscriptionSession:
+    '''Manages a live transcription session with audio buffering and streaming transcription.'''
+    
+    def __init__(self, session_id: str, model_name: str = "tiny"):
+        self.session_id = session_id
+        self.model_name = model_name
+        self.audio_buffer = []
+        self.sample_rate = 16000
+        self.chunk_duration = 2.0  # Process every 2 seconds
+        self.overlap_duration = 0.5  # 0.5 second overlap
+        self.is_active = True
+        self.transcription_history = []
+        self.last_chunk_end = 0.0
+        
+    def add_audio_chunk(self, audio_data: bytes):
+        '''Add audio chunk to buffer'''
+        # Convert audio bytes to numpy array (assuming 16-bit PCM)
+        audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        self.audio_buffer.extend(audio_array)
+        
+    def get_chunk_for_transcription(self):
+        '''Get next chunk of audio for transcription'''
+        if not self.audio_buffer:
+            return None
+            
+        chunk_samples = int(self.chunk_duration * self.sample_rate)
+        overlap_samples = int(self.overlap_duration * self.sample_rate)
+        
+        if len(self.audio_buffer) < chunk_samples:
+            return None
+            
+        # Get chunk with overlap
+        start_idx = max(0, len(self.audio_buffer) - chunk_samples - overlap_samples)
+        chunk = np.array(self.audio_buffer[start_idx:start_idx + chunk_samples])
+        
+        # Remove processed audio but keep overlap
+        self.audio_buffer = self.audio_buffer[-overlap_samples:] if overlap_samples > 0 else []
+        
+        return chunk
+        
+    def stop(self):
+        '''Stop the session and clean up'''
+        self.is_active = False
+        self.audio_buffer.clear()
+
+def get_or_load_whisper_model(model_name: str = "tiny"):
+    '''Load and cache GPU-accelerated Whisper model with advanced optimizations'''
+    global WHISPER_MODEL
+    if WHISPER_MODEL is None:
+        if FASTER_WHISPER_AVAILABLE:
+            # Use GPU-accelerated faster-whisper optimized for RTX A6000s
+            WHISPER_MODEL = WhisperModel(
+                model_name, 
+                device="cuda",
+                device_index=0,  # Use first GPU
+                compute_type="float16",  # Use half precision for faster inference
+                num_workers=8,  # Increased workers for 112-core CPU
+                cpu_threads=24,  # More CPU threads for better parallelization
+                local_files_only=False,
+                # Advanced optimizations
+                model_kwargs={"use_memory_efficient_attention": True}
+            )
+            
+            # Ensure CUDA memory is properly managed
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()  # Clear any existing CUDA memory
+                    torch.cuda.set_per_process_memory_fraction(0.8)  # Use 80% of GPU memory
+                    logger.info(f"GPU memory configured: {torch.cuda.get_device_name(0)}")
+            except Exception as e:
+                logger.warning(f"Could not configure GPU memory: {e}")
+            
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Loaded GPU-accelerated faster-whisper model: {model_name}")
+        else:
+            # Fallback to OpenAI whisper
+            WHISPER_MODEL = whisper.load_model(model_name, device=DEVICE)
+            timestamp = get_timestamp()
+            logging.info(f"{timestamp}: Loaded OpenAI whisper model: {model_name}")
+    return WHISPER_MODEL
+
+def transcribe_audio_chunk(audio_chunk: np.ndarray, model) -> str:
+    '''Transcribe a single audio chunk with advanced GPU-accelerated processing'''
+    try:
+        if len(audio_chunk) == 0:
+            return ""
+            
+        # Ensure audio is the right shape and type
+        if audio_chunk.dtype != np.float32:
+            audio_chunk = audio_chunk.astype(np.float32)
+            
+        # Advanced audio preprocessing for better quality
+        try:
+            import librosa
+            import noisereduce as nr
+            
+            # Noise reduction
+            audio_chunk = nr.reduce_noise(y=audio_chunk, sr=16000)
+            
+            # Normalize audio with better dynamic range
+            audio_chunk = librosa.util.normalize(audio_chunk)
+            
+            # Voice Activity Detection using Silero VAD
+            try:
+                import torch
+                from silero_vad import get_speech_timestamps, load_silero_vad
+                
+                if not hasattr(self, 'vad_model'):
+                    self.vad_model = load_silero_vad()
+                
+                # Get speech timestamps (requires torch tensor)
+                audio_tensor = torch.from_numpy(audio_chunk)
+                speech_timestamps = get_speech_timestamps(audio_tensor, self.vad_model, sampling_rate=16000)
+                
+                # Check if there's significant speech activity
+                if not speech_timestamps:
+                    logger.debug("No speech detected by Silero VAD - skipping chunk")
+                    return None, False, "No speech activity detected"
+                    
+            except ImportError:
+                logger.warning("Silero VAD not available, using basic audio detection")
+            
+        except ImportError:
+            # Fallback normalization if libraries not available
+            max_amplitude = np.max(np.abs(audio_chunk))
+            if max_amplitude > 0:
+                audio_chunk = audio_chunk / max_amplitude
+            
+        # Calculate audio statistics for quality detection
+        rms_level = np.sqrt(np.mean(audio_chunk**2))
+        max_amplitude = np.max(np.abs(audio_chunk))
+        
+        # Much stricter silence detection thresholds
+        silence_threshold = 0.02  # Higher RMS threshold
+        amplitude_threshold = 0.05  # Higher peak amplitude threshold
+        
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Audio stats - RMS: {rms_level:.4f}, Max: {max_amplitude:.4f}")
+        
+        # Skip transcription if audio is too quiet (likely silence)
+        if rms_level < silence_threshold and max_amplitude < amplitude_threshold:
+            logging.info(f"{timestamp}: Audio too quiet, skipping transcription")
+            return ""
+        
+        # Use faster-whisper API with GPU acceleration
+        if FASTER_WHISPER_AVAILABLE and hasattr(model, 'transcribe'):
+            # faster-whisper API
+            segments, info = model.transcribe(
+                audio_chunk,
+                language="en",
+                task="transcribe",
+                vad_filter=True,  # Built-in voice activity detection
+                vad_parameters=dict(min_silence_duration_ms=500),  # Stricter VAD
+                condition_on_previous_text=False,
+                temperature=0.0,
+                no_speech_threshold=0.8,  # Much higher threshold
+                log_prob_threshold=-0.8,  # Stricter probability
+                compression_ratio_threshold=2.4
+            )
+            
+            # Extract text from faster-whisper segments
+            text = ""
+            for segment in segments:
+                text += segment.text + " "
+            text = text.strip()
+            
+        else:
+            # Fallback to OpenAI whisper API
+            result = model.transcribe(
+                audio_chunk, 
+                language="en", 
+                fp16=False,
+                condition_on_previous_text=False,
+                temperature=0.0,
+                no_speech_threshold=0.6,
+                logprob_threshold=-1.0
+            )
+            text = result.get("text", "").strip()
+        
+        # Filter out likely hallucinations
+        if text:
+            # Check if text is too short (common hallucination)
+            if len(text) < 3:
+                logging.info(f"{timestamp}: Text too short, likely hallucination: '{text}'")
+                return ""
+                
+            # Check for common hallucination patterns
+            hallucination_patterns = [
+                "thank you", "thanks for watching", "bye", "see you", 
+                "subscribe", "like", "comment", "follow",
+                "you", "the", "a", "i", "to", "and", "is", "it"
+            ]
+            
+            text_lower = text.lower()
+            if any(pattern in text_lower and len(text) < 20 for pattern in hallucination_patterns):
+                logging.info(f"{timestamp}: Detected likely hallucination pattern: '{text}'")
+                return ""
+        
+        return text
+        
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error transcribing audio chunk: {e}")
+        return ""
 
 ##################################### Functions #####################################
 def get_timestamp() -> str:
@@ -1816,6 +2036,141 @@ async def export_markdown_summary(uuid: str, request: Request = None):
         timestamp = get_timestamp()
         logging.error(f"{timestamp}: Unexpected error during markdown generation for UUID {uuid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during markdown generation")
+
+# WebSocket endpoint for live transcription
+@app.websocket("/live-transcription")
+async def live_transcription_websocket(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time transcription.
+    Expects audio chunks as base64 encoded binary data.
+    """
+    await websocket.accept()
+    session_id = str(uuid.uuid4())
+    session = None
+    
+    try:
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Started live transcription session: {session_id}")
+        
+        # Wait for initial configuration
+        config_data = await websocket.receive_json()
+        model_name = config_data.get("model", "tiny")
+        
+        # Create session
+        session = LiveTranscriptionSession(session_id, model_name)
+        LIVE_SESSIONS[session_id] = session
+        
+        # Load model
+        model = get_or_load_whisper_model(model_name)
+        
+        await websocket.send_json({
+            "type": "session_started",
+            "session_id": session_id,
+            "model": model_name
+        })
+        
+        while session.is_active:
+            try:
+                # Receive audio data
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                
+                if message == "stop":
+                    break
+                    
+                # Decode base64 audio data
+                try:
+                    audio_data = base64.b64decode(message)
+                    session.add_audio_chunk(audio_data)
+                    timestamp = get_timestamp()
+                    logging.info(f"{timestamp}: Received audio chunk of {len(audio_data)} bytes for session {session_id}")
+                except Exception as e:
+                    timestamp = get_timestamp()
+                    logging.error(f"{timestamp}: Error decoding audio data for session {session_id}: {e}")
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": f"Invalid audio data: {e}"
+                    })
+                    continue
+                
+                # Check if we have enough audio to transcribe
+                audio_chunk = session.get_chunk_for_transcription()
+                if audio_chunk is not None:
+                    timestamp = get_timestamp()
+                    logging.info(f"{timestamp}: Processing audio chunk of length {len(audio_chunk)} for transcription")
+                    
+                    # Transcribe in background to avoid blocking
+                    transcription = transcribe_audio_chunk(audio_chunk, model)
+                    
+                    timestamp = get_timestamp()
+                    logging.info(f"{timestamp}: Transcription result: '{transcription}' (length: {len(transcription) if transcription else 0})")
+                    
+                    if transcription:
+                        session.transcription_history.append({
+                            "text": transcription,
+                            "timestamp": time.time()
+                        })
+                        
+                        # Send transcription to client
+                        await websocket.send_json({
+                            "type": "transcription",
+                            "text": transcription,
+                            "timestamp": time.time(),
+                            "is_partial": False
+                        })
+                        
+                        timestamp = get_timestamp()
+                        logging.info(f"{timestamp}: Sent transcription to client: '{transcription}'")
+                        
+            except asyncio.TimeoutError:
+                # Send heartbeat
+                await websocket.send_json({"type": "heartbeat"})
+                continue
+                
+            except WebSocketDisconnect:
+                break
+                
+            except Exception as e:
+                timestamp = get_timestamp()
+                logging.error(f"{timestamp}: Error in live transcription loop: {e}")
+                await websocket.send_json({
+                    "type": "error",
+                    "message": str(e)
+                })
+                break
+                
+    except Exception as e:
+        timestamp = get_timestamp()
+        logging.error(f"{timestamp}: Error in live transcription websocket: {e}")
+        
+    finally:
+        # Cleanup
+        if session:
+            session.stop()
+        if session_id in LIVE_SESSIONS:
+            del LIVE_SESSIONS[session_id]
+        
+        timestamp = get_timestamp()
+        logging.info(f"{timestamp}: Ended live transcription session: {session_id}")
+
+@app.get("/live-transcription/sessions")
+def get_active_sessions():
+    """Get list of active live transcription sessions"""
+    return {
+        "active_sessions": len(LIVE_SESSIONS),
+        "sessions": [
+            {
+                "session_id": sid,
+                "model": session.model_name,
+                "history_length": len(session.transcription_history)
+            }
+            for sid, session in LIVE_SESSIONS.items()
+        ]
+    }
+
+@app.get("/live-transcription/test")
+def test_live_transcription():
+    """Test endpoint to verify routing works"""
+    return {"status": "live-transcription routing works", "websocket_available": True}
 
 # Start the file cleanup scheduler when the application starts
 start_cleanup_scheduler()

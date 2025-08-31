@@ -11,18 +11,21 @@ WORKDIR /app
 # Copy dependencies list
 COPY requirements.txt /app/requirements.txt
 
+# Install system dependencies first (for build tools)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        g++ \
+        make \
+        ffmpeg \
+        libsndfile1 && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install Python dependencies and ensure CUDA-enabled PyTorch remains
 RUN pip install -r requirements.txt \
     && pip uninstall -y torch torchvision torchaudio \
     && pip install --index-url https://download.pytorch.org/whl/cu118 \
          torch torchvision torchaudio
-
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ffmpeg \
-        libsndfile1 && \
-    rm -rf /var/lib/apt/lists/*
 
 # Copy application code
 COPY . /app

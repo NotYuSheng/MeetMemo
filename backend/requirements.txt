@@ -1,12 +1,19 @@
 setuptools==59.5.0
 numpy==1.26.4
 openai-whisper==20240930
+faster-whisper==1.1.0
+# GPU acceleration and audio processing improvements
+torch>=2.2.0
+torchaudio>=2.2.0
+librosa==0.10.1
+noisereduce==3.0.2
 pyannote.audio==3.3.0
 soundfile==0.13.1
-speechbrain==0.5.16
+silero-vad==5.1.0
 python-dotenv==1.0.1
 fastapi==0.110.1
-uvicorn==0.29.0
+uvicorn[standard]==0.29.0
+websockets==12.0
 pydantic==2.7.1
 numba==0.59.1
 python-multipart==0.0.9
