@@ -10,6 +10,19 @@ MeetMemo is an AI-powered meeting transcription application that combines cuttin
 
 </div>
 
+### 📁 Sample Files
+
+The `sample-files/` directory contains example outputs to showcase MeetMemo's capabilities:
+
+- **`GenAI Week - AI x SaaS.wav`** - Sample audio file for testing (37MB, ~1 hour)
+- **`genai-week---ai-x-saas_transcript_2025-08-31.json`** - Complete diarized transcript with speaker identification
+- **`genai-week---ai-x-saas_summary_2025-08-31.pdf`** - Professional PDF summary with key insights and action items  
+- **`genai-week---ai-x-saas_summary_2025-08-31.markdown`** - Markdown version of the AI-generated summary
+- **`MeetMemo_Demo.gif`** - Application demonstration GIF
+- **`MeetMemo_Demo.mp4`** - Full video demonstration
+
+These files demonstrate the complete workflow from audio upload to final deliverables, showing the quality and format of MeetMemo's output.
+
 ## Key Features
 
 - **Audio Recording & Upload**: Record meetings directly in the browser or upload existing audio files (MP3, WAV, M4A, FLAC, etc.)
