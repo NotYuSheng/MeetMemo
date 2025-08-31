@@ -23,19 +23,17 @@ from pydantic import BaseModel
 from pydub import AudioSegment
 
 from pyannote_whisper.utils import diarize_text
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.platypus.frames import Frame
 from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPDF
-import os
 
 # Start up the app
 app = FastAPI()    
@@ -847,7 +845,7 @@ def generate_professional_pdf(summary_data: dict, transcript_data: list, generat
             # Fallback to text header if logo not found
             story.append(Paragraph("🎯 MeetMemo", title_style))
             story.append(Paragraph("AI Summary", subtitle_style))
-    except Exception as e:
+    except Exception:
         # Fallback to text header if there's any error with logo
         story.append(Paragraph("🎯 MeetMemo", title_style))
         story.append(Paragraph("AI Summary", subtitle_style))
@@ -1731,7 +1729,7 @@ async def export_professional_pdf(uuid: str, request: Request = None):
             try:
                 body = await request.json()
                 generated_on = body.get('generated_on')
-            except:
+            except (ValueError, TypeError):
                 pass
         
         # Generate professional PDF
@@ -1773,7 +1771,7 @@ async def export_markdown_summary(uuid: str, request: Request = None):
             try:
                 body = await request.json()
                 generated_on = body.get('generated_on')
-            except:
+            except (ValueError, TypeError):
                 pass
         
         # Use current timestamp if not provided
