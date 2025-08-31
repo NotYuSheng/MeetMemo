@@ -10,7 +10,7 @@ MeetMemo is an AI-powered meeting transcription application that combines cuttin
 
 </div>
 
-### 📁 Sample Files
+### Sample Files
 
 The `sample-files/` directory contains example outputs to showcase MeetMemo's capabilities:
 
