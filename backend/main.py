@@ -1089,7 +1089,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         # Transcription & diarization of text
         hf_token = os.getenv("HF_TOKEN")
         pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization", 
+            "pyannote/speaker-diarization-3.1", 
             use_auth_token=hf_token
         )
         asr = model.transcribe(file_path, language="en")
@@ -1508,32 +1508,43 @@ def rename_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> dict:
             
         file_name = filename_response["file_name"]
         transcript_path = os.path.join("transcripts", f"{file_name}.json")
+        edited_transcript_path = os.path.join("transcripts", "edited", f"{file_name}.json")
 
-        # 2. Check if the transcript file exists
-        if not os.path.exists(transcript_path):
-            logging.error(f"{timestamp}: Transcript file not found at {transcript_path} for UUID {uuid}.")
+        # 2. Determine which transcript file(s) to update - prioritize edited version if it exists
+        files_to_update = []
+        if os.path.exists(edited_transcript_path):
+            files_to_update.append(edited_transcript_path)
+            logging.info(f"{timestamp}: Found edited transcript for UUID {uuid}, will update it")
+        if os.path.exists(transcript_path):
+            files_to_update.append(transcript_path)
+            
+        if not files_to_update:
+            logging.error(f"{timestamp}: No transcript files found for UUID {uuid}.")
             return {"error": "Transcript file not found", "status_code": "404"}
 
-        # 3. Read, update, and write the transcript data
-        temp_file_path = transcript_path + ".tmp"
-        with open(transcript_path, "r", encoding="utf-8") as f_read, open(temp_file_path, "w", encoding="utf-8") as f_write:
-            transcript_data = json.load(f_read)
+        # 3. Update all existing transcript files with speaker name changes
+        for file_path in files_to_update:
+            temp_file_path = file_path + ".tmp"
             
-            # Create a copy of the mapping from the Pydantic model
-            name_map = speaker_map.mapping
+            with open(file_path, "r", encoding="utf-8") as f_read, open(temp_file_path, "w", encoding="utf-8") as f_write:
+                transcript_data = json.load(f_read)
+                
+                # Create a copy of the mapping from the Pydantic model
+                name_map = speaker_map.mapping
 
-            # Iterate through each segment and update the speaker name if it's in the map
-            # Normalize None to placeholder
-            for segment in transcript_data:
-                original_speaker = (segment.get("speaker") or "SPEAKER_00").strip()
+                # Iterate through each segment and update the speaker name if it's in the map
+                # Normalize None to placeholder
+                for segment in transcript_data:
+                    original_speaker = (segment.get("speaker") or "SPEAKER_00").strip()
 
-                if original_speaker in name_map:
-                    segment["speaker"] = name_map[original_speaker].strip()
-            
-            json.dump(transcript_data, f_write, indent=4)
+                    if original_speaker in name_map:
+                        segment["speaker"] = name_map[original_speaker].strip()
+                
+                json.dump(transcript_data, f_write, indent=4)
 
-        # Atomically replace the original file with the updated one
-        os.replace(temp_file_path, transcript_path)
+            # Atomically replace the file with the updated one
+            os.replace(temp_file_path, file_path)
+            logging.info(f"{timestamp}: Updated speaker names in {file_path}")
 
         # Invalidate cached summary since speaker names have changed
         summary_dir = Path("summary")

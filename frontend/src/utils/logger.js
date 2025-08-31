@@ -161,9 +161,14 @@ class Logger {
           break;
         case 502:
         case 503:
-        case 504:
           userFriendlyMessage =
             "Service temporarily unavailable. Please try again later.";
+          break;
+        case 504:
+          userFriendlyMessage =
+            "Processing timeout - your file may be taking longer than expected. Large audio files can take several minutes to process. Please try again or use a smaller file.";
+          // Extra logging for 504 timeouts since they're common with large files
+          console.warn("🔄 TIMEOUT: Audio processing took too long. This usually happens with large files (>30MB). Server timeouts have been increased to 6 hours.");
           break;
         default:
           userFriendlyMessage = `Request failed (${status}). Please try again.`;
