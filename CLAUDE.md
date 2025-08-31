@@ -42,12 +42,13 @@ MeetMemo is a containerized application with three main services:
 ### Backend (`meetmemo-backend`)
 - **Framework**: FastAPI with Uvicorn
 - **Core Technologies**: 
-  - OpenAI Whisper for speech-to-text
-  - PyAnnote.audio for speaker diarization
+  - OpenAI Whisper (turbo model) for speech-to-text
+  - PyAnnote.audio 3.3.0 with speaker-diarization-3.1 model
   - ReportLab for PDF generation
+  - PyTorch 2.7.1+cu118 for ML inference
 - **Main Module**: `backend/main.py`
 - **Key Features**: Audio transcription, speaker identification, LLM-powered summarization
-- **GPU Acceleration**: Uses NVIDIA runtime for ML models
+- **GPU Acceleration**: Uses NVIDIA runtime for ML models (CUDA 11.8 compatible)
 
 ### Frontend (`meetmemo-frontend`)  
 - **Framework**: React 19 with Create React App
@@ -69,9 +70,10 @@ MeetMemo is a containerized application with three main services:
 
 ### Environment Variables
 Required in `.env` file:
-- `HF_TOKEN`: Hugging Face token for PyAnnote models
-- `LLM_API_URL`: LLM endpoint for summarization
-- `LLM_MODEL_NAME`: LLM model identifier
+- `HF_TOKEN`: Hugging Face token for PyAnnote models (requires access to speaker-diarization-3.1)
+- `LLM_API_URL`: LLM endpoint for summarization (e.g., OpenAI compatible API)
+- `LLM_MODEL_NAME`: LLM model identifier (e.g., qwen2.5-32b-instruct)
+- `LLM_API_KEY`: Optional authentication key for LLM service
 
 ### Persistent Data
 Docker volumes store:
