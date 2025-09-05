@@ -98,7 +98,7 @@ MeetMemo is a containerized application with three main services:
 
 6. **Access the application:**
    
-   Open your browser and navigate to `https://localhost` or `http://localhost:3000/MeetMemo`
+   Open your browser and navigate to `https://localhost`
 
 ## Usage
 
