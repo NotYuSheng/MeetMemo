@@ -1,0 +1,79 @@
+/**
+ * Header Component Styles
+ */
+
+/* Theme Toggle Switch */
+.themeToggle {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 32px;
+}
+
+.themeToggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: linear-gradient(135deg, #2998d5 0%, #265289 100%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 32px;
+  box-shadow: var(--shadow-md);
+}
+
+.toggleSlider::before {
+  position: absolute;
+  content: "";
+  height: 24px;
+  width: 24px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 20%);
+}
+
+/* Default (unchecked = light mode) - Sun icon */
+.toggleSlider::after {
+  content: "☀️";
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 12px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+}
+
+/* Checked = dark mode styles */
+input:checked + .toggleSlider {
+  background: linear-gradient(135deg, #75797c 0%, #272b2d 100%);
+}
+
+input:checked + .toggleSlider::before {
+  transform: translateX(28px);
+}
+
+/* Moon icon (checked = dark mode) */
+input:checked + .toggleSlider::after {
+  content: "🌙";
+  left: 34px;
+  opacity: 1;
+}
+
+.themeToggle:hover .toggleSlider {
+  box-shadow: var(--shadow-lg);
+}

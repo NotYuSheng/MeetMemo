@@ -1,0 +1,37 @@
+/**
+ * MeetingsList Component Styles
+ */
+
+.meetingsCard {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.meetingsScrollWrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.meetingList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.meetingEntry {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+/* Spinning Animation for Refresh Icon */
+.spinning {
+  animation: spin 1s linear infinite;
+}

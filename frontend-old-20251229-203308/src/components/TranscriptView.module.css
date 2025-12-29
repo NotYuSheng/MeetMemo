@@ -1,0 +1,255 @@
+/**
+ * TranscriptView Component Styles
+ */
+
+.transcriptContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 2%);
+  max-height: 30rem;
+  overflow-y: auto;
+  min-height: 20rem;
+}
+
+.pdf-expanded .transcriptContainer {
+  max-height: 1150px;
+}
+
+/* Transcript Entry */
+.transcriptEntry {
+  border-left: 4px solid var(--border);
+  padding-left: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  background: var(--transcript-entry-bg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.transcriptEntry:hover {
+  background: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 95%) 0%,
+    rgb(248 250 252 / 90%) 100%
+  );
+  box-shadow: var(--shadow-lg);
+  border-left-color: var(--btn-primary);
+  border-left-width: 6px;
+  transform: translateX(4px);
+  border-radius: 0.375rem;
+}
+
+.transcriptHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.transcriptContent {
+  position: relative;
+}
+
+/* Transcript Text */
+.transcriptText {
+  color: var(--text);
+  line-height: 1.625;
+  flex: 1;
+}
+
+.transcriptText.clickable {
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.transcriptText.clickable:hover {
+  background: linear-gradient(
+    135deg,
+    rgb(41 152 213 / 8%) 0%,
+    rgb(41 152 213 / 4%) 100%
+  );
+  border: 1px solid rgb(41 152 213 / 20%);
+  box-shadow: 0 2px 4px rgb(41 152 213 / 10%);
+  transform: translateY(-1px);
+}
+
+.transcriptText.editable {
+  border: 2px solid #007bff;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background: var(--bg);
+  outline: none;
+  min-height: 1.5rem;
+  cursor: text;
+}
+
+.transcriptText.editable:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgb(0 123 255 / 25%);
+}
+
+/* Transcript Text Editing */
+.transcriptTextContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.transcriptEditContainer {
+  width: 100%;
+}
+
+.transcriptTextarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  background-color: var(--input-bg, var(--bg));
+  color: var(--text);
+}
+
+.transcriptTextarea:focus {
+  outline: none;
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 2px var(--btn-primary-alpha);
+}
+
+.transcriptEditActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Speaker Badge */
+.speakerBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.speakerContainer {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.speakerNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.speakerEditContainer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Speaker Colors */
+.speakerAfblue {
+  background-color: #2998d5;
+  color: #fff;
+}
+
+.speakerPoisedgold {
+  background-color: #bba88e;
+  color: #fff;
+}
+
+.speakerNavyblue {
+  background-color: #265289;
+  color: #fff;
+}
+
+.speakerArmyred {
+  background-color: #c42030;
+  color: #fff;
+}
+
+/* Speaker Suggestion */
+.speakerSuggestion {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.suggestionText {
+  flex: 1;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Save Status */
+.saveStatus {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.saveStatusSaving {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.saveStatusSaved {
+  background: #d1edff;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.saveStatusError {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Actions Group */
+.actionsGroup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Timestamp */
+.timestamp {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+    monospace;
+}

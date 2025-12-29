@@ -5,7 +5,7 @@ import MeetingTranscriptionApp from "./MeetingTranscriptionApp";
 
 function App() {
   return (
-    <Router basename={process.env.PUBLIC_URL}>
+    <Router basename="/">
       <div className="App">
         <Routes>
           <Route path="/" element={<MeetingTranscriptionApp />} />

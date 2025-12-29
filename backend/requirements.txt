@@ -2,6 +2,7 @@ setuptools==59.5.0
 numpy==1.26.4
 openai-whisper==20240930
 pyannote.audio==3.3.0
+huggingface_hub==0.13.4
 soundfile==0.13.1
 speechbrain==0.5.16
 python-dotenv==1.0.1

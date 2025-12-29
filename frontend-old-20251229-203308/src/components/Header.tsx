@@ -1,9 +1,20 @@
-const Header = ({ isDarkMode, onToggleDarkMode }) => {
+/**
+ * Header component with logo and theme toggle
+ */
+
+import React from 'react';
+
+interface HeaderProps {
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ isDarkMode, onToggleDarkMode }) => {
   return (
     <div className="header-card">
       <h1 className="header-title">
         <img
-          src={process.env.PUBLIC_URL + "/logo.png"}
+          src="/logo.png"
           alt="MeetMemo Logo"
           className="header-logo"
         />{" "}

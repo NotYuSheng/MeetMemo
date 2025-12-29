@@ -1,39 +1,310 @@
+/* MeetMemo App Styles - Workflow Focused */
+
 .app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+/* Header */
+.app-header {
+  background-color: white;
+  border-bottom: 1px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Workflow Steps */
+.workflow-steps {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.steps-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6c757d;
+  transition: all 0.3s ease;
+}
+
+.step.active {
+  color: #0d6efd;
+}
+
+.step.completed {
+  color: #198754;
+}
+
+.step-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.step.active .step-icon {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.step.completed .step-icon {
+  background-color: #198754;
+  color: white;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  font-weight: 500;
   text-align: center;
 }
 
-.app-logo {
-  height: 40vmin;
-  pointer-events: none;
+.step-divider {
+  width: 60px;
+  height: 2px;
+  background-color: #dee2e6;
+  margin: 0 1rem;
+  margin-bottom: 24px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .app-logo {
-    animation: app-logo-spin infinite 20s linear;
+.step.completed ~ .step-divider {
+  background-color: #198754;
+}
+
+/* Upload and Record Cards */
+.upload-card,
+.record-card {
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-card:hover {
+  border-color: #0d6efd;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+}
+
+.record-card:hover {
+  border-color: #dc3545;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
+}
+
+.upload-icon,
+.record-icon {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }
 
-.app-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Upload Dropzone */
+.upload-dropzone {
+  border: 2px dashed #dee2e6;
+  border-radius: 0.5rem;
+  padding: 2rem 1rem;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: #0d6efd;
+  background-color: #e7f1ff;
+}
+
+/* Processing Animation */
+.processing-animation {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+.processing-steps {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.processing-step {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.processing-step.active {
+  opacity: 1;
+  background-color: #e7f1ff;
+  border-left: 3px solid #0d6efd;
+}
+
+.processing-step.completed {
+  opacity: 1;
+  background-color: #d1e7dd;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+/* Sidebar */
+.sticky-sidebar {
+  position: sticky;
+  top: 100px;
+}
+
+.info-item {
+  padding-bottom: 0.75rem;
+}
+
+.info-item small {
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Transcript and Summary placeholders */
+.transcript-placeholder,
+.summary-placeholder {
+  min-height: 300px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.app-link {
-  color: #61dafb;
+/* Footer */
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid #dee2e6;
 }
 
-@keyframes app-logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Responsive Design */
+@media (max-width: 768px) {
+  .steps-container {
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
-  to {
-    transform: rotate(360deg);
+  .step-divider {
+    display: none;
   }
+
+  .step {
+    flex: 1 1 40%;
+    min-width: 120px;
+  }
+
+  .sticky-sidebar {
+    position: static;
+    margin-top: 1rem;
+  }
+
+  .upload-dropzone {
+    padding: 1.5rem 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .step {
+    flex: 1 1 100%;
+  }
+
+  .step-label {
+    font-size: 0.75rem;
+  }
+
+  .step-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .step-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Utility Classes */
+.opacity-50 {
+  opacity: 0.5;
+}
+
+/* Icon alignment */
+.lucide {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Card improvements */
+.card {
+  border: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Button improvements */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Progress bar */
+.progress {
+  background-color: #e9ecef;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.4s ease;
 }

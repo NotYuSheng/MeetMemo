@@ -14,6 +14,7 @@ from pathlib import Path
 from threading import Lock
 
 import requests
+import torch
 import whisper
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, Request, HTTPException
@@ -57,8 +58,38 @@ logging.basicConfig(level=logging.INFO,
                     filemode='a',
                     )
 
-# Variables 
+# Variables
 load_dotenv('.env')
+
+# Validate required environment variables
+REQUIRED_ENV_VARS = {
+    'HF_TOKEN': 'Hugging Face token for PyAnnote models',
+    'LLM_API_URL': 'LLM endpoint for summarization',
+    'LLM_MODEL_NAME': 'LLM model identifier'
+}
+
+missing_vars = []
+for var, description in REQUIRED_ENV_VARS.items():
+    if not os.getenv(var):
+        missing_vars.append(f"  - {var}: {description}")
+
+if missing_vars:
+    error_message = (
+        "\n╔════════════════════════════════════════════════════════════════╗\n"
+        "║ ERROR: Missing Required Environment Variables                 ║\n"
+        "╚════════════════════════════════════════════════════════════════╝\n"
+        "\nThe following environment variables are required but not set:\n\n"
+        + "\n".join(missing_vars) +
+        "\n\nPlease ensure these variables are defined in your .env file.\n"
+        "See CLAUDE.md for more information on configuration.\n"
+    )
+    logging.error(error_message)
+    raise EnvironmentError(error_message)
+
+# Log warning for optional env vars
+if not os.getenv('LLM_API_KEY'):
+    logging.warning("LLM_API_KEY is not set. LLM requests will be made without authentication.")
+
 UPLOAD_DIR = "audiofiles"
 CSV_LOCK = Lock()
 CSV_FILE = "audiofiles/audiofiles.csv"
@@ -1089,7 +1120,7 @@ def transcribe(file: UploadFile, model_name: str = "turbo") -> dict:
         # Transcription & diarization of text
         hf_token = os.getenv("HF_TOKEN")
         pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1", 
+            "pyannote/speaker-diarization-3.1",
             use_auth_token=hf_token
         )
         asr = model.transcribe(file_path, language="en")
