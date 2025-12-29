@@ -10,6 +10,8 @@ services:
       - transcripts:/app/transcripts
       - summary:/app/summary
       - whisper_cache:/root/.cache/whisper
+      - huggingface_cache:/root/.cache/huggingface
+      - torch_cache:/root/.cache/torch
     runtime: nvidia
     environment:
       - HF_TOKEN=${HF_TOKEN:-CHANGEME}
@@ -38,6 +40,8 @@ volumes:
   logs:
   transcripts:
   whisper_cache:
+  huggingface_cache:
+  torch_cache:
   summary:
 
 networks:

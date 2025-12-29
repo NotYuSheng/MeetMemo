@@ -1,11 +1,177 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Container, Row, Col, Card, Button, Badge, ProgressBar, Alert } from '@govtechsg/sgds-react'
-import { Mic, Upload, FileText, Users, Sparkles, Download, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Mic, Upload as UploadIcon, FileText, Users, Sparkles, Download, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import * as api from './services/api'
 import './App.css'
 
 function App() {
   const [currentStep, setCurrentStep] = useState('upload') // upload, processing, transcript, summary
   const [processingProgress, setProcessingProgress] = useState(0)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState(null)
+  const [jobId, setJobId] = useState(null)
+  const [jobStatus, setJobStatus] = useState(null)
+  const [transcript, setTranscript] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const fileInputRef = useRef(null)
+
+  // Handle file selection
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+      setSelectedFile(file)
+      // Immediately show processing UI
+      setCurrentStep('processing')
+      setProcessingProgress(10)
+      handleUpload(file)
+    }
+  }
+
+  // Handle drag and drop
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (uploading) return
+
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      setSelectedFile(file)
+      setCurrentStep('processing')
+      setProcessingProgress(10)
+      handleUpload(file)
+    }
+  }
+
+  // Handle file upload
+  const handleUpload = async (file) => {
+    setError(null)
+    setUploading(true)
+    setProcessingProgress(0)
+
+    try {
+      // Note: Backend now uses async processing with 202 response
+      const response = await api.uploadAudio(file)
+
+      setJobId(response.uuid)
+
+      // Backend returns 202 immediately and processes in background
+      if (response.status_code === 202 || response.status_code === '202') {
+        setCurrentStep('processing')
+        setUploading(false)
+        startPolling(response.uuid)
+      } else if (response.status_code === 200 || response.status_code === '200') {
+        // If somehow it completes immediately
+        setUploading(false)
+        setProcessingProgress(100)
+        if (response.transcript) {
+          setTranscript(response.transcript)
+          setTimeout(() => {
+            setCurrentStep('transcript')
+          }, 500)
+        } else {
+          setCurrentStep('processing')
+          startPolling(response.uuid)
+        }
+      } else {
+        // Fallback to polling
+        setCurrentStep('processing')
+        setUploading(false)
+        startPolling(response.uuid)
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to upload file')
+      setUploading(false)
+      setCurrentStep('upload')
+      setProcessingProgress(0)
+    }
+  }
+
+  // Poll job status
+  const startPolling = (uuid) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await api.getJobStatus(uuid)
+        console.log('Progress Debug:', {
+          percentage: status.progress_percentage,
+          stage: status.processing_stage,
+          status_code: status.status_code
+        })
+        setJobStatus(status)
+
+        // Update progress with actual percentage from backend
+        if (status.progress_percentage !== undefined) {
+          setProcessingProgress(status.progress_percentage)
+        }
+
+        if (status.status_code === '200' || status.status_code === 200) {
+          clearInterval(pollInterval)
+          setProcessingProgress(100)
+          // Fetch the transcript
+          const transcriptData = await api.getTranscript(uuid)
+          // Parse full_transcript JSON string if needed
+          if (transcriptData.full_transcript && typeof transcriptData.full_transcript === 'string') {
+            try {
+              const parsed = JSON.parse(transcriptData.full_transcript)
+              // The parsed data is an array of segments, wrap it in an object
+              setTranscript({ segments: parsed })
+            } catch (e) {
+              console.error('Failed to parse transcript:', e)
+              setTranscript(transcriptData)
+            }
+          } else {
+            setTranscript(transcriptData)
+          }
+          setCurrentStep('transcript')
+          setUploading(false)
+        } else if (status.status_code === '500' || status.status_code === 500) {
+          clearInterval(pollInterval)
+          const errorMsg = status.error_message || 'Processing failed. Please try again.'
+          setError(errorMsg)
+          setUploading(false)
+        }
+        // else continue polling (status 202 - still processing)
+      } catch (err) {
+        console.error('Polling error:', err)
+        clearInterval(pollInterval)
+        setError('Failed to check processing status')
+        setUploading(false)
+      }
+    }, 2000) // Poll every 2 seconds
+  }
+
+  // Generate summary
+  const handleGenerateSummary = async () => {
+    if (!jobId) return
+
+    try {
+      setError(null)
+      const summaryData = await api.generateSummary(jobId)
+      setSummary(summaryData)
+      setCurrentStep('summary')
+    } catch (err) {
+      setError(err.message || 'Failed to generate summary')
+    }
+  }
+
+  // Start new meeting
+  const handleStartNewMeeting = () => {
+    setCurrentStep('upload')
+    setSelectedFile(null)
+    setJobId(null)
+    setJobStatus(null)
+    setTranscript(null)
+    setSummary(null)
+    setError(null)
+    setProcessingProgress(0)
+    setUploading(false)
+  }
 
   return (
     <div className="app">
@@ -34,7 +200,7 @@ function App() {
           <div className="steps-container">
             <div className={`step ${currentStep === 'upload' ? 'active' : 'completed'}`}>
               <div className="step-icon">
-                <Upload size={20} />
+                <UploadIcon size={20} />
               </div>
               <div className="step-label">Upload Audio</div>
             </div>
@@ -65,6 +231,18 @@ function App() {
 
       {/* Main Content Area */}
       <Container className="py-5">
+        {/* Error Display */}
+        {error && (
+          <Row className="justify-content-center mb-4">
+            <Col lg={10}>
+              <Alert variant="danger" dismissible onClose={() => setError(null)}>
+                <AlertCircle size={20} className="me-2" />
+                <strong>Error:</strong> {error}
+              </Alert>
+            </Col>
+          </Row>
+        )}
+
         {/* Step 1: Upload/Record */}
         {currentStep === 'upload' && (
           <Row className="justify-content-center">
@@ -79,19 +257,40 @@ function App() {
                   <Card className="h-100 upload-card">
                     <Card.Body className="text-center p-5">
                       <div className="upload-icon mb-4">
-                        <Upload size={64} strokeWidth={1.5} className="text-primary" />
+                        <UploadIcon size={64} strokeWidth={1.5} className="text-primary" />
                       </div>
                       <h4 className="mb-3">Upload Audio File</h4>
                       <p className="text-muted mb-4">
-                        Drop your audio file here or click to browse
+                        Drag & drop your audio file or click to browse
                       </p>
-                      <div className="upload-dropzone mb-3">
-                        <p className="mb-2"><strong>Drag & drop</strong> or <strong>click to browse</strong></p>
+                      <div
+                        className="upload-dropzone mb-3"
+                        onClick={() => !uploading && fileInputRef.current?.click()}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        style={{ cursor: uploading ? 'default' : 'pointer' }}
+                      >
+                        <p className="mb-2"><strong>Click to browse</strong> or drag & drop</p>
                         <small className="text-muted">Supports MP3, WAV, M4A, WEBM (max 500MB)</small>
                       </div>
-                      <Button variant="primary" size="lg" className="w-100">
-                        Choose File
-                      </Button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept=".mp3,.wav,.m4a,.webm,.ogg,.flac,.aac"
+                        style={{ display: 'none' }}
+                      />
+                      {uploading && (
+                        <div className="text-center">
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          <span>Uploading...</span>
+                        </div>
+                      )}
+                      {selectedFile && !uploading && (
+                        <div className="mt-3">
+                          <small className="text-success">Selected: {selectedFile.name}</small>
+                        </div>
+                      )}
                     </Card.Body>
                   </Card>
                 </Col>
@@ -159,26 +358,51 @@ function App() {
                       <CheckCircle size={20} className="text-success me-2" />
                       <span>Audio uploaded successfully</span>
                     </div>
-                    <div className="processing-step active">
-                      <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
+                    <div className={`processing-step ${processingProgress >= 30 ? 'completed' : processingProgress > 0 ? 'active' : ''}`}>
+                      {processingProgress >= 30 ? (
+                        <CheckCircle size={20} className="text-success me-2" />
+                      ) : (
+                        <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      )}
                       <span>Transcribing with Whisper AI...</span>
                     </div>
-                    <div className="processing-step">
-                      <div className="step-number me-2">3</div>
-                      <span>Identifying speakers with PyAnnote</span>
+                    <div className={`processing-step ${processingProgress >= 95 ? 'completed' : processingProgress >= 30 ? 'active' : ''}`}>
+                      {processingProgress >= 95 ? (
+                        <CheckCircle size={20} className="text-success me-2" />
+                      ) : processingProgress >= 30 ? (
+                        <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      ) : (
+                        <div className="step-number me-2">3</div>
+                      )}
+                      <span>Identifying speakers with PyAnnote (slowest step)</span>
                     </div>
-                    <div className="processing-step">
-                      <div className="step-number me-2">4</div>
+                    <div className={`processing-step ${processingProgress === 100 ? 'completed' : processingProgress >= 95 ? 'active' : ''}`}>
+                      {processingProgress === 100 ? (
+                        <CheckCircle size={20} className="text-success me-2" />
+                      ) : processingProgress >= 95 ? (
+                        <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      ) : (
+                        <div className="step-number me-2">4</div>
+                      )}
                       <span>Finalizing transcript</span>
                     </div>
                   </div>
 
-                  <ProgressBar now={processingProgress} className="mb-3" style={{ height: '8px' }} />
+                  <ProgressBar
+                    now={processingProgress}
+                    variant="primary"
+                    className="mb-3"
+                    style={{ height: '8px' }}
+                  />
                   <div className="text-center">
                     <small className="text-muted">
-                      This may take a few minutes depending on the length of your recording
+                      {processingProgress}% complete - This usually takes 2-3 minutes for a 10-minute recording
                     </small>
                   </div>
                 </Card.Body>
@@ -203,10 +427,28 @@ function App() {
                   </div>
                 </Card.Header>
                 <Card.Body>
-                  <div className="transcript-placeholder text-center text-muted py-5">
-                    <FileText size={48} className="mb-3 opacity-50" />
-                    <p>Transcript will appear here after processing</p>
-                  </div>
+                  {transcript && transcript.segments ? (
+                    <div className="transcript-content">
+                      {transcript.segments.map((segment, index) => (
+                        <div key={index} className="transcript-segment mb-3 p-3 border-start border-3" style={{ borderColor: segment.speaker === 'SPEAKER_00' ? '#0d6efd' : segment.speaker === 'SPEAKER_01' ? '#198754' : '#0dcaf0' }}>
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                            <Badge bg={segment.speaker === 'SPEAKER_00' ? 'primary' : segment.speaker === 'SPEAKER_01' ? 'success' : 'info'}>
+                              {segment.speaker}
+                            </Badge>
+                            <small className="text-muted">
+                              {Math.floor(segment.start / 60)}:{String(Math.floor(segment.start % 60)).padStart(2, '0')} - {Math.floor(segment.end / 60)}:{String(Math.floor(segment.end % 60)).padStart(2, '0')}
+                            </small>
+                          </div>
+                          <p className="mb-0">{segment.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="transcript-placeholder text-center text-muted py-5">
+                      <FileText size={48} className="mb-3 opacity-50" />
+                      <p>Transcript will appear here after processing</p>
+                    </div>
+                  )}
                 </Card.Body>
               </Card>
             </Col>
@@ -220,18 +462,32 @@ function App() {
                   <div className="meeting-info mb-4">
                     <div className="info-item mb-3">
                       <small className="text-muted">File Name</small>
-                      <div>team-meeting.mp3</div>
+                      <div>{selectedFile?.name || 'Unknown'}</div>
                     </div>
                     <div className="info-item mb-3">
                       <small className="text-muted">Duration</small>
-                      <div>12:34</div>
+                      <div>
+                        {transcript?.segments && transcript.segments.length > 0
+                          ? `${Math.floor(transcript.segments[transcript.segments.length - 1].end / 60)}:${String(Math.floor(transcript.segments[transcript.segments.length - 1].end % 60)).padStart(2, '0')}`
+                          : 'N/A'}
+                      </div>
                     </div>
                     <div className="info-item mb-3">
                       <small className="text-muted">Speakers</small>
                       <div>
-                        <Badge bg="primary" className="me-1">Speaker 1</Badge>
-                        <Badge bg="success" className="me-1">Speaker 2</Badge>
-                        <Badge bg="info">Speaker 3</Badge>
+                        {transcript?.segments ? (
+                          [...new Set(transcript.segments.map(s => s.speaker))].map((speaker, idx) => (
+                            <Badge
+                              key={speaker}
+                              bg={idx === 0 ? 'primary' : idx === 1 ? 'success' : 'info'}
+                              className="me-1"
+                            >
+                              {speaker}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted">N/A</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -240,11 +496,11 @@ function App() {
 
                   <div className="actions">
                     <h6 className="mb-3">Next Steps</h6>
-                    <Button variant="primary" className="w-100 mb-2" onClick={() => setCurrentStep('summary')}>
+                    <Button variant="primary" className="w-100 mb-2" onClick={handleGenerateSummary}>
                       <Sparkles size={18} className="me-2" />
                       Generate AI Summary
                     </Button>
-                    <Button variant="outline-secondary" className="w-100 mb-2">
+                    <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadMarkdown(jobId)}>
                       <Download size={18} className="me-2" />
                       Export Transcript
                     </Button>
@@ -274,10 +530,41 @@ function App() {
                   </div>
                 </Card.Header>
                 <Card.Body>
-                  <div className="summary-placeholder text-center text-muted py-5">
-                    <Sparkles size={48} className="mb-3 opacity-50" />
-                    <p>AI summary will appear here</p>
-                  </div>
+                  {summary ? (
+                    <div className="summary-content">
+                      {summary.summary && (
+                        <div className="mb-4">
+                          <h6 className="mb-3">Summary</h6>
+                          <p>{summary.summary}</p>
+                        </div>
+                      )}
+                      {summary.key_points && summary.key_points.length > 0 && (
+                        <div className="mb-4">
+                          <h6 className="mb-3">Key Points</h6>
+                          <ul>
+                            {summary.key_points.map((point, idx) => (
+                              <li key={idx}>{point}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {summary.action_items && summary.action_items.length > 0 && (
+                        <div className="mb-4">
+                          <h6 className="mb-3">Action Items</h6>
+                          <ul>
+                            {summary.action_items.map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="summary-placeholder text-center text-muted py-5">
+                      <Sparkles size={48} className="mb-3 opacity-50" />
+                      <p>AI summary will appear here</p>
+                    </div>
+                  )}
                 </Card.Body>
               </Card>
 
@@ -297,22 +584,18 @@ function App() {
                   <h5 className="mb-0">Export Options</h5>
                 </Card.Header>
                 <Card.Body>
-                  <Button variant="outline-primary" className="w-100 mb-2">
+                  <Button variant="outline-primary" className="w-100 mb-2" onClick={() => api.downloadPDF(jobId, selectedFile?.name || 'transcript')}>
                     <Download size={18} className="me-2" />
                     Download PDF
                   </Button>
-                  <Button variant="outline-primary" className="w-100 mb-2">
+                  <Button variant="outline-primary" className="w-100 mb-2" onClick={() => api.downloadMarkdown(jobId)}>
                     <Download size={18} className="me-2" />
                     Download Markdown
-                  </Button>
-                  <Button variant="outline-primary" className="w-100 mb-2">
-                    <Download size={18} className="me-2" />
-                    Download JSON
                   </Button>
 
                   <hr />
 
-                  <Button variant="outline-secondary" className="w-100" onClick={() => setCurrentStep('upload')}>
+                  <Button variant="outline-secondary" className="w-100" onClick={handleStartNewMeeting}>
                     Start New Meeting
                   </Button>
                 </Card.Body>
