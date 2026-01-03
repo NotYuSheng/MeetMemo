@@ -506,10 +506,6 @@ function App() {
                 <small className="text-muted">AI Meeting Transcription</small>
               </div>
             </div>
-            <Button variant="outline-primary" size="sm">
-              <Clock size={16} className="me-2" />
-              Past Meetings
-            </Button>
           </div>
         </Container>
       </div>
@@ -746,15 +742,9 @@ function App() {
                     </div>
                   </div>
 
-                  <ProgressBar
-                    now={processingProgress}
-                    variant="primary"
-                    className="mb-3"
-                    style={{ height: '8px' }}
-                  />
                   <div className="text-center">
                     <small className="text-muted">
-                      {processingProgress}% complete - This usually takes 2-3 minutes for a 10-minute recording
+                      This usually takes 2-3 minutes for a 10-minute recording
                     </small>
                   </div>
                 </Card.Body>
