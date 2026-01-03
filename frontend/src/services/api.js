@@ -1,6 +1,6 @@
 // API Service for MeetMemo Backend Communication
 
-const API_BASE_URL = '/api'
+const API_BASE_URL = '/api/v1'
 
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {
@@ -50,7 +50,7 @@ export async function getJobs() {
 
 // Get job status by UUID
 export async function getJobStatus(uuid) {
-  return await apiCall(`/jobs/${uuid}/status`)
+  return await apiCall(`/jobs/${uuid}`)
 }
 
 // Get transcript
@@ -58,17 +58,27 @@ export async function getTranscript(uuid) {
   return await apiCall(`/jobs/${uuid}/transcript`)
 }
 
-// Update speaker name (identify speakers endpoint)
-export async function updateSpeaker(uuid, oldName, newName) {
-  return await apiCall(`/jobs/${uuid}/identify-speakers`, {
+// Identify speakers with AI
+export async function identifySpeakers(uuid, context = null) {
+  const body = context ? { context } : {}
+
+  return await apiCall(`/jobs/${uuid}/speaker-identifications`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      old_speaker_name: oldName,
-      new_speaker_name: newName,
-    }),
+    body: JSON.stringify(body),
+  })
+}
+
+// Update speaker names
+export async function updateSpeakers(uuid, mapping) {
+  return await apiCall(`/jobs/${uuid}/speakers`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mapping }),
   })
 }
 
@@ -78,7 +88,7 @@ export async function generateSummary(uuid, customPrompt = null) {
     ? { custom_prompt: customPrompt }
     : {}
 
-  return await apiCall(`/jobs/${uuid}/summarise`, {
+  return await apiCall(`/jobs/${uuid}/summary`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -89,7 +99,7 @@ export async function generateSummary(uuid, customPrompt = null) {
 
 // Get summary - uses the same endpoint, returns generated summary
 export async function getSummary(uuid) {
-  return await apiCall(`/jobs/${uuid}/summarise`, {
+  return await apiCall(`/jobs/${uuid}/summary`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -100,30 +110,62 @@ export async function getSummary(uuid) {
 
 // Download PDF
 export async function downloadPDF(uuid, filename) {
-  const response = await apiCall(`/jobs/${uuid}/pdf`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ filename }),
-  })
-  // The backend should return a URL or blob
-  if (response.url) {
-    window.open(response.url, '_blank')
+  try {
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/pdf`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+
+    // Get the blob from the response
+    const blob = await response.blob()
+
+    // Create a download link
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `${filename || 'transcript'}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return { success: true }
+  } catch (error) {
+    console.error('PDF Download Error:', error)
+    throw error
   }
-  return response
 }
 
 // Download Markdown
 export async function downloadMarkdown(uuid) {
-  const response = await apiCall(`/jobs/${uuid}/markdown`, {
-    method: 'POST',
-  })
-  // The backend should return a URL or blob
-  if (response.url) {
-    window.open(response.url, '_blank')
+  try {
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/markdown`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+
+    // Get the blob from the response
+    const blob = await response.blob()
+
+    // Create a download link
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `transcript_${uuid}.md`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Markdown Download Error:', error)
+    throw error
   }
-  return response
 }
 
 // Delete job
@@ -136,4 +178,39 @@ export async function deleteJob(uuid) {
 // Health check
 export async function healthCheck() {
   return await apiCall('/health')
+}
+
+// ============================================================================
+// New Workflow Step APIs
+// ============================================================================
+
+// Start transcription step
+export async function startTranscription(uuid, model = 'turbo') {
+  return await apiCall(`/jobs/${uuid}/transcriptions?model_name=${model}`, {
+    method: 'POST',
+  })
+}
+
+// Get transcription data
+export async function getTranscriptionData(uuid) {
+  return await apiCall(`/jobs/${uuid}/transcriptions`)
+}
+
+// Start diarization step
+export async function startDiarization(uuid) {
+  return await apiCall(`/jobs/${uuid}/diarizations`, {
+    method: 'POST',
+  })
+}
+
+// Get diarization data
+export async function getDiarizationData(uuid) {
+  return await apiCall(`/jobs/${uuid}/diarizations`)
+}
+
+// Start alignment step
+export async function startAlignment(uuid) {
+  return await apiCall(`/jobs/${uuid}/alignments`, {
+    method: 'POST',
+  })
 }

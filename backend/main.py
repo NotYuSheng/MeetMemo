@@ -3,6 +3,7 @@ FastAPI application for audio transcription and speaker diarization.
 
 Refactored version addressing all critical security, performance, and design issues.
 """
+import hashlib
 import json
 import logging
 import os
@@ -17,6 +18,9 @@ from pathlib import Path
 from threading import Thread
 from typing import Optional
 
+import aiofiles
+import aiofiles.os
+import asyncio
 import httpx
 import torch
 import whisper
@@ -40,17 +44,25 @@ from pyannote_whisper.utils import diarize_text
 
 # Import new modules
 from database import (
-    init_database, add_job, update_status, update_progress, update_error,
+    init_database, close_database, add_job, update_status, update_progress, update_error,
     get_job, get_all_jobs, get_jobs_count, delete_job, update_file_name,
-    cleanup_old_jobs
+    cleanup_old_jobs, add_export_job, get_export_job, update_export_status,
+    update_export_progress, update_export_error, update_export_file_path,
+    cleanup_old_export_jobs, get_job_by_hash,
+    # New workflow functions
+    update_workflow_state, update_step_progress, save_transcription_data,
+    save_diarization_data, get_transcription_data, get_diarization_data
 )
 from security import sanitize_filename, validate_uuid_format, sanitize_log_data
 from models import (
     SpeakerNameMapping, TranscriptUpdateRequest, SummarizeRequest,
     SpeakerIdentificationRequest, RenameJobRequest, ExportRequest,
-    JobResponse, JobStatusResponse, FileNameResponse, TranscriptResponse,
-    SummaryResponse, DeleteResponse, RenameResponse, SpeakerUpdateResponse,
-    SpeakerIdentificationResponse, JobListResponse
+    CreateExportRequest, JobResponse, JobStatusResponse, FileNameResponse,
+    TranscriptResponse, SummaryResponse, DeleteResponse, RenameResponse,
+    SpeakerUpdateResponse, SpeakerIdentificationResponse, JobListResponse,
+    ExportJobResponse, ExportJobStatusResponse,
+    # New workflow models
+    WorkflowActionResponse, TranscriptionDataResponse, DiarizationDataResponse
 )
 
 # Load environment variables
@@ -276,7 +288,7 @@ def generate_professional_filename(meeting_title: str, file_type: str, include_d
         return f"{base_name}.{file_type}"
 
 
-async def upload_audio(job_uuid: str, file: UploadFile) -> str:
+async def upload_audio(job_uuid: str, file: UploadFile) -> tuple[str, str]:
     """
     Uploads the audio file to the desired directory with validation.
 
@@ -285,12 +297,12 @@ async def upload_audio(job_uuid: str, file: UploadFile) -> str:
         file: Uploaded file
 
     Returns:
-        The resultant file name
+        Tuple of (filename, file_hash)
 
     Raises:
         HTTPException: If file is invalid
     """
-    # Validate file size
+    # Validate file size and collect chunks
     file_size = 0
     chunks = []
 
@@ -305,6 +317,9 @@ async def upload_audio(job_uuid: str, file: UploadFile) -> str:
         chunks.append(chunk)
         chunk = await file.read(8192)
 
+    # Calculate file hash for duplicate detection
+    file_hash = calculate_file_hash(chunks)
+
     # Sanitize filename
     try:
         safe_filename = sanitize_filename(file.filename)
@@ -316,12 +331,12 @@ async def upload_audio(job_uuid: str, file: UploadFile) -> str:
     filename = get_unique_filename(UPLOAD_DIR, safe_filename)
     file_path = os.path.join(UPLOAD_DIR, filename)
 
-    # Save the file to disk
-    with open(file_path, "wb") as buffer:
+    # Save the file to disk (async)
+    async with aiofiles.open(file_path, "wb") as buffer:
         for chunk in chunks:
-            buffer.write(chunk)
+            await buffer.write(chunk)
 
-    return filename
+    return filename, file_hash
 
 
 def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
@@ -329,6 +344,22 @@ def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000):
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_frame_rate(sample_rate).set_channels(1)
     audio.export(output_path, format="wav")
+
+
+def calculate_file_hash(chunks: list[bytes]) -> str:
+    """
+    Calculate SHA256 hash of file content from chunks.
+
+    Args:
+        chunks: List of file content chunks
+
+    Returns:
+        Hexadecimal SHA256 hash string
+    """
+    sha256_hash = hashlib.sha256()
+    for chunk in chunks:
+        sha256_hash.update(chunk)
+    return sha256_hash.hexdigest()
 
 
 ##################################### Model Loading #####################################
@@ -780,7 +811,7 @@ async def cleanup_expired_files():
     """Clean up files older than 12 hours."""
     try:
         # Get expired jobs from database
-        expired_jobs = cleanup_old_jobs(max_age_hours=12)
+        expired_jobs = await cleanup_old_jobs(max_age_hours=12)
 
         if not expired_jobs:
             return
@@ -793,40 +824,56 @@ async def cleanup_expired_files():
 
             # Remove audio file
             audio_path = os.path.join(UPLOAD_DIR, file_name)
-            if os.path.exists(audio_path):
+            if await aiofiles.os.path.exists(audio_path):
                 try:
-                    os.remove(audio_path)
+                    await aiofiles.os.remove(audio_path)
                     removed_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to remove audio file {audio_path}: {e}")
 
             # Remove transcript files
             transcript_path = os.path.join("transcripts", f"{file_name}.json")
-            if os.path.exists(transcript_path):
+            if await aiofiles.os.path.exists(transcript_path):
                 try:
-                    os.remove(transcript_path)
+                    await aiofiles.os.remove(transcript_path)
                     removed_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to remove transcript {transcript_path}: {e}")
 
             edited_transcript_path = os.path.join("transcripts", "edited", f"{file_name}.json")
-            if os.path.exists(edited_transcript_path):
+            if await aiofiles.os.path.exists(edited_transcript_path):
                 try:
-                    os.remove(edited_transcript_path)
+                    await aiofiles.os.remove(edited_transcript_path)
                     removed_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to remove edited transcript: {e}")
 
             # Remove summary file
             summary_path = os.path.join("summary", f"{job_uuid}.txt")
-            if os.path.exists(summary_path):
+            if await aiofiles.os.path.exists(summary_path):
                 try:
-                    os.remove(summary_path)
+                    await aiofiles.os.remove(summary_path)
                     removed_count += 1
                 except Exception as e:
                     logger.warning(f"Failed to remove summary: {e}")
 
         logger.info(f"Cleaned up {removed_count} files from {len(expired_jobs)} expired jobs")
+
+        # Cleanup old export jobs (older than 24 hours)
+        old_exports = await cleanup_old_export_jobs(max_age_hours=24)
+
+        if old_exports:
+            export_removed_count = 0
+            for export in old_exports:
+                file_path = export.get('file_path')
+                if file_path and await aiofiles.os.path.exists(file_path):
+                    try:
+                        await aiofiles.os.remove(file_path)
+                        export_removed_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to remove export file {file_path}: {e}")
+
+            logger.info(f"Cleaned up {export_removed_count} export files from {len(old_exports)} old export jobs")
 
     except Exception as e:
         logger.error(f"Error during file cleanup: {e}", exc_info=True)
@@ -862,8 +909,8 @@ async def startup_event():
 
     logger.info("Starting MeetMemo API...")
 
-    # Initialize database
-    init_database()
+    # Initialize database (NOW ASYNC)
+    await init_database()
 
     # Initialize HTTP client
     http_client = httpx.AsyncClient(timeout=120.0)
@@ -896,6 +943,9 @@ async def shutdown_event():
     if http_client:
         await http_client.aclose()
 
+    # Close database pool
+    await close_database()
+
     logger.info("MeetMemo API shutdown complete")
 
 
@@ -917,13 +967,13 @@ async def get_jobs(
         Paginated job list
     """
     try:
-        jobs_list = get_all_jobs(limit=limit, offset=offset)
-        total = get_jobs_count()
+        jobs_list = await get_all_jobs(limit=limit, offset=offset)
+        total = await get_jobs_count()
 
         # Convert to dict format expected by frontend
         jobs_dict = {}
         for job in jobs_list:
-            jobs_dict[job['uuid']] = {
+            jobs_dict[str(job['uuid'])] = {
                 'file_name': job['file_name'],
                 'status_code': job['status_code']
             }
@@ -938,75 +988,323 @@ async def get_jobs(
         logger.error(f"Error retrieving job list: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error while retrieving job list")
 
+##################################### Independent Processing Functions #####################################
 
-async def process_transcription_job(
-    job_uuid: str,
-    file_path: str,
-    wav_file_name: str,
-    model_name: str = "turbo"
-) -> None:
+async def process_transcription_step(job_uuid: str, file_path: str, model_name: str = "turbo") -> None:
     """
-    Background task for audio transcription and diarization.
+    Independent transcription step using Whisper.
 
     Args:
-        job_uuid: Job UUID for tracking
+        job_uuid: Job UUID
         file_path: Path to audio file
-        wav_file_name: Name of WAV file
         model_name: Whisper model to use
     """
     try:
-        # Update status to processing with initial progress
-        update_progress(job_uuid, 0, "initializing")
-        logger.info(f"Starting background processing for job {job_uuid}")
+        await update_workflow_state(job_uuid, 'transcribing', 0)
+        logger.info(f"Starting transcription for job {job_uuid}")
 
-        # Get cached models (already loaded in memory)
+        # Get cached model
         model = get_whisper_model(model_name)
-        pipeline = get_pyannote_pipeline()
 
-        logger.info(f"Processing file {wav_file_name} with model {model_name}")
-
-        # Stage 1: Transcription (0-30% progress) - Fast with optimizations
-        update_progress(job_uuid, 5, "transcribing")
+        # Transcribe with optimized settings
+        await update_step_progress(job_uuid, 10)
         asr = model.transcribe(
             file_path,
             language="en",
-            fp16=True,                    # Enable half-precision for 2x speed on GPU
-            beam_size=1,                  # Reduce beam search from default 5 to 1
-            best_of=1,                    # Reduce sampling from default 5 to 1
-            temperature=0.0,              # Deterministic output
-            no_speech_threshold=0.6,      # Skip segments with low speech probability
-            logprob_threshold=-1.0,       # Skip low confidence segments
-            compression_ratio_threshold=2.4,  # Detect and skip repetitive hallucinated text
-            condition_on_previous_text=False  # Don't condition on previous text (reduces hallucinations)
+            fp16=True,
+            beam_size=1,
+            best_of=1,
+            temperature=0.0,
+            no_speech_threshold=0.6,
+            logprob_threshold=-1.0,
+            compression_ratio_threshold=2.4,
+            condition_on_previous_text=False
         )
-        logger.info(f"Transcription complete for {wav_file_name}")
 
-        # Stage 2: Diarization (30-95% progress) - This is the slowest part
-        update_progress(job_uuid, 30, "diarizing")
-        logger.info(f"Diarizing {wav_file_name}")
-        diarization = pipeline(file_path)
-        logger.info(f"Diarization complete for {wav_file_name}")
+        await update_step_progress(job_uuid, 90)
+        logger.info(f"Transcription complete for job {job_uuid}")
 
-        # Stage 3: Format and save (95-100% progress)
-        update_progress(job_uuid, 95, "finalizing")
-        diarized = diarize_text(asr, diarization)
-        full_transcript = format_result(diarized=diarized)
+        # Save transcription data to database
+        transcription_data = {
+            "text": asr.get("text", ""),
+            "segments": asr.get("segments", []),
+            "language": asr.get("language", "en")
+        }
+        await save_transcription_data(job_uuid, transcription_data)
 
-        os.makedirs("transcripts", exist_ok=True)
-        json_path = os.path.join("transcripts", f"{wav_file_name}.json")
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(full_transcript, f, indent=4)
-
-        # Mark complete
-        update_progress(job_uuid, 100, "completed")
-        update_status(job_uuid, 200)
-        logger.info(f"Successfully completed processing for job {job_uuid}")
+        # Update state to transcribed
+        await update_step_progress(job_uuid, 100)
+        await update_workflow_state(job_uuid, 'transcribed', 100)
+        logger.info(f"Transcription step completed for job {job_uuid}")
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Error processing job {job_uuid}: {error_msg}", exc_info=True)
+        logger.error(f"Transcription failed for job {job_uuid}: {error_msg}", exc_info=True)
+        await update_error(job_uuid, f"Transcription failed: {error_msg}")
+        await update_workflow_state(job_uuid, 'error', 0)
+
+
+async def process_diarization_step(job_uuid: str, file_path: str) -> None:
+    """
+    Independent diarization step using PyAnnote.
+
+    Args:
+        job_uuid: Job UUID
+        file_path: Path to audio file
+    """
+    try:
+        await update_workflow_state(job_uuid, 'diarizing', 0)
+        logger.info(f"Starting diarization for job {job_uuid}")
+
+        # Get cached pipeline
+        pipeline = get_pyannote_pipeline()
+
+        # Diarize audio
+        await update_step_progress(job_uuid, 10)
+        diarization = pipeline(file_path)
+
+        await update_step_progress(job_uuid, 90)
+        logger.info(f"Diarization complete for job {job_uuid}")
+
+        # Convert diarization to serializable format
+        diarization_data = {
+            "speakers": [],
+            "segments": []
+        }
+
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            diarization_data["segments"].append({
+                "start": float(turn.start),
+                "end": float(turn.end),
+                "speaker": speaker
+            })
+            if speaker not in diarization_data["speakers"]:
+                diarization_data["speakers"].append(speaker)
+
+        # Save diarization data to database
+        await save_diarization_data(job_uuid, diarization_data)
+
+        # Update state to diarized
+        await update_step_progress(job_uuid, 100)
+        await update_workflow_state(job_uuid, 'diarized', 100)
+        logger.info(f"Diarization step completed for job {job_uuid}")
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Diarization failed for job {job_uuid}: {error_msg}", exc_info=True)
+        await update_error(job_uuid, f"Diarization failed: {error_msg}")
+        await update_workflow_state(job_uuid, 'error', 0)
+
+
+async def process_alignment_step(job_uuid: str, file_name: str) -> None:
+    """
+    Independent alignment step - combines transcription and diarization.
+
+    Args:
+        job_uuid: Job UUID
+        file_name: File name for saving transcript
+    """
+    try:
+        await update_workflow_state(job_uuid, 'aligning', 0)
+        logger.info(f"Starting alignment for job {job_uuid}")
+
+        # Get transcription and diarization data
+        await update_step_progress(job_uuid, 10)
+        transcription_data = await get_transcription_data(job_uuid)
+        diarization_data = await get_diarization_data(job_uuid)
+
+        if not transcription_data:
+            raise ValueError("Transcription data not found")
+        if not diarization_data:
+            raise ValueError("Diarization data not found")
+
+        await update_step_progress(job_uuid, 30)
+
+        # Convert back to pyannote format for diarize_text
+        # This is a simplified version - we need to reconstruct the objects
+        # For now, we'll create a simpler alignment
+
+        # Align speakers with text segments
+        await update_step_progress(job_uuid, 50)
+
+        # Create aligned transcript
+        aligned_transcript = []
+        text_segments = transcription_data.get("segments", [])
+        speaker_segments = diarization_data.get("segments", [])
+
+        for text_seg in text_segments:
+            seg_start = text_seg.get("start", 0)
+            seg_end = text_seg.get("end", 0)
+            seg_text = text_seg.get("text", "").strip()
+
+            # Find overlapping speaker
+            assigned_speaker = "SPEAKER_00"  # default
+            max_overlap = 0
+
+            for spk_seg in speaker_segments:
+                spk_start = spk_seg["start"]
+                spk_end = spk_seg["end"]
+
+                # Calculate overlap
+                overlap_start = max(seg_start, spk_start)
+                overlap_end = min(seg_end, spk_end)
+                overlap = max(0, overlap_end - overlap_start)
+
+                if overlap > max_overlap:
+                    max_overlap = overlap
+                    assigned_speaker = spk_seg["speaker"]
+
+            aligned_transcript.append({
+                "speaker": assigned_speaker,
+                "text": seg_text,
+                "start": f"{seg_start:.2f}",
+                "end": f"{seg_end:.2f}"
+            })
+
+        await update_step_progress(job_uuid, 80)
+
+        # Save aligned transcript to file
+        os.makedirs("transcripts", exist_ok=True)
+        json_path = os.path.join("transcripts", f"{file_name}.json")
+        json_str = json.dumps(aligned_transcript, indent=4)
+        async with aiofiles.open(json_path, "w", encoding="utf-8") as f:
+            await f.write(json_str)
+
+        # Update state to completed
+        await update_step_progress(job_uuid, 100)
+        await update_workflow_state(job_uuid, 'completed', 100)
+        await update_status(job_uuid, 200)
+        logger.info(f"Alignment step completed for job {job_uuid}")
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Alignment failed for job {job_uuid}: {error_msg}", exc_info=True)
+        await update_error(job_uuid, f"Alignment failed: {error_msg}")
+        await update_workflow_state(job_uuid, 'error', 0)
+
+
+async def process_export_job(
+    export_uuid: str,
+    job_uuid: str,
+    export_type: str
+) -> None:
+    """
+    Background task for PDF/Markdown export generation.
+
+    Args:
+        export_uuid: Export job UUID
+        job_uuid: Parent job UUID
+        export_type: Type of export (pdf or markdown)
+    """
+    try:
+        await update_export_progress(export_uuid, 10)
+        logger.info(f"Starting export job {export_uuid} ({export_type}) for job {job_uuid}")
+
+        # Ensure export directory exists
+        export_dir = Path("exports")
+        export_dir.mkdir(exist_ok=True)
+
+        # Get job data
+        job = await get_job(job_uuid)
+        if not job:
+            raise ValueError(f"Job {job_uuid} not found")
+
+        file_name = job['file_name']
+
+        # Get transcript
+        await update_export_progress(export_uuid, 20)
+        transcript_response = await get_transcript(job_uuid)
+        full_transcript_json = transcript_response.full_transcript
+        transcript_data = json.loads(full_transcript_json)
+
+        # Get summary
+        await update_export_progress(export_uuid, 40)
         try:
-            update_error(job_uuid, error_msg)
+            summary_response = await get_summary(job_uuid, regenerate=False)
+            summary = summary_response.summary
+        except HTTPException:
+            # No summary available
+            summary = "No summary available."
+
+        # Parse summary into structured data
+        summary_data = {
+            "key_points": [],
+            "action_items": [],
+            "decisions": [],
+            "summary_text": summary
+        }
+
+        # Simple parsing - look for sections
+        if "Key Points:" in summary or "key points:" in summary.lower():
+            try:
+                lines = summary.split('\n')
+                in_key_points = False
+                for line in lines:
+                    if 'key point' in line.lower():
+                        in_key_points = True
+                        continue
+                    if in_key_points and line.strip().startswith(('-', '•', '*', '1.', '2.')):
+                        summary_data["key_points"].append(line.strip().lstrip('-•* ').lstrip('0123456789. '))
+                    elif in_key_points and line.strip() and not line.strip().startswith(('-', '•', '*')):
+                        in_key_points = False
+            except Exception as e:
+                logger.warning(f"Failed to parse summary structure: {e}")
+
+        await update_export_progress(export_uuid, 60)
+
+        if export_type == "pdf":
+            # Generate PDF in thread pool (CPU-bound operation)
+            loop = asyncio.get_event_loop()
+            pdf_buffer = await loop.run_in_executor(
+                None,
+                generate_professional_pdf,
+                summary_data,
+                transcript_data,
+                datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            )
+
+            await update_export_progress(export_uuid, 90)
+
+            # Save PDF to file asynchronously
+            file_path = export_dir / f"{export_uuid}.pdf"
+            async with aiofiles.open(str(file_path), "wb") as f:
+                await f.write(pdf_buffer.read())
+
+        elif export_type == "markdown":
+            # Generate Markdown
+            markdown_content = f"# Meeting Transcript\n\n"
+            markdown_content += f"**File:** {file_name}\n\n"
+            markdown_content += f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+
+            if summary_data["key_points"]:
+                markdown_content += f"## Summary\n\n"
+                markdown_content += summary + "\n\n"
+
+            markdown_content += f"## Transcript\n\n"
+            for segment in transcript_data:
+                speaker = segment.get('speaker', 'Unknown')
+                text = segment.get('text', '')
+                start = segment.get('start', '')
+                markdown_content += f"**{speaker}** ({start}): {text}\n\n"
+
+            await update_export_progress(export_uuid, 90)
+
+            # Save Markdown to file asynchronously
+            file_path = export_dir / f"{export_uuid}.md"
+            async with aiofiles.open(str(file_path), "w", encoding="utf-8") as f:
+                await f.write(markdown_content)
+
+        # Update export job with file path and mark complete
+        await update_export_file_path(export_uuid, str(file_path))
+        await update_export_progress(export_uuid, 100)
+        await update_export_status(export_uuid, 200)
+        logger.info(f"Successfully completed export job {export_uuid}")
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Error processing export job {export_uuid}: {error_msg}", exc_info=True)
+        try:
+            await update_export_error(export_uuid, error_msg)
         except Exception:
             pass
 
@@ -1019,6 +1317,7 @@ async def create_job(
 ) -> JobResponse:
     """
     Create new transcription job by uploading audio file.
+    Checks for duplicate files using hash comparison.
     Returns immediately with 202 status while processing in background.
 
     Args:
@@ -1027,13 +1326,35 @@ async def create_job(
         model_name: Whisper model to use
 
     Returns:
-        Job information with UUID and 202 status
+        Job information with UUID and status (202 for new, 200 for duplicate)
     """
     job_uuid = str(uuid.uuid4())
 
     try:
-        # Upload and validate file (quick, runs synchronously)
-        file_name = await upload_audio(job_uuid, file)
+        # Upload and validate file (calculates hash during upload)
+        file_name, file_hash = await upload_audio(job_uuid, file)
+
+        # Check if this file was already uploaded
+        existing_job = await get_job_by_hash(file_hash)
+
+        if existing_job:
+            # File already exists - remove the newly uploaded file and return existing job
+            file_path = os.path.join(UPLOAD_DIR, file_name)
+            if await aiofiles.os.path.exists(file_path):
+                await aiofiles.os.remove(file_path)
+
+            logger.info(
+                f"Duplicate file detected (hash: {file_hash[:16]}...). "
+                f"Returning existing job {existing_job['uuid']}"
+            )
+
+            return JobResponse(
+                uuid=str(existing_job['uuid']),
+                file_name=existing_job['file_name'],
+                status_code=existing_job['status_code']
+            )
+
+        # New file - proceed with normal processing
         file_path = os.path.join(UPLOAD_DIR, file_name)
 
         # Convert to WAV if needed
@@ -1045,23 +1366,14 @@ async def create_job(
         else:
             wav_file_name = file_name
 
-        logger.info(f"Created transcription job {job_uuid} for file: {wav_file_name}")
+        logger.info(f"Created transcription job {job_uuid} for file: {wav_file_name} (hash: {file_hash[:16]}...)")
 
-        # Create job record with status 202 (processing)
-        add_job(job_uuid, wav_file_name, 202)
+        # Create job record in 'uploaded' state (ready for transcription)
+        await add_job(job_uuid, wav_file_name, 202, file_hash, workflow_state='uploaded')
 
-        # Queue background task (non-blocking)
-        background_tasks.add_task(
-            process_transcription_job,
-            job_uuid,
-            file_path,
-            wav_file_name,
-            model_name
-        )
+        logger.info(f"Job {job_uuid} created successfully in 'uploaded' state")
 
-        logger.info(f"Queued background processing for job {job_uuid}")
-
-        # Return immediately with 202 status
+        # Return immediately - client will initiate workflow steps via API
         return JobResponse(
             uuid=job_uuid,
             file_name=wav_file_name,
@@ -1073,7 +1385,7 @@ async def create_job(
     except Exception as e:
         logger.error(f"Error creating job: {e}", exc_info=True)
         try:
-            update_status(job_uuid, 500)
+            await update_status(job_uuid, 500)
         except Exception:
             pass
         raise HTTPException(status_code=500, detail="Failed to create job")
@@ -1082,17 +1394,17 @@ async def create_job(
 @app.get("/api/v1/jobs/{uuid}", response_model=JobStatusResponse)
 async def get_job_status(uuid: str) -> JobStatusResponse:
     """
-    Get job status and information.
+    Get job status and information with workflow state.
 
     Args:
         uuid: Job UUID
 
     Returns:
-        Job status information
+        Job status information including workflow state and available actions
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1106,12 +1418,32 @@ async def get_job_status(uuid: str) -> JobStatusResponse:
 
     status_code = job['status_code']
     status = status_map.get(status_code, "unknown")
+    workflow_state = job.get('workflow_state', 'uploaded')
+
+    # Determine available actions based on workflow state
+    available_actions = []
+    if workflow_state == 'uploaded':
+        available_actions = ['transcribe', 'delete']
+    elif workflow_state == 'transcribed':
+        available_actions = ['diarize', 'delete']
+    elif workflow_state == 'diarized':
+        available_actions = ['align', 'delete']
+    elif workflow_state == 'completed':
+        available_actions = ['export', 'summary', 'delete']
+    elif workflow_state in ['transcribing', 'diarizing', 'aligning']:
+        available_actions = []  # No actions while processing
+    elif workflow_state == 'error':
+        available_actions = ['retry', 'delete']
 
     return JobStatusResponse(
         uuid=uuid,
         file_name=job['file_name'],
         status_code=status_code,
         status=status,
+        workflow_state=workflow_state,
+        current_step_progress=job.get('current_step_progress', 0),
+        available_actions=available_actions,
+        # Legacy fields
         progress_percentage=job.get('progress_percentage', 0),
         processing_stage=job.get('processing_stage', 'pending'),
         error_message=job.get('error_message')
@@ -1132,7 +1464,7 @@ async def update_job(uuid: str, request: RenameJobRequest) -> RenameResponse:
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1143,19 +1475,19 @@ async def update_job(uuid: str, request: RenameJobRequest) -> RenameResponse:
     unique_new_name = get_unique_filename(UPLOAD_DIR, request.file_name, exclude_path=old_audio_path)
 
     # Update database
-    if not update_file_name(uuid, unique_new_name):
+    if not await update_file_name(uuid, unique_new_name):
         raise HTTPException(status_code=500, detail="Failed to update job")
 
     # Rename audio file
     new_audio_path = os.path.join(UPLOAD_DIR, unique_new_name)
-    if os.path.exists(old_audio_path):
-        os.rename(old_audio_path, new_audio_path)
+    if await aiofiles.os.path.exists(old_audio_path):
+        await aiofiles.os.rename(old_audio_path, new_audio_path)
 
     # Rename transcript file
     old_transcript_path = os.path.join("transcripts", f"{old_file_name}.json")
     new_transcript_path = os.path.join("transcripts", f"{unique_new_name}.json")
-    if os.path.exists(old_transcript_path):
-        os.rename(old_transcript_path, new_transcript_path)
+    if await aiofiles.os.path.exists(old_transcript_path):
+        await aiofiles.os.rename(old_transcript_path, new_transcript_path)
 
     logger.info(f"Renamed job {uuid} from {old_file_name} to {unique_new_name}")
 
@@ -1163,6 +1495,209 @@ async def update_job(uuid: str, request: RenameJobRequest) -> RenameResponse:
         uuid=uuid,
         status="success",
         new_name=unique_new_name
+    )
+
+
+##################################### New Workflow Step Endpoints #####################################
+
+@app.post("/api/v1/jobs/{uuid}/transcriptions", response_model=WorkflowActionResponse, status_code=202)
+async def start_transcription(
+    uuid: str,
+    background_tasks: BackgroundTasks,
+    model_name: str = Query(default="turbo")
+) -> WorkflowActionResponse:
+    """
+    Start transcription step for an uploaded audio file.
+
+    Args:
+        uuid: Job UUID
+        background_tasks: FastAPI background tasks
+        model_name: Whisper model to use
+
+    Returns:
+        Workflow action response indicating transcription has started
+    """
+    uuid = validate_uuid_format(uuid)
+
+    job = await get_job(uuid)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
+
+    workflow_state = job.get('workflow_state', 'uploaded')
+
+    # Check if job is in correct state
+    if workflow_state != 'uploaded':
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot transcribe. Job is in '{workflow_state}' state. Must be 'uploaded'."
+        )
+
+    file_name = job['file_name']
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+
+    if not await aiofiles.os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    # Queue background task
+    background_tasks.add_task(process_transcription_step, uuid, file_path, model_name)
+
+    logger.info(f"Started transcription for job {uuid}")
+
+    return WorkflowActionResponse(
+        uuid=uuid,
+        workflow_state='transcribing',
+        status_code=202,
+        message="Transcription started"
+    )
+
+
+@app.get("/api/v1/jobs/{uuid}/transcriptions", response_model=TranscriptionDataResponse)
+async def get_transcription(uuid: str) -> TranscriptionDataResponse:
+    """
+    Get raw transcription data from Whisper.
+
+    Args:
+        uuid: Job UUID
+
+    Returns:
+        Raw transcription data
+    """
+    uuid = validate_uuid_format(uuid)
+
+    job = await get_job(uuid)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
+
+    transcription_data = await get_transcription_data(uuid)
+    if not transcription_data:
+        raise HTTPException(status_code=404, detail="Transcription data not found")
+
+    return TranscriptionDataResponse(
+        uuid=uuid,
+        transcription_data=transcription_data,
+        workflow_state=job.get('workflow_state', 'unknown')
+    )
+
+
+@app.post("/api/v1/jobs/{uuid}/diarizations", response_model=WorkflowActionResponse, status_code=202)
+async def start_diarization(
+    uuid: str,
+    background_tasks: BackgroundTasks
+) -> WorkflowActionResponse:
+    """
+    Start diarization step for a transcribed audio file.
+
+    Args:
+        uuid: Job UUID
+        background_tasks: FastAPI background tasks
+
+    Returns:
+        Workflow action response indicating diarization has started
+    """
+    uuid = validate_uuid_format(uuid)
+
+    job = await get_job(uuid)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
+
+    workflow_state = job.get('workflow_state', 'uploaded')
+
+    # Check if job is in correct state
+    if workflow_state != 'transcribed':
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot diarize. Job is in '{workflow_state}' state. Must be 'transcribed'."
+        )
+
+    file_name = job['file_name']
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+
+    if not await aiofiles.os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    # Queue background task
+    background_tasks.add_task(process_diarization_step, uuid, file_path)
+
+    logger.info(f"Started diarization for job {uuid}")
+
+    return WorkflowActionResponse(
+        uuid=uuid,
+        workflow_state='diarizing',
+        status_code=202,
+        message="Diarization started"
+    )
+
+
+@app.get("/api/v1/jobs/{uuid}/diarizations", response_model=DiarizationDataResponse)
+async def get_diarization(uuid: str) -> DiarizationDataResponse:
+    """
+    Get raw diarization data from PyAnnote.
+
+    Args:
+        uuid: Job UUID
+
+    Returns:
+        Raw diarization data
+    """
+    uuid = validate_uuid_format(uuid)
+
+    job = await get_job(uuid)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
+
+    diarization_data = await get_diarization_data(uuid)
+    if not diarization_data:
+        raise HTTPException(status_code=404, detail="Diarization data not found")
+
+    return DiarizationDataResponse(
+        uuid=uuid,
+        diarization_data=diarization_data,
+        workflow_state=job.get('workflow_state', 'unknown')
+    )
+
+
+@app.post("/api/v1/jobs/{uuid}/alignments", response_model=WorkflowActionResponse, status_code=202)
+async def start_alignment(
+    uuid: str,
+    background_tasks: BackgroundTasks
+) -> WorkflowActionResponse:
+    """
+    Start alignment step to combine transcription and diarization.
+
+    Args:
+        uuid: Job UUID
+        background_tasks: FastAPI background tasks
+
+    Returns:
+        Workflow action response indicating alignment has started
+    """
+    uuid = validate_uuid_format(uuid)
+
+    job = await get_job(uuid)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
+
+    workflow_state = job.get('workflow_state', 'uploaded')
+
+    # Check if job is in correct state
+    if workflow_state != 'diarized':
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot align. Job is in '{workflow_state}' state. Must be 'diarized'."
+        )
+
+    file_name = job['file_name']
+
+    # Queue background task
+    background_tasks.add_task(process_alignment_step, uuid, file_name)
+
+    logger.info(f"Started alignment for job {uuid}")
+
+    return WorkflowActionResponse(
+        uuid=uuid,
+        workflow_state='aligning',
+        status_code=202,
+        message="Alignment started"
     )
 
 
@@ -1179,7 +1714,7 @@ async def delete_job_endpoint(uuid: str) -> DeleteResponse:
     """
     uuid = validate_uuid_format(uuid)
 
-    file_name = delete_job(uuid)
+    file_name = await delete_job(uuid)
     if not file_name:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1188,36 +1723,36 @@ async def delete_job_endpoint(uuid: str) -> DeleteResponse:
 
     # Delete audio file
     audio_path = os.path.join(UPLOAD_DIR, file_name)
-    if os.path.exists(audio_path):
+    if await aiofiles.os.path.exists(audio_path):
         try:
-            os.remove(audio_path)
+            await aiofiles.os.remove(audio_path)
             files_deleted.append(f"audio: {file_name}")
         except Exception as e:
             logger.error(f"Error deleting audio file: {e}")
 
     # Delete transcript
     transcript_path = os.path.join("transcripts", f"{file_name}.json")
-    if os.path.exists(transcript_path):
+    if await aiofiles.os.path.exists(transcript_path):
         try:
-            os.remove(transcript_path)
+            await aiofiles.os.remove(transcript_path)
             files_deleted.append(f"transcript: {file_name}.json")
         except Exception as e:
             logger.error(f"Error deleting transcript: {e}")
 
     # Delete edited transcript
     edited_transcript_path = os.path.join("transcripts", "edited", f"{file_name}.json")
-    if os.path.exists(edited_transcript_path):
+    if await aiofiles.os.path.exists(edited_transcript_path):
         try:
-            os.remove(edited_transcript_path)
+            await aiofiles.os.remove(edited_transcript_path)
             files_deleted.append(f"edited transcript")
         except Exception as e:
             logger.error(f"Error deleting edited transcript: {e}")
 
     # Delete summary
     summary_path = os.path.join("summary", f"{uuid}.txt")
-    if os.path.exists(summary_path):
+    if await aiofiles.os.path.exists(summary_path):
         try:
-            os.remove(summary_path)
+            await aiofiles.os.remove(summary_path)
             files_deleted.append(f"summary")
         except Exception as e:
             logger.error(f"Error deleting summary: {e}")
@@ -1245,7 +1780,7 @@ async def get_transcript(uuid: str) -> TranscriptResponse:
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1255,9 +1790,9 @@ async def get_transcript(uuid: str) -> TranscriptResponse:
     edited_path = os.path.join("transcripts", "edited", f"{file_name}.json")
     original_path = os.path.join("transcripts", f"{file_name}.json")
 
-    if os.path.exists(edited_path):
-        with open(edited_path, "r", encoding="utf-8") as f:
-            full_transcript = f.read()
+    if await aiofiles.os.path.exists(edited_path):
+        async with aiofiles.open(edited_path, "r", encoding="utf-8") as f:
+            full_transcript = await f.read()
         logger.info(f"Retrieved edited transcript for {uuid}: {sanitize_log_data(full_transcript)}")
         return TranscriptResponse(
             uuid=uuid,
@@ -1267,9 +1802,9 @@ async def get_transcript(uuid: str) -> TranscriptResponse:
             status_code=200,
             is_edited=True
         )
-    elif os.path.exists(original_path):
-        with open(original_path, "r", encoding="utf-8") as f:
-            full_transcript = f.read()
+    elif await aiofiles.os.path.exists(original_path):
+        async with aiofiles.open(original_path, "r", encoding="utf-8") as f:
+            full_transcript = await f.read()
         logger.info(f"Retrieved original transcript for {uuid}: {sanitize_log_data(full_transcript)}")
         return TranscriptResponse(
             uuid=uuid,
@@ -1297,7 +1832,7 @@ async def update_transcript(uuid: str, request: TranscriptUpdateRequest) -> dict
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1305,16 +1840,17 @@ async def update_transcript(uuid: str, request: TranscriptUpdateRequest) -> dict
 
     # Save edited transcript
     os.makedirs("transcripts/edited", exist_ok=True)
-    edited_path = os.path.join("transcripts/edited", f"{file_name}.json")
+    edited_path = os.path.join("transcripts", "edited", f"{file_name}.json")
 
-    with open(edited_path, "w", encoding="utf-8") as f:
-        json.dump(request.transcript, f, indent=4)
+    json_str = json.dumps(request.transcript, indent=4)
+    async with aiofiles.open(edited_path, "w", encoding="utf-8") as f:
+        await f.write(json_str)
 
     # Invalidate cached summary
     summary_path = Path("summary") / f"{uuid}.txt"
-    if summary_path.exists():
+    if await aiofiles.os.path.exists(str(summary_path)):
         try:
-            summary_path.unlink()
+            await aiofiles.os.remove(str(summary_path))
             logger.info(f"Invalidated cached summary for {uuid}")
         except Exception as e:
             logger.warning(f"Failed to invalidate summary: {e}")
@@ -1346,7 +1882,7 @@ async def get_summary(
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1354,9 +1890,10 @@ async def get_summary(
     summary_path = Path("summary") / f"{uuid}.txt"
 
     # Return cached summary if exists and not forcing regeneration
-    if summary_path.exists() and not regenerate:
+    if await aiofiles.os.path.exists(str(summary_path)) and not regenerate:
         try:
-            cached_summary = summary_path.read_text(encoding="utf-8")
+            async with aiofiles.open(str(summary_path), "r", encoding="utf-8") as f:
+                cached_summary = await f.read()
             logger.info(f"Returned cached summary for {uuid}")
             return SummaryResponse(
                 uuid=uuid,
@@ -1380,7 +1917,8 @@ async def get_summary(
 
         # Cache summary
         summary_path.parent.mkdir(exist_ok=True)
-        summary_path.write_text(summary, encoding="utf-8")
+        async with aiofiles.open(str(summary_path), "w", encoding="utf-8") as f:
+            await f.write(summary)
 
         logger.info(f"Generated summary for {uuid}: {sanitize_log_data(summary)}")
 
@@ -1413,7 +1951,7 @@ async def create_summary(uuid: str, request: SummarizeRequest = None) -> Summary
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1437,7 +1975,8 @@ async def create_summary(uuid: str, request: SummarizeRequest = None) -> Summary
         # Cache summary
         summary_path = Path("summary") / f"{uuid}.txt"
         summary_path.parent.mkdir(exist_ok=True)
-        summary_path.write_text(summary, encoding="utf-8")
+        async with aiofiles.open(str(summary_path), "w", encoding="utf-8") as f:
+            await f.write(summary)
 
         logger.info(f"Generated custom summary for {uuid}")
 
@@ -1469,14 +2008,14 @@ async def delete_summary_cache(uuid: str) -> dict:
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
     summary_path = Path("summary") / f"{uuid}.txt"
 
-    if summary_path.exists():
-        summary_path.unlink()
+    if await aiofiles.os.path.exists(str(summary_path)):
+        await aiofiles.os.remove(str(summary_path))
         logger.info(f"Deleted cached summary for {uuid}")
         return {
             "uuid": uuid,
@@ -1501,7 +2040,7 @@ async def update_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> Speaker
     """
     uuid = validate_uuid_format(uuid)
 
-    job = get_job(uuid)
+    job = await get_job(uuid)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
@@ -1511,9 +2050,9 @@ async def update_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> Speaker
 
     # Determine which files to update
     files_to_update = []
-    if os.path.exists(edited_transcript_path):
+    if await aiofiles.os.path.exists(edited_transcript_path):
         files_to_update.append(edited_transcript_path)
-    if os.path.exists(transcript_path):
+    if await aiofiles.os.path.exists(transcript_path):
         files_to_update.append(transcript_path)
 
     if not files_to_update:
@@ -1522,8 +2061,9 @@ async def update_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> Speaker
     # Update all transcript files
     updated_transcript = None
     for file_path in files_to_update:
-        with open(file_path, "r", encoding="utf-8") as f:
-            transcript_data = json.load(f)
+        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+            transcript_json = await f.read()
+            transcript_data = json.loads(transcript_json)
 
         # Update speaker names
         for segment in transcript_data:
@@ -1531,16 +2071,17 @@ async def update_speakers(uuid: str, speaker_map: SpeakerNameMapping) -> Speaker
             if original_speaker in speaker_map.mapping:
                 segment["speaker"] = speaker_map.mapping[original_speaker].strip()
 
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(transcript_data, f, indent=4)
+        json_str = json.dumps(transcript_data, indent=4)
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+            await f.write(json_str)
 
         updated_transcript = transcript_data
 
     # Invalidate cached summary
     summary_path = Path("summary") / f"{uuid}.txt"
-    if summary_path.exists():
+    if await aiofiles.os.path.exists(str(summary_path)):
         try:
-            summary_path.unlink()
+            await aiofiles.os.remove(str(summary_path))
             logger.info(f"Invalidated cached summary for {uuid}")
         except Exception as e:
             logger.warning(f"Failed to invalidate summary: {e}")
@@ -1728,12 +2269,210 @@ async def export_markdown(uuid: str, request: ExportRequest = None):
         raise HTTPException(status_code=500, detail="Internal server error during markdown generation")
 
 
+##################################### Export Jobs #####################################
+
+@app.post("/api/v1/jobs/{uuid}/exports", response_model=ExportJobResponse, status_code=202)
+async def create_export_job(
+    uuid: str,
+    request: CreateExportRequest,
+    background_tasks: BackgroundTasks
+) -> ExportJobResponse:
+    """
+    Create a background export job for PDF or Markdown.
+
+    Args:
+        uuid: Job UUID
+        request: Export request with type
+        background_tasks: FastAPI background tasks
+
+    Returns:
+        Export job information with export_uuid
+    """
+    uuid = validate_uuid_format(uuid)
+
+    # Verify job exists
+    job = await get_job(uuid)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
+
+    # Verify job is completed
+    if job['status_code'] != 200:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job must be completed before exporting. Current status: {job['status_code']}"
+        )
+
+    # Create export job
+    import uuid as uuid_module
+    export_uuid = str(uuid_module.uuid4())
+    await add_export_job(export_uuid, uuid, request.export_type, 202)
+
+    # Queue background task
+    background_tasks.add_task(
+        process_export_job,
+        export_uuid,
+        uuid,
+        request.export_type
+    )
+
+    logger.info(f"Created export job {export_uuid} ({request.export_type}) for job {uuid}")
+
+    return ExportJobResponse(
+        export_uuid=export_uuid,
+        job_uuid=uuid,
+        export_type=request.export_type,
+        status_code=202
+    )
+
+
+@app.get("/api/v1/jobs/{uuid}/exports/{export_uuid}", response_model=ExportJobStatusResponse)
+async def get_export_job_status(uuid: str, export_uuid: str) -> ExportJobStatusResponse:
+    """
+    Get status of an export job.
+
+    Args:
+        uuid: Job UUID
+        export_uuid: Export job UUID
+
+    Returns:
+        Export job status
+    """
+    uuid = validate_uuid_format(uuid)
+    export_uuid = validate_uuid_format(export_uuid)
+
+    export_job = await get_export_job(export_uuid)
+    if not export_job:
+        raise HTTPException(status_code=404, detail=f"Export job {export_uuid} not found")
+
+    # Verify export belongs to this job
+    if str(export_job['job_uuid']) != uuid:
+        raise HTTPException(status_code=404, detail="Export job not found for this job")
+
+    # Build download URL if completed
+    download_url = None
+    if export_job['status_code'] == 200:
+        download_url = f"/api/v1/jobs/{uuid}/exports/{export_uuid}/download"
+
+    return ExportJobStatusResponse(
+        uuid=str(export_job['uuid']),
+        job_uuid=str(export_job['job_uuid']),
+        export_type=export_job['export_type'],
+        status_code=export_job['status_code'],
+        progress_percentage=export_job['progress_percentage'],
+        error_message=export_job.get('error_message'),
+        download_url=download_url
+    )
+
+
+@app.get("/api/v1/jobs/{uuid}/exports/{export_uuid}/download")
+async def download_export(uuid: str, export_uuid: str):
+    """
+    Download completed export file.
+
+    Args:
+        uuid: Job UUID
+        export_uuid: Export job UUID
+
+    Returns:
+        Export file (PDF or Markdown)
+    """
+    uuid = validate_uuid_format(uuid)
+    export_uuid = validate_uuid_format(export_uuid)
+
+    export_job = await get_export_job(export_uuid)
+    if not export_job:
+        raise HTTPException(status_code=404, detail=f"Export job {export_uuid} not found")
+
+    # Verify export belongs to this job
+    if str(export_job['job_uuid']) != uuid:
+        raise HTTPException(status_code=404, detail="Export job not found for this job")
+
+    # Check if export is complete
+    if export_job['status_code'] != 200:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Export not ready. Status: {export_job['status_code']}, Progress: {export_job['progress_percentage']}%"
+        )
+
+    # Get file path
+    file_path = export_job.get('file_path')
+    if not file_path or not await aiofiles.os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Export file not found")
+
+    # Determine content type and filename
+    export_type = export_job['export_type']
+    if export_type == 'pdf':
+        media_type = 'application/pdf'
+        filename = f"meeting_{uuid[:8]}.pdf"
+    else:  # markdown
+        media_type = 'text/markdown'
+        filename = f"meeting_{uuid[:8]}.md"
+
+    # Read and stream file
+    async def file_iterator():
+        async with aiofiles.open(file_path, 'rb') as f:
+            while chunk := await f.read(8192):
+                yield chunk
+
+    return StreamingResponse(
+        file_iterator(),
+        media_type=media_type,
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+    )
+
+
+@app.delete("/api/v1/jobs/{uuid}/exports/{export_uuid}")
+async def delete_export_job(uuid: str, export_uuid: str) -> dict:
+    """
+    Delete an export job and its file.
+
+    Args:
+        uuid: Job UUID
+        export_uuid: Export job UUID
+
+    Returns:
+        Delete confirmation
+    """
+    uuid = validate_uuid_format(uuid)
+    export_uuid = validate_uuid_format(export_uuid)
+
+    export_job = await get_export_job(export_uuid)
+    if not export_job:
+        raise HTTPException(status_code=404, detail=f"Export job {export_uuid} not found")
+
+    # Verify export belongs to this job
+    if str(export_job['job_uuid']) != uuid:
+        raise HTTPException(status_code=404, detail="Export job not found for this job")
+
+    # Delete file if exists
+    file_path = export_job.get('file_path')
+    if file_path and await aiofiles.os.path.exists(file_path):
+        try:
+            await aiofiles.os.remove(file_path)
+            logger.info(f"Deleted export file: {file_path}")
+        except Exception as e:
+            logger.error(f"Error deleting export file: {e}")
+
+    # Note: Cleanup scheduler will remove old export jobs from database
+    logger.info(f"Deleted export job {export_uuid}")
+
+    return {
+        "uuid": export_uuid,
+        "status": "success",
+        "message": "Export job deleted successfully"
+    }
+
+
+##################################### Health Check #####################################
+
 @app.get("/api/v1/health")
 async def health_check():
     """Health check endpoint."""
     try:
         # Check database connection
-        total_jobs = get_jobs_count()
+        total_jobs = await get_jobs_count()
 
         return {
             "status": "ok",

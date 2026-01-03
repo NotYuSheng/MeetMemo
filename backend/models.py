@@ -40,6 +40,18 @@ class ExportRequest(BaseModel):
     generated_on: Optional[str] = None
 
 
+class CreateExportRequest(BaseModel):
+    """Model for creating export jobs."""
+    export_type: str = Field(..., pattern="^(pdf|markdown)$")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "export_type": "pdf"
+            }
+        }
+
+
 # Response Models
 class TranscriptSegment(BaseModel):
     """Model for a single transcript segment."""
@@ -66,11 +78,16 @@ class JobResponse(BaseModel):
 
 
 class JobStatusResponse(BaseModel):
-    """Model for job status information."""
+    """Model for job status information with workflow state."""
     uuid: str
     file_name: str
     status_code: int
     status: str
+    workflow_state: Optional[str] = "uploaded"
+    current_step_progress: Optional[int] = 0
+    available_actions: Optional[list[str]] = []
+
+    # Legacy fields (for backwards compatibility)
     progress_percentage: Optional[int] = 0
     processing_stage: Optional[str] = "pending"
     error_message: Optional[str] = None
@@ -82,6 +99,9 @@ class JobStatusResponse(BaseModel):
                 "file_name": "meeting-recording.wav",
                 "status_code": 200,
                 "status": "completed",
+                "workflow_state": "completed",
+                "current_step_progress": 100,
+                "available_actions": ["export", "delete"],
                 "progress_percentage": 100,
                 "processing_stage": "completed",
                 "error_message": None
@@ -151,6 +171,48 @@ class JobListResponse(BaseModel):
     offset: int
 
 
+class ExportJobResponse(BaseModel):
+    """Model for export job creation response."""
+    export_uuid: str
+    job_uuid: str
+    export_type: str
+    status_code: int
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "export_uuid": "650e8400-e29b-41d4-a716-446655440001",
+                "job_uuid": "550e8400-e29b-41d4-a716-446655440000",
+                "export_type": "pdf",
+                "status_code": 202
+            }
+        }
+
+
+class ExportJobStatusResponse(BaseModel):
+    """Model for export job status."""
+    uuid: str
+    job_uuid: str
+    export_type: str
+    status_code: int
+    progress_percentage: int
+    error_message: Optional[str] = None
+    download_url: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "uuid": "650e8400-e29b-41d4-a716-446655440001",
+                "job_uuid": "550e8400-e29b-41d4-a716-446655440000",
+                "export_type": "pdf",
+                "status_code": 200,
+                "progress_percentage": 100,
+                "error_message": None,
+                "download_url": "/api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/exports/650e8400-e29b-41d4-a716-446655440001/download"
+            }
+        }
+
+
 class ErrorResponse(BaseModel):
     """Model for error responses."""
     detail: str
@@ -161,5 +223,56 @@ class ErrorResponse(BaseModel):
             "example": {
                 "detail": "Resource not found",
                 "status_code": 404
+            }
+        }
+
+
+# Workflow-specific Response Models
+class WorkflowActionResponse(BaseModel):
+    """Model for workflow action responses (transcribe, diarize, align)."""
+    uuid: str
+    workflow_state: str
+    status_code: int
+    message: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "uuid": "550e8400-e29b-41d4-a716-446655440000",
+                "workflow_state": "transcribing",
+                "status_code": 202,
+                "message": "Transcription started"
+            }
+        }
+
+
+class TranscriptionDataResponse(BaseModel):
+    """Model for raw transcription data response."""
+    uuid: str
+    transcription_data: dict
+    workflow_state: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "uuid": "550e8400-e29b-41d4-a716-446655440000",
+                "transcription_data": {"text": "Meeting transcript...", "segments": []},
+                "workflow_state": "transcribed"
+            }
+        }
+
+
+class DiarizationDataResponse(BaseModel):
+    """Model for raw diarization data response."""
+    uuid: str
+    diarization_data: dict
+    workflow_state: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "uuid": "550e8400-e29b-41d4-a716-446655440000",
+                "diarization_data": {"speakers": []},
+                "workflow_state": "diarized"
             }
         }
