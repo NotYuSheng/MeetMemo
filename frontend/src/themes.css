@@ -336,10 +336,27 @@ body {
   background-color: var(--primary-500) !important;
 }
 
+.badge.bg-secondary {
+  background-color: var(--gray-600) !important;
+}
+
 .badge.bg-success {
   background-color: var(--success-500) !important;
 }
 
+.badge.bg-danger {
+  background-color: var(--danger-500) !important;
+}
+
+.badge.bg-warning {
+  background-color: var(--warning-500) !important;
+  color: #000 !important;
+}
+
 .badge.bg-info {
   background-color: var(--info-500) !important;
+}
+
+.badge.bg-dark {
+  background-color: var(--gray-900) !important;
 }
