@@ -810,6 +810,32 @@ def generate_professional_pdf(
 async def cleanup_expired_files():
     """Clean up files older than 12 hours."""
     try:
+        # Clean up orphaned non-WAV files (files that were uploaded but not converted)
+        # These might be left over from failed conversions
+        try:
+            all_files = await aiofiles.os.listdir(UPLOAD_DIR)
+            for filename in all_files:
+                # Skip WAV files - those are tracked in the database
+                if filename.lower().endswith('.wav'):
+                    continue
+
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                # Check if file is a regular file
+                if await aiofiles.os.path.isfile(file_path):
+                    # Get file age
+                    stat_info = await aiofiles.os.stat(file_path)
+                    file_age_hours = (time.time() - stat_info.st_mtime) / 3600
+
+                    # Remove non-WAV files older than 1 hour (likely orphaned from failed conversions)
+                    if file_age_hours > 1:
+                        try:
+                            await aiofiles.os.remove(file_path)
+                            logger.info(f"Removed orphaned file: {filename} (age: {file_age_hours:.1f}h)")
+                        except Exception as e:
+                            logger.warning(f"Failed to remove orphaned file {filename}: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to clean orphaned files: {e}")
+
         # Get expired jobs from database
         expired_jobs = await cleanup_old_jobs(max_age_hours=12)
 
@@ -975,7 +1001,8 @@ async def get_jobs(
         for job in jobs_list:
             jobs_dict[str(job['uuid'])] = {
                 'file_name': job['file_name'],
-                'status_code': job['status_code']
+                'status_code': job['status_code'],
+                'created_at': job['created_at'].isoformat() if job.get('created_at') else None
             }
 
         return JobListResponse(
@@ -1361,8 +1388,25 @@ async def create_job(
         if not file_name.lower().endswith(".wav"):
             wav_file_name = f"{os.path.splitext(file_name)[0]}.wav"
             wav_file_path = os.path.join(UPLOAD_DIR, wav_file_name)
-            convert_to_wav(file_path, wav_file_path)
-            file_path = wav_file_path
+
+            try:
+                convert_to_wav(file_path, wav_file_path)
+
+                # Delete the original file after successful conversion
+                if await aiofiles.os.path.exists(file_path):
+                    await aiofiles.os.remove(file_path)
+                    logger.info(f"Removed original file after conversion: {file_name}")
+
+                file_path = wav_file_path
+            except Exception as e:
+                # If conversion fails, clean up WAV file (if partially created) and keep original
+                logger.error(f"Audio conversion failed: {e}", exc_info=True)
+                if await aiofiles.os.path.exists(wav_file_path):
+                    try:
+                        await aiofiles.os.remove(wav_file_path)
+                    except Exception:
+                        pass
+                raise HTTPException(status_code=500, detail=f"Audio conversion failed: {str(e)}")
         else:
             wav_file_name = file_name
 
