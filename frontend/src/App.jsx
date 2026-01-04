@@ -526,7 +526,7 @@ function App() {
     setShowEditTextModal(true)
   }
 
-  // Save edited segment text
+  // Save edited segment text and speaker
   const handleSaveSegmentText = async () => {
     if (!editingSegment || !transcript || !jobId) return
 
@@ -536,17 +536,18 @@ function App() {
       const updatedSegments = [...transcript.segments]
       updatedSegments[editingSegment.index] = {
         ...updatedSegments[editingSegment.index],
-        text: editingSegment.text
+        text: editingSegment.text,
+        speaker: editingSegment.speaker
       }
 
-      // Call backend API to persist transcript changes
+      // Call backend API to persist transcript changes (including speaker reassignment)
       await api.updateTranscript(jobId, updatedSegments)
 
       setTranscriptWithColors({ ...transcript, segments: updatedSegments })
       setShowEditTextModal(false)
       setEditingSegment(null)
     } catch (err) {
-      setError(err.message || 'Failed to update text')
+      setError(err.message || 'Failed to update segment')
     }
   }
 
@@ -1398,13 +1399,51 @@ function App() {
           {editingSegment && (
             <>
               <div className="mb-3">
-                <Badge bg="primary" className="me-2">
-                  {editingSegment.speaker}
-                </Badge>
                 <small className="text-muted">
                   {Math.floor(editingSegment.start / 60)}:{String(Math.floor(editingSegment.start % 60)).padStart(2, '0')} - {Math.floor(editingSegment.end / 60)}:{String(Math.floor(editingSegment.end % 60)).padStart(2, '0')}
                 </small>
               </div>
+              <Form.Group className="mb-3">
+                <Form.Label>Speaker</Form.Label>
+                <Form.Select
+                  value={editingSegment.speaker}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    if (value === '__new__') {
+                      const newSpeaker = prompt('Enter new speaker name (e.g., John Smith or SPEAKER_03):')
+                      if (newSpeaker && newSpeaker.trim()) {
+                        setEditingSegment({
+                          ...editingSegment,
+                          speaker: newSpeaker.trim(),
+                        })
+                      }
+                    } else {
+                      setEditingSegment({
+                        ...editingSegment,
+                        speaker: value,
+                      })
+                    }
+                  }}
+                >
+                  {/* Get unique speakers from transcript, plus the currently editing speaker if it's new */}
+                  {transcript && (() => {
+                    const existingSpeakers = [...new Set(transcript.segments.map(s => s.speaker))]
+                    // If editing speaker is not in existing list, add it (newly added speaker)
+                    if (editingSegment.speaker && !existingSpeakers.includes(editingSegment.speaker)) {
+                      existingSpeakers.push(editingSegment.speaker)
+                    }
+                    return existingSpeakers.sort().map(speaker => (
+                      <option key={speaker} value={speaker}>
+                        {editingSpeakers[speaker] || speaker}
+                      </option>
+                    ))
+                  })()}
+                  <option value="__new__">+ Add New Speaker</option>
+                </Form.Select>
+                <Form.Text className="text-muted">
+                  Select an existing speaker or add a new one
+                </Form.Text>
+              </Form.Group>
               <Form.Group>
                 <Form.Label>Transcript Text</Form.Label>
                 <Form.Control
