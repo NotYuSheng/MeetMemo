@@ -1,9 +1,10 @@
 """Database module for managing jobs using PostgreSQL with async support."""
-import asyncpg
 import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Optional
+
+import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ async def init_database():
         )
         logger.info("Database connection pool initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize database pool: {e}", exc_info=True)
+        logger.error("Failed to initialize database pool: %s", e, exc_info=True)
         raise
 
 
@@ -62,7 +63,7 @@ async def add_job(uuid: str, file_name: str, status_code: int, file_hash: Option
                VALUES ($1, $2, $3, $4, $5)""",
             uuid, file_name, status_code, file_hash, workflow_state
         )
-    logger.info(f"Added job {uuid} with file {file_name} (hash: {file_hash[:16] if file_hash else 'None'}...) state: {workflow_state}")
+    logger.info("Added job %s with file %s (hash: %s...) state: %s", uuid, file_name, file_hash[:16] if file_hash else 'None', workflow_state)
 
 
 async def update_status(uuid: str, new_status: int) -> None:
@@ -74,7 +75,7 @@ async def update_status(uuid: str, new_status: int) -> None:
                WHERE uuid = $2""",
             new_status, uuid
         )
-    logger.debug(f"Updated status for job {uuid} to {new_status}")
+    logger.debug("Updated status for job %s to %s", uuid, new_status)
 
 
 async def update_progress(uuid: str, progress: int, stage: str) -> None:
@@ -86,7 +87,7 @@ async def update_progress(uuid: str, progress: int, stage: str) -> None:
                WHERE uuid = $3""",
             progress, stage, uuid
         )
-    logger.debug(f"Updated progress for job {uuid} to {progress}% ({stage})")
+    logger.debug("Updated progress for job %s to %s%% (%s)", uuid, progress, stage)
 
 
 async def update_error(uuid: str, error_message: str) -> None:
@@ -98,7 +99,7 @@ async def update_error(uuid: str, error_message: str) -> None:
                WHERE uuid = $2""",
             error_message, uuid
         )
-    logger.error(f"Job {uuid} failed with error: {error_message}")
+    logger.error("Job %s failed with error: %s", uuid, error_message)
 
 
 async def get_job(uuid: str) -> Optional[dict]:
@@ -152,7 +153,7 @@ async def delete_job(uuid: str) -> Optional[str]:
         # Delete the job (CASCADE will delete export_jobs)
         await conn.execute("DELETE FROM jobs WHERE uuid = $1", uuid)
 
-        logger.info(f"Deleted job {uuid} with file {file_name}")
+        logger.info("Deleted job %s with file %s", uuid, file_name)
         return file_name
 
 
@@ -169,7 +170,7 @@ async def update_file_name(uuid: str, new_file_name: str) -> bool:
         success = result.split()[-1] != "0"
 
     if success:
-        logger.info(f"Updated file name for job {uuid} to {new_file_name}")
+        logger.info("Updated file name for job %s to %s", uuid, new_file_name)
 
     return success
 
@@ -197,7 +198,7 @@ async def cleanup_old_jobs(max_age_hours: int = 12) -> list[dict]:
                 uuids
             )
 
-            logger.info(f"Cleaned up {len(old_jobs)} jobs older than {max_age_hours} hours")
+            logger.info("Cleaned up %s jobs older than %s hours", len(old_jobs), max_age_hours)
 
         return old_jobs
 
@@ -214,7 +215,7 @@ async def add_export_job(export_uuid: str, job_uuid: str, export_type: str, stat
                VALUES ($1, $2, $3, $4)""",
             export_uuid, job_uuid, export_type, status_code
         )
-    logger.info(f"Added export job {export_uuid} for job {job_uuid} ({export_type})")
+    logger.info("Added export job %s for job %s (%s)", export_uuid, job_uuid, export_type)
 
 
 async def get_export_job(uuid: str) -> Optional[dict]:
@@ -238,7 +239,7 @@ async def update_export_status(uuid: str, status_code: int) -> None:
                WHERE uuid = $2""",
             status_code, uuid
         )
-    logger.debug(f"Updated export job {uuid} status to {status_code}")
+    logger.debug("Updated export job %s status to %s", uuid, status_code)
 
 
 async def update_export_progress(uuid: str, progress: int) -> None:
@@ -250,7 +251,7 @@ async def update_export_progress(uuid: str, progress: int) -> None:
                WHERE uuid = $2""",
             progress, uuid
         )
-    logger.debug(f"Updated export job {uuid} progress to {progress}%")
+    logger.debug("Updated export job %s progress to %s%%", uuid, progress)
 
 
 async def update_export_error(uuid: str, error_message: str) -> None:
@@ -262,7 +263,7 @@ async def update_export_error(uuid: str, error_message: str) -> None:
                WHERE uuid = $2""",
             error_message, uuid
         )
-    logger.error(f"Export job {uuid} failed with error: {error_message}")
+    logger.error("Export job %s failed with error: %s", uuid, error_message)
 
 
 async def update_export_file_path(uuid: str, file_path: str) -> None:
@@ -274,7 +275,7 @@ async def update_export_file_path(uuid: str, file_path: str) -> None:
                WHERE uuid = $2""",
             file_path, uuid
         )
-    logger.debug(f"Updated export job {uuid} file path to {file_path}")
+    logger.debug("Updated export job %s file path to %s", uuid, file_path)
 
 
 async def cleanup_old_export_jobs(max_age_hours: int = 24) -> list[dict]:
@@ -300,7 +301,7 @@ async def cleanup_old_export_jobs(max_age_hours: int = 24) -> list[dict]:
                 uuids
             )
 
-            logger.info(f"Cleaned up {len(old_exports)} export jobs older than {max_age_hours} hours")
+            logger.info("Cleaned up %s export jobs older than %s hours", len(old_exports), max_age_hours)
 
         return old_exports
 
@@ -340,7 +341,7 @@ async def update_workflow_state(uuid: str, new_state: str, progress: int = 0) ->
                WHERE uuid = $3""",
             new_state, progress, uuid
         )
-    logger.debug(f"Updated workflow state for job {uuid} to {new_state} ({progress}%)")
+    logger.debug("Updated workflow state for job %s to %s (%s%%)", uuid, new_state, progress)
 
 
 async def update_step_progress(uuid: str, progress: int) -> None:
@@ -352,7 +353,7 @@ async def update_step_progress(uuid: str, progress: int) -> None:
                WHERE uuid = $2""",
             progress, uuid
         )
-    logger.debug(f"Updated step progress for job {uuid} to {progress}%")
+    logger.debug("Updated step progress for job %s to %s%%", uuid, progress)
 
 
 async def save_transcription_data(uuid: str, transcription_data: dict) -> None:
@@ -365,7 +366,7 @@ async def save_transcription_data(uuid: str, transcription_data: dict) -> None:
                WHERE uuid = $2""",
             json.dumps(transcription_data), uuid
         )
-    logger.info(f"Saved transcription data for job {uuid}")
+    logger.info("Saved transcription data for job %s", uuid)
 
 
 async def save_diarization_data(uuid: str, diarization_data: dict) -> None:
@@ -378,7 +379,7 @@ async def save_diarization_data(uuid: str, diarization_data: dict) -> None:
                WHERE uuid = $2""",
             json.dumps(diarization_data), uuid
         )
-    logger.info(f"Saved diarization data for job {uuid}")
+    logger.info("Saved diarization data for job %s", uuid)
 
 
 async def get_transcription_data(uuid: str) -> Optional[dict]:

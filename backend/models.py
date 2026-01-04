@@ -1,7 +1,10 @@
 """Pydantic models for request/response validation."""
-from pydantic import BaseModel, Field, validator
+# pylint: disable=R0903
 from typing import Optional
-from security import sanitize_filename, validate_uuid_format
+
+from pydantic import BaseModel, Field, validator
+
+from security import sanitize_filename
 
 
 # Request Models
@@ -32,6 +35,7 @@ class RenameJobRequest(BaseModel):
 
     @validator('file_name')
     def validate_filename(cls, v):
+        """Validate and sanitize the filename."""
         return sanitize_filename(v)
 
 
@@ -45,6 +49,7 @@ class CreateExportRequest(BaseModel):
     export_type: str = Field(..., pattern="^(pdf|markdown)$")
 
     class Config:
+        """Pydantic configuration for CreateExportRequest."""
         json_schema_extra = {
             "example": {
                 "export_type": "pdf"
@@ -68,6 +73,7 @@ class JobResponse(BaseModel):
     status_code: int
 
     class Config:
+        """Pydantic configuration for JobResponse."""
         json_schema_extra = {
             "example": {
                 "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -93,6 +99,7 @@ class JobStatusResponse(BaseModel):
     error_message: Optional[str] = None
 
     class Config:
+        """Pydantic configuration for JobStatusResponse."""
         json_schema_extra = {
             "example": {
                 "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -179,6 +186,7 @@ class ExportJobResponse(BaseModel):
     status_code: int
 
     class Config:
+        """Pydantic configuration for ExportJobResponse."""
         json_schema_extra = {
             "example": {
                 "export_uuid": "650e8400-e29b-41d4-a716-446655440001",
@@ -200,6 +208,7 @@ class ExportJobStatusResponse(BaseModel):
     download_url: Optional[str] = None
 
     class Config:
+        """Pydantic configuration for ExportJobStatusResponse."""
         json_schema_extra = {
             "example": {
                 "uuid": "650e8400-e29b-41d4-a716-446655440001",
@@ -219,6 +228,7 @@ class ErrorResponse(BaseModel):
     status_code: Optional[int] = None
 
     class Config:
+        """Pydantic configuration for ErrorResponse."""
         json_schema_extra = {
             "example": {
                 "detail": "Resource not found",
@@ -236,6 +246,7 @@ class WorkflowActionResponse(BaseModel):
     message: str
 
     class Config:
+        """Pydantic configuration for WorkflowActionResponse."""
         json_schema_extra = {
             "example": {
                 "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -253,6 +264,7 @@ class TranscriptionDataResponse(BaseModel):
     workflow_state: str
 
     class Config:
+        """Pydantic configuration for TranscriptionDataResponse."""
         json_schema_extra = {
             "example": {
                 "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -269,6 +281,7 @@ class DiarizationDataResponse(BaseModel):
     workflow_state: str
 
     class Config:
+        """Pydantic configuration for DiarizationDataResponse."""
         json_schema_extra = {
             "example": {
                 "uuid": "550e8400-e29b-41d4-a716-446655440000",

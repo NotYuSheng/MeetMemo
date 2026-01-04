@@ -1,6 +1,8 @@
 """Security utilities for input validation and sanitization."""
 import re
+import uuid as uuid_lib
 from pathlib import Path
+
 from fastapi import HTTPException
 
 
@@ -71,8 +73,6 @@ def validate_uuid_format(uuid: str) -> str:
     Raises:
         HTTPException: If UUID format is invalid
     """
-    import uuid as uuid_lib
-
     # Handle legacy 4-digit format
     if len(uuid) <= 4 and uuid.isdigit():
         return uuid.zfill(4)
@@ -81,11 +81,11 @@ def validate_uuid_format(uuid: str) -> str:
     try:
         uuid_lib.UUID(uuid)
         return uuid
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid UUID format: {uuid}"
-        )
+        ) from exc
 
 
 def sanitize_log_data(data: str, max_length: int = 100) -> str:
