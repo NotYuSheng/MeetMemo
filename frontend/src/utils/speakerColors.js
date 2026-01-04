@@ -1,14 +1,14 @@
-// Speaker color mapping utilities
+// Speaker color mapping utilities - Professional & Minimalistic
 
-// Define a palette of distinct colors for speakers
+// Define a muted, professional color palette for speakers
 const SPEAKER_COLOR_PALETTE = [
-  { bg: 'primary', border: '#0d6efd' },    // Blue - SPEAKER_00
-  { bg: 'success', border: '#198754' },    // Green - SPEAKER_01
-  { bg: 'warning', border: '#ffc107' },    // Yellow - SPEAKER_02
-  { bg: 'danger', border: '#dc3545' },     // Red - SPEAKER_03
-  { bg: 'info', border: '#0dcaf0' },       // Cyan - SPEAKER_04
-  { bg: 'secondary', border: '#6c757d' },  // Gray - SPEAKER_05
-  { bg: 'dark', border: '#212529' },       // Dark - SPEAKER_06
+  { bg: 'primary', border: '#2563eb' },    // Blue - SPEAKER_00
+  { bg: 'secondary', border: '#64748b' },  // Slate - SPEAKER_01
+  { bg: 'info', border: '#0891b2' },       // Cyan - SPEAKER_02
+  { bg: 'dark', border: '#334155' },       // Dark Slate - SPEAKER_03
+  { bg: 'primary', border: '#3b82f6', opacity: 0.8 },    // Light Blue - SPEAKER_04
+  { bg: 'secondary', border: '#475569', opacity: 0.8 },  // Medium Slate - SPEAKER_05
+  { bg: 'info', border: '#06b6d4', opacity: 0.8 },       // Light Cyan - SPEAKER_06
 ];
 
 // Keep track of speaker name -> color mapping

@@ -1,16 +1,31 @@
-/* MeetMemo App Styles - Workflow Focused */
+/* MeetMemo App Styles - Professional & Minimalistic */
+
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --secondary: #64748b;
+  --success: #2563eb;
+  --muted: #94a3b8;
+  --border: #e2e8f0;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+}
 
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f8f9fa;
+  background-color: var(--background);
 }
 
 /* Header */
 .app-header {
-  background-color: white;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -18,7 +33,7 @@
 
 /* Workflow Steps */
 .workflow-steps {
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border);
 }
 
 .steps-container {
@@ -35,23 +50,23 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: #6c757d;
+  color: var(--text-muted);
   transition: all 0.3s ease;
 }
 
 .step.active {
-  color: #0d6efd;
+  color: var(--primary);
 }
 
 .step.completed {
-  color: #198754;
+  color: var(--text-secondary);
 }
 
 .step-icon {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: #e9ecef;
+  background-color: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,12 +74,12 @@
 }
 
 .step.active .step-icon {
-  background-color: #0d6efd;
+  background-color: var(--primary);
   color: white;
 }
 
 .step.completed .step-icon {
-  background-color: #198754;
+  background-color: var(--text-secondary);
   color: white;
 }
 
@@ -77,13 +92,13 @@
 .step-divider {
   width: 60px;
   height: 2px;
-  background-color: #dee2e6;
+  background-color: var(--border);
   margin: 0 1rem;
   margin-bottom: 24px;
 }
 
 .step.completed ~ .step-divider {
-  background-color: #198754;
+  background-color: var(--text-secondary);
 }
 
 /* Upload and Record Cards */
@@ -95,13 +110,13 @@
 }
 
 .upload-card:hover {
-  border-color: #0d6efd;
-  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
 }
 
 .record-card:hover {
-  border-color: #dc3545;
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
+  border-color: var(--secondary);
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.12);
 }
 
 .upload-icon,
@@ -120,16 +135,16 @@
 
 /* Upload Dropzone */
 .upload-dropzone {
-  border: 2px dashed #dee2e6;
+  border: 2px dashed var(--border);
   border-radius: 0.5rem;
   padding: 2rem 1rem;
-  background-color: #f8f9fa;
+  background-color: var(--background);
   transition: all 0.3s ease;
 }
 
 .upload-dropzone:hover {
-  border-color: #0d6efd;
-  background-color: #e7f1ff;
+  border-color: var(--primary);
+  background-color: var(--primary-light);
 }
 
 /* Processing Animation */
@@ -158,7 +173,7 @@
   align-items: center;
   padding: 1rem;
   margin-bottom: 0.5rem;
-  background-color: #f8f9fa;
+  background-color: var(--background);
   border-radius: 0.5rem;
   opacity: 0.5;
   transition: all 0.3s ease;
@@ -166,26 +181,26 @@
 
 .processing-step.active {
   opacity: 1;
-  background-color: #e7f1ff;
-  border-left: 3px solid #0d6efd;
+  background-color: var(--primary-light);
+  border-left: 3px solid var(--primary);
 }
 
 .processing-step.completed {
   opacity: 1;
-  background-color: #d1e7dd;
+  background-color: #f1f5f9;
 }
 
 .step-number {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: #dee2e6;
+  background-color: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6c757d;
+  color: var(--text-secondary);
 }
 
 /* Sidebar */
@@ -222,21 +237,21 @@
 }
 
 .transcript-segment {
-  background-color: #f8f9fa;
+  background-color: var(--background);
   border-radius: 0.5rem;
   transition: all 0.2s ease;
 }
 
 .transcript-segment:hover {
-  background-color: #e9ecef;
+  background-color: #f1f5f9;
   transform: translateX(4px);
 }
 
 /* Summary Content */
 .summary-content h6 {
-  color: #495057;
+  color: var(--text-primary);
   font-weight: 600;
-  border-bottom: 2px solid #dee2e6;
+  border-bottom: 2px solid var(--border);
   padding-bottom: 0.5rem;
 }
 
@@ -255,14 +270,25 @@
   content: "→";
   position: absolute;
   left: 0;
-  color: #0d6efd;
+  color: var(--primary);
   font-weight: bold;
 }
 
 /* Footer */
 .app-footer {
   margin-top: auto;
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid var(--border);
+}
+
+/* Card improvements */
+.card {
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
 }
 
 /* Responsive Design */
@@ -322,17 +348,6 @@
   vertical-align: middle;
 }
 
-/* Card improvements */
-.card {
-  border: 1px solid #dee2e6;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.3s ease;
-}
-
-.card:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
 /* Button improvements */
 .btn {
   transition: all 0.2s ease;
@@ -344,20 +359,12 @@
 
 /* Progress bar */
 .progress {
-  background-color: #e9ecef;
+  background-color: #f1f5f9;
   border-radius: 0.5rem;
   overflow: hidden;
 }
 
 .progress-bar {
   transition: width 0.4s ease;
-}
-
-/* Ensure Bootstrap progress bar is visible */
-.progress {
-  background-color: #e9ecef;
-}
-
-.progress .progress-bar {
-  background-color: #0d6efd;
+  background-color: var(--primary);
 }

@@ -627,11 +627,11 @@ function App() {
   // Show loading screen while backend is initializing
   if (!backendReady && !backendError) {
     return (
-      <div className="app d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="app d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
         <Container>
           <Row className="justify-content-center">
             <Col md={6} className="text-center">
-              <Card className="shadow-lg border-0">
+              <Card className="shadow-sm border-0">
                 <Card.Body className="p-5">
                   <FileText size={64} className="text-primary mb-4" />
                   <h2 className="mb-3">MeetMemo</h2>
@@ -653,13 +653,13 @@ function App() {
   // Show error screen if backend failed to load
   if (backendError) {
     return (
-      <div className="app d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <div className="app d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
         <Container>
           <Row className="justify-content-center">
             <Col md={6} className="text-center">
-              <Card className="shadow-lg border-0">
+              <Card className="shadow-sm border-0">
                 <Card.Body className="p-5">
-                  <AlertCircle size={64} className="text-danger mb-4" />
+                  <AlertCircle size={64} className="text-secondary mb-4" />
                   <h2 className="mb-3">Connection Error</h2>
                   <Alert variant="danger" className="mb-4">
                     {backendError}
@@ -693,7 +693,7 @@ function App() {
               <FileText size={32} className="text-primary" />
               <div>
                 <h4 className="mb-0">MeetMemo</h4>
-                <small className="text-muted">AI Meeting Transcription</small>
+                <small className="text-muted">AI Meeting Summary</small>
               </div>
             </div>
           </div>
@@ -906,12 +906,12 @@ function App() {
 
                   <div className="processing-steps mb-4">
                     <div className="processing-step completed">
-                      <CheckCircle size={20} className="text-success me-2" />
+                      <CheckCircle size={20} className="text-secondary me-2" />
                       <span>Audio uploaded successfully</span>
                     </div>
                     <div className={`processing-step ${processingProgress >= 30 ? 'completed' : processingProgress > 0 ? 'active' : ''}`}>
                       {processingProgress >= 30 ? (
-                        <CheckCircle size={20} className="text-success me-2" />
+                        <CheckCircle size={20} className="text-secondary me-2" />
                       ) : processingProgress > 0 ? (
                         <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
                           <span className="visually-hidden">Loading...</span>
@@ -923,7 +923,7 @@ function App() {
                     </div>
                     <div className={`processing-step ${processingProgress >= 90 ? 'completed' : processingProgress >= 30 ? 'active' : ''}`}>
                       {processingProgress >= 90 ? (
-                        <CheckCircle size={20} className="text-success me-2" />
+                        <CheckCircle size={20} className="text-secondary me-2" />
                       ) : processingProgress >= 30 ? (
                         <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
                           <span className="visually-hidden">Loading...</span>
@@ -935,7 +935,7 @@ function App() {
                     </div>
                     <div className={`processing-step ${processingProgress === 100 ? 'completed' : processingProgress >= 90 ? 'active' : ''}`}>
                       {processingProgress === 100 ? (
-                        <CheckCircle size={20} className="text-success me-2" />
+                        <CheckCircle size={20} className="text-secondary me-2" />
                       ) : processingProgress >= 90 ? (
                         <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
                           <span className="visually-hidden">Loading...</span>
@@ -1218,7 +1218,7 @@ function App() {
                 </Card.Header>
                 <Card.Body>
                   <h6 className="mb-2 small text-muted">AI Summary + Transcript</h6>
-                  <Button variant="outline-primary" className="w-100 mb-2" onClick={() => api.downloadPDF(jobId, selectedFile?.name || 'transcript')}>
+                  <Button variant="primary" className="w-100 mb-2" onClick={() => api.downloadPDF(jobId, selectedFile?.name || 'transcript')}>
                     <Download size={18} className="me-2" />
                     Export PDF
                   </Button>
