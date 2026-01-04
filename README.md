@@ -6,7 +6,7 @@ A meeting transcription app that runs entirely offline. It converts speech to te
 
 <div align="center">
 
-![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/MeetMemo_Demo.gif) <br>
+![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/MeetMemo-DEMO_v2.0.0.gif) <br>
 
 </div>
 
@@ -16,10 +16,10 @@ The `sample-files/` directory contains example outputs to showcase MeetMemo's ca
 
 - **`GenAI Week - AI x SaaS.wav`** - Sample audio file for testing (37MB, ~1 hour)
 - **`genai-week---ai-x-saas_transcript_2025-08-31.json`** - Complete diarized transcript with speaker identification
-- **`genai-week---ai-x-saas_summary_2025-08-31.pdf`** - Professional PDF summary with key insights and action items  
+- **`genai-week---ai-x-saas_summary_2025-08-31.pdf`** - Professional PDF summary with key insights and action items
 - **`genai-week---ai-x-saas_summary_2025-08-31.markdown`** - Markdown version of the AI-generated summary
-- **`MeetMemo_Demo.gif`** - Application demonstration GIF
-- **`MeetMemo_Demo.mp4`** - Full video demonstration
+- **`MeetMemo-DEMO_v2.0.0.gif`** - Application demonstration GIF (v2.0.0)
+- **`MeetMemo_Demo_v1.0.0.gif`** - Legacy demonstration GIF (v1.0.0)
 
 These files demonstrate the complete workflow from audio upload to final deliverables, showing the quality and format of MeetMemo's output.
 
