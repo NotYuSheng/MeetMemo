@@ -1,5 +1,12 @@
 // API Service for MeetMemo Backend Communication
 
+import {
+  generatePDFFilename,
+  generateMarkdownFilename,
+  generateTranscriptPDFFilename,
+  generateTranscriptMarkdownFilename
+} from '../utils/fileNaming'
+
 const API_BASE_URL = '/api/v1'
 
 // Helper function for API calls
@@ -130,8 +137,8 @@ export async function getSummary(uuid) {
   })
 }
 
-// Download PDF
-export async function downloadPDF(uuid, filename) {
+// Download PDF (Summary + Transcript)
+export async function downloadPDF(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/pdf`
     const response = await fetch(url)
@@ -143,11 +150,14 @@ export async function downloadPDF(uuid, filename) {
     // Get the blob from the response
     const blob = await response.blob()
 
+    // Generate clean filename
+    const filename = generatePDFFilename(originalFilename)
+
     // Create a download link
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = `${filename || 'transcript'}.pdf`
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -160,8 +170,8 @@ export async function downloadPDF(uuid, filename) {
   }
 }
 
-// Download Markdown
-export async function downloadMarkdown(uuid) {
+// Download Markdown (Summary + Transcript)
+export async function downloadMarkdown(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/markdown`
     const response = await fetch(url)
@@ -173,11 +183,14 @@ export async function downloadMarkdown(uuid) {
     // Get the blob from the response
     const blob = await response.blob()
 
+    // Generate clean filename
+    const filename = generateMarkdownFilename(originalFilename)
+
     // Create a download link
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = `transcript_${uuid}.md`
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -191,7 +204,7 @@ export async function downloadMarkdown(uuid) {
 }
 
 // Download Transcript PDF (transcript only, no AI summary)
-export async function downloadTranscriptPDF(uuid, filename) {
+export async function downloadTranscriptPDF(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/pdf`
     const response = await fetch(url)
@@ -203,11 +216,14 @@ export async function downloadTranscriptPDF(uuid, filename) {
     // Get the blob from the response
     const blob = await response.blob()
 
+    // Generate clean filename
+    const filename = generateTranscriptPDFFilename(originalFilename)
+
     // Create a download link
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = `${filename || 'transcript'}.pdf`
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -221,7 +237,7 @@ export async function downloadTranscriptPDF(uuid, filename) {
 }
 
 // Download Transcript Markdown (transcript only, no AI summary)
-export async function downloadTranscriptMarkdown(uuid) {
+export async function downloadTranscriptMarkdown(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/markdown`
     const response = await fetch(url)
@@ -233,11 +249,14 @@ export async function downloadTranscriptMarkdown(uuid) {
     // Get the blob from the response
     const blob = await response.blob()
 
+    // Generate clean filename
+    const filename = generateTranscriptMarkdownFilename(originalFilename)
+
     // Create a download link
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = `transcript_${uuid}.md`
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
