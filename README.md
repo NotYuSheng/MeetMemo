@@ -256,17 +256,138 @@ Available models (size/speed trade-off):
 
 ## Deployment
 
+### HTTPS Requirement
+
+**HTTPS is required for the recording feature to work** (browsers require secure context for microphone access). For local development on `localhost`, HTTP works fine. For production deployments, choose one of the options below.
+
+### Deployment Options
+
+#### Option 1: Local Development (HTTP)
+For local testing, HTTP works on localhost:
+```bash
+docker compose up --build
+```
+Access at `http://localhost` - recording will work because browsers allow microphone access on localhost.
+
+#### Option 2: Cloudflare Tunnel (Easiest for Production)
+Free HTTPS with zero certificate management:
+
+```bash
+# Install cloudflared
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+chmod +x cloudflared
+sudo mv cloudflared /usr/local/bin/
+
+# Authenticate and create tunnel
+cloudflared tunnel login
+cloudflared tunnel create meetmemo
+
+# Configure tunnel (~/.cloudflared/config.yml)
+tunnel: <your-tunnel-id>
+credentials-file: /home/user/.cloudflared/<tunnel-id>.json
+ingress:
+  - hostname: meetmemo.yourdomain.com
+    service: http://localhost:80
+  - service: http_status:404
+
+# Run tunnel
+cloudflared tunnel run meetmemo
+```
+
+#### Option 3: Tailscale (Private Network)
+Perfect for internal/team use:
+
+```bash
+# Install Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+
+# Enable HTTPS serving
+tailscale serve https / proxy http://127.0.0.1:80
+```
+
+Access via `https://<machine-name>.tail-scale.ts.net` with automatic HTTPS.
+
+#### Option 4: Caddy (Auto-HTTPS)
+Simple production deployment with automatic Let's Encrypt certificates:
+
+```bash
+# Install Caddy
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
+
+# Create Caddyfile
+sudo nano /etc/caddy/Caddyfile
+```
+
+Add to Caddyfile:
+```
+meetmemo.yourdomain.com {
+    reverse_proxy localhost:80
+}
+```
+
+```bash
+sudo systemctl restart caddy
+```
+
+#### Option 5: Nginx + Let's Encrypt
+Traditional setup for existing nginx infrastructure:
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get certificate
+sudo certbot --nginx -d meetmemo.yourdomain.com
+
+# Update docker-compose.yml
+# Change frontend port to avoid conflict
+ports:
+  - "8080:80"
+```
+
+Certbot automatically configures nginx and handles certificate renewal.
+
+#### Option 6: Self-Signed Certificate (Testing Only)
+⚠️ Not recommended for production - browsers will show warnings:
+
+```bash
+# Generate certificate
+mkdir -p nginx/ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout nginx/ssl/nginx-selfsigned.key \
+  -out nginx/ssl/nginx-selfsigned.crt \
+  -subj "/C=US/ST=State/L=City/O=MeetMemo/CN=localhost"
+
+# Update nginx config and docker-compose to use HTTPS
+```
+
 ### Production Considerations
 - **SSL Certificates**: Use proper SSL certificates in production (not self-signed)
 - **Authentication**: Add authentication layer for multi-user deployments
 - **Resource Limits**: Configure appropriate memory and CPU limits for containers
 - **Monitoring**: Set up logging and monitoring for production workloads
 - **Backup**: Regular backup of transcription data and speaker mappings
+- **Firewall**: Configure firewall rules appropriately based on your HTTPS option
 
 ### Cloud Deployment
 - Ensure cloud instance has GPU support for optimal performance
 - Configure persistent volumes for data retention
 - Set up load balancing if scaling horizontally
+
+### Deployment Checklist
+Before deploying to production:
+- [ ] Choose and configure HTTPS option above
+- [ ] Set strong `POSTGRES_PASSWORD` in `.env`
+- [ ] Configure `HF_TOKEN` for speaker diarization
+- [ ] Set up `LLM_API_URL` and `LLM_MODEL_NAME`
+- [ ] Test recording feature works with HTTPS
+- [ ] Set up backup for PostgreSQL data volume
+- [ ] Configure firewall rules as needed
+- [ ] Set up log rotation for application logs
 
 ## License
 

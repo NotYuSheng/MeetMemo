@@ -13,7 +13,9 @@ export default function UploadView({
   recentJobs,
   loadingJobs,
   handleLoadJob,
-  handleDeleteJob
+  handleDeleteJob,
+  onStartRecording,
+  isRecording
 }) {
   return (
     <Row className="justify-content-center">
@@ -36,7 +38,10 @@ export default function UploadView({
           </Col>
 
           <Col md={6}>
-            <RecordingCard />
+            <RecordingCard
+              onStartRecording={onStartRecording}
+              isRecording={isRecording}
+            />
           </Col>
         </Row>
 

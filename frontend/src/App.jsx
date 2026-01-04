@@ -5,6 +5,7 @@ import { Container } from '@govtechsg/sgds-react'
 import useBackendHealth from './hooks/useBackendHealth'
 import useJobHistory from './hooks/useJobHistory'
 import useFileUpload from './hooks/useFileUpload'
+import useAudioRecording from './hooks/useAudioRecording'
 import useTranscriptPolling from './hooks/useTranscriptPolling'
 import useTranscript from './hooks/useTranscript'
 import useSpeakerManagement from './hooks/useSpeakerManagement'
@@ -29,6 +30,7 @@ import SummaryView from './components/Summary/SummaryView'
 import EditSpeakersModal from './components/Modals/EditSpeakersModal'
 import EditTextModal from './components/Modals/EditTextModal'
 import EditSummaryModal from './components/Modals/EditSummaryModal'
+import RecordingModal from './components/Modals/RecordingModal'
 
 import './App.css'
 
@@ -88,6 +90,15 @@ function App() {
     setSelectedFile
   } = useFileUpload(setError, setCurrentStep, setProcessingProgress, setJobId, setTranscriptWithColors, startPolling)
 
+  // Audio recording
+  const {
+    isRecording,
+    recordingTime,
+    startRecording,
+    stopRecording,
+    cleanup: cleanupRecording
+  } = useAudioRecording(setError, setCurrentStep, setProcessingProgress, setJobId, setTranscriptWithColors, startPolling)
+
   // Job history
   const {
     recentJobs,
@@ -113,6 +124,7 @@ function App() {
   // Start new meeting handler
   const handleStartNewMeeting = () => {
     stopPolling()
+    cleanupRecording()
     setCurrentStep('upload')
     setSelectedFile(null)
     setJobId(null)
@@ -152,6 +164,8 @@ function App() {
             loadingJobs={loadingJobs}
             handleLoadJob={handleLoadJob}
             handleDeleteJob={handleDeleteJob}
+            onStartRecording={startRecording}
+            isRecording={isRecording}
           />
         )}
 
@@ -218,6 +232,13 @@ function App() {
         editingSummary={editingSummary}
         setEditingSummary={setEditingSummary}
         handleSaveSummary={handleSaveSummary}
+      />
+
+      <RecordingModal
+        show={isRecording}
+        onHide={() => {}}
+        recordingTime={recordingTime}
+        onStop={stopRecording}
       />
     </div>
   )
