@@ -41,6 +41,8 @@ services:
       - DATABASE_URL=postgresql://meetmemo:${POSTGRES_PASSWORD:-changeme}@postgres:5432/meetmemo
       - PYTHONUNBUFFERED=1
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      # Required for PyAnnote models - newer PyTorch defaults to weights_only=True for security,
+      # but PyAnnote's pickled models require full unpickling. Only use with trusted model sources.
       - TORCH_LOAD_WEIGHTS_ONLY=0
     networks:
       - meetmemo-network

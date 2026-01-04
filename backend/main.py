@@ -3,6 +3,8 @@ FastAPI application for audio transcription and speaker diarization.
 
 Refactored version addressing all critical security, performance, and design issues.
 """
+# pylint: disable=redefined-outer-name  # uuid used as parameter name throughout
+import asyncio
 import hashlib
 import json
 import logging
@@ -10,7 +12,6 @@ import os
 import re
 import time
 import uuid
-from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from functools import lru_cache
 from io import BytesIO
@@ -20,7 +21,6 @@ from typing import Optional
 
 import aiofiles
 import aiofiles.os
-import asyncio
 import httpx
 import torch
 import whisper
@@ -40,11 +40,9 @@ from reportlab.platypus.frames import Frame
 from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
 from svglib.svglib import svg2rlg
 
-from pyannote_whisper.utils import diarize_text
-
 # Import new modules
 from database import (
-    init_database, close_database, add_job, update_status, update_progress, update_error,
+    init_database, close_database, add_job, update_status, update_error,
     get_job, get_all_jobs, get_jobs_count, delete_job, update_file_name,
     cleanup_old_jobs, add_export_job, get_export_job, update_export_status,
     update_export_progress, update_export_error, update_export_file_path,
@@ -57,7 +55,7 @@ from security import sanitize_filename, validate_uuid_format, sanitize_log_data
 from models import (
     SpeakerNameMapping, TranscriptUpdateRequest, SummarizeRequest,
     SpeakerIdentificationRequest, RenameJobRequest, ExportRequest,
-    CreateExportRequest, JobResponse, JobStatusResponse, FileNameResponse,
+    CreateExportRequest, JobResponse, JobStatusResponse,
     TranscriptResponse, SummaryResponse, DeleteResponse, RenameResponse,
     SpeakerUpdateResponse, SpeakerIdentificationResponse, JobListResponse,
     ExportJobResponse, ExportJobStatusResponse,
@@ -302,8 +300,7 @@ def generate_professional_filename(
     # Combine with date and extension
     if date_str:
         return f"{base_name}_{date_str}.{file_type}"
-    else:
-        return f"{base_name}.{file_type}"
+    return f"{base_name}.{file_type}"
 
 
 async def upload_audio(job_uuid: str, file: UploadFile) -> tuple[str, str]:
@@ -517,7 +514,10 @@ The recording was too brief to generate a detailed meeting summary."""
 
     except httpx.HTTPError as e:
         logger.error("LLM service error: %s", e)
-        raise HTTPException(status_code=503, detail="Summary service temporarily unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail="Summary service temporarily unavailable"
+        ) from e
 
 
 async def identify_speakers_with_llm(transcript: str, context: str = None) -> dict:
@@ -622,10 +622,12 @@ def generate_professional_pdf(
 
     # Custom document class with footer
     class FooterDocTemplate(BaseDocTemplate):
+        """Custom document template with footer on every page."""
+
         def __init__(self, filename, **kwargs):
             BaseDocTemplate.__init__(self, filename, **kwargs)
 
-        def afterPage(self):
+        def afterPage(self):  # pylint: disable=invalid-name
             """Add footer to every page"""
             self.canv.saveState()
 
@@ -797,7 +799,7 @@ def generate_professional_pdf(
 
             if line.startswith('# '):
                 continue
-            elif line.startswith('### ') or line.startswith('## '):
+            if line.startswith('### ') or line.startswith('## '):
                 prefix_len = 4 if line.startswith('### ') else 3
                 sub_heading = process_markdown_text(line[prefix_len:])
                 story.append(Paragraph(f"• {sub_heading}", ParagraphStyle(
@@ -844,10 +846,12 @@ def generate_transcript_pdf(
 
     # Custom document class with footer
     class FooterDocTemplate(BaseDocTemplate):
+        """Custom document template with footer on every page."""
+
         def __init__(self, filename, **kwargs):
             BaseDocTemplate.__init__(self, filename, **kwargs)
 
-        def afterPage(self):
+        def afterPage(self):  # pylint: disable=invalid-name
             """Add footer to every page"""
             self.canv.saveState()
 
@@ -1119,7 +1123,6 @@ async def cleanup_expired_files():
 def start_cleanup_scheduler():
     """Start background cleanup thread."""
     async def cleanup_worker():
-        import asyncio
         while True:
             try:
                 await cleanup_expired_files()
@@ -1129,7 +1132,6 @@ def start_cleanup_scheduler():
                 await asyncio.sleep(600)  # Sleep for 10 minutes on error
 
     def run_async_cleanup():
-        import asyncio
         asyncio.run(cleanup_worker())
 
     cleanup_thread = Thread(target=run_async_cleanup, daemon=True)
@@ -1227,9 +1229,9 @@ async def get_jobs(
         raise HTTPException(
             status_code=500,
             detail="Internal server error while retrieving job list"
-        )
+        ) from e
 
-##################################### Independent Processing Functions #####################################
+#################### Independent Processing Functions ####################
 
 async def process_transcription_step(
     job_uuid: str,
@@ -1633,7 +1635,10 @@ async def create_job(
                         await aiofiles.os.remove(wav_file_path)
                     except Exception:
                         pass
-                raise HTTPException(status_code=500, detail=f"Audio conversion failed: {str(e)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Audio conversion failed: {str(e)}"
+                ) from e
         else:
             wav_file_name = file_name
 
@@ -1664,7 +1669,7 @@ async def create_job(
             await update_status(job_uuid, 500)
         except Exception:
             pass
-        raise HTTPException(status_code=500, detail="Failed to create job")
+        raise HTTPException(status_code=500, detail="Failed to create job") from e
 
 
 @app.get("/api/v1/jobs/{uuid}", response_model=JobStatusResponse)
@@ -1778,7 +1783,7 @@ async def update_job(uuid: str, request: RenameJobRequest) -> RenameResponse:
     )
 
 
-##################################### New Workflow Step Endpoints #####################################
+#################### New Workflow Step Endpoints ####################
 
 @app.post(
     "/api/v1/jobs/{uuid}/transcriptions",
@@ -2094,7 +2099,7 @@ async def get_transcript(uuid: str) -> TranscriptResponse:
             status_code=200,
             is_edited=True
         )
-    elif await aiofiles.os.path.exists(original_path):
+    if await aiofiles.os.path.exists(original_path):
         async with aiofiles.open(original_path, "r", encoding="utf-8") as f:
             full_transcript = await f.read()
         logger.info(
@@ -2233,7 +2238,7 @@ async def get_summary(
         raise HTTPException(
             status_code=500,
             detail="Internal server error during summary generation"
-        )
+        ) from e
 
 
 @app.post("/api/v1/jobs/{uuid}/summary", response_model=SummaryResponse)
@@ -2294,7 +2299,7 @@ async def create_summary(uuid: str, request: SummarizeRequest = None) -> Summary
         raise HTTPException(
             status_code=500,
             detail="Internal server error during summary generation"
-        )
+        ) from e
 
 
 @app.patch("/api/v1/jobs/{uuid}/summary")
@@ -2368,8 +2373,7 @@ async def delete_summary_cache(uuid: str) -> dict:
             "status": "success",
             "message": "Summary deleted successfully"
         }
-    else:
-        raise HTTPException(status_code=404, detail="No cached summary found")
+    raise HTTPException(status_code=404, detail="No cached summary found")
 
 
 @app.patch("/api/v1/jobs/{uuid}/speakers", response_model=SpeakerUpdateResponse)
@@ -2486,12 +2490,11 @@ async def identify_speakers_endpoint(
                 status="success",
                 suggestions=identification_result["suggestions"]
             )
-        else:
-            logger.error("Speaker identification failed for %s", uuid)
-            raise HTTPException(
-                status_code=500,
-                detail=identification_result.get("message", "Speaker identification failed")
-            )
+        logger.error("Speaker identification failed for %s", uuid)
+        raise HTTPException(
+            status_code=500,
+            detail=identification_result.get("message", "Speaker identification failed")
+        )
 
     except HTTPException:
         raise
@@ -2500,7 +2503,7 @@ async def identify_speakers_endpoint(
         raise HTTPException(
             status_code=500,
             detail="Internal server error during speaker identification"
-        )
+        ) from e
 
 
 @app.get("/api/v1/jobs/{uuid}/exports/pdf")
@@ -2554,7 +2557,7 @@ async def export_pdf(uuid: str, request: ExportRequest = None):
         raise HTTPException(
             status_code=500,
             detail="Internal server error during PDF generation"
-        )
+        ) from e
 
 
 @app.get("/api/v1/jobs/{uuid}/exports/markdown")
@@ -2624,7 +2627,7 @@ async def export_markdown(uuid: str, request: ExportRequest = None):
         raise HTTPException(
             status_code=500,
             detail="Internal server error during markdown generation"
-        )
+        ) from e
 
 
 @app.get("/api/v1/jobs/{uuid}/exports/transcript/pdf")
@@ -2675,7 +2678,7 @@ async def export_transcript_pdf(uuid: str, request: ExportRequest = None):
         raise HTTPException(
             status_code=500,
             detail="Internal server error during transcript PDF generation"
-        )
+        ) from e
 
 
 @app.get("/api/v1/jobs/{uuid}/exports/transcript/markdown")
@@ -2741,7 +2744,7 @@ async def export_transcript_markdown(uuid: str, request: ExportRequest = None):
         raise HTTPException(
             status_code=500,
             detail="Internal server error during transcript markdown generation"
-        )
+        ) from e
 
 
 ##################################### Export Jobs #####################################
@@ -2778,8 +2781,7 @@ async def create_export_job(
         )
 
     # Create export job
-    import uuid as uuid_module
-    export_uuid = str(uuid_module.uuid4())
+    export_uuid = str(uuid.uuid4())
     await add_export_job(export_uuid, uuid, request.export_type, 202)
 
     # Queue background task
@@ -2959,55 +2961,4 @@ async def health_check():
         }
     except Exception as e:
         logger.error("Health check failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Health check failed")
-
-
-##################################### Legacy Routes (Backwards Compatibility) #####################################
-
-# Legacy routes for backwards compatibility - these redirect to new API versioned routes
-# Can be removed once frontend is updated
-
-@app.get("/jobs")
-async def legacy_get_jobs():
-    """Legacy endpoint - redirects to versioned API."""
-    return await get_jobs()
-
-
-@app.post("/jobs")
-async def legacy_create_job(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    model_name: str = Query(default="turbo")
-):
-    """Legacy endpoint - redirects to versioned API."""
-    return await create_job(background_tasks, file, model_name)
-
-
-@app.delete("/jobs/{uuid}")
-async def legacy_delete_job(uuid: str):
-    """Legacy endpoint - redirects to versioned API."""
-    return await delete_job_endpoint(uuid)
-
-
-@app.get("/jobs/{uuid}/status")
-async def legacy_get_job_status(uuid: str):
-    """Legacy endpoint - redirects to versioned API."""
-    return await get_job_status(uuid)
-
-
-@app.get("/jobs/{uuid}/transcript")
-async def legacy_get_transcript(uuid: str):
-    """Legacy endpoint - redirects to versioned API."""
-    return await get_transcript(uuid)
-
-
-@app.post("/jobs/{uuid}/summarise")
-async def legacy_summarise(uuid: str, request: SummarizeRequest = None):
-    """Legacy endpoint - redirects to versioned API."""
-    return await create_summary(uuid, request)
-
-
-@app.get("/health")
-async def legacy_health():
-    """Legacy endpoint - redirects to versioned API."""
-    return await health_check()
+        raise HTTPException(status_code=500, detail="Health check failed") from e

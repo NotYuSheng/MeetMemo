@@ -217,7 +217,10 @@ class ExportJobStatusResponse(BaseModel):
                 "status_code": 200,
                 "progress_percentage": 100,
                 "error_message": None,
-                "download_url": "/api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/exports/650e8400-e29b-41d4-a716-446655440001/download"
+                "download_url": (
+                    "/api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/"
+                    "exports/650e8400-e29b-41d4-a716-446655440001/download"
+                )
             }
         }
 

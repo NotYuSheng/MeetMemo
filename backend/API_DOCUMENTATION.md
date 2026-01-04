@@ -14,12 +14,12 @@ Base URL: `http://localhost:8000` (or your configured backend URL)
 
 ## Health Check
 
-### GET /health
+### GET /api/v1/health
 Check the health status of the backend service.
 
 **Request:**
 ```http
-GET /health
+GET /api/v1/health
 ```
 
 **Response (Success):**
@@ -43,12 +43,12 @@ GET /health
 
 ## Jobs Management
 
-### GET /jobs
+### GET /api/v1/jobs
 Retrieve a list of all transcription jobs.
 
 **Request:**
 ```http
-GET /jobs
+GET /api/v1/jobs
 ```
 
 **Response:**
@@ -75,12 +75,12 @@ GET /jobs
 
 ---
 
-### POST /jobs
+### POST /api/v1/jobs
 Upload an audio file for transcription and speaker diarization.
 
 **Request:**
 ```http
-POST /jobs
+POST /api/v1/jobs
 Content-Type: multipart/form-data
 
 file: [audio file binary]
@@ -127,12 +127,12 @@ model_name: "turbo" (optional, default: "turbo")
 
 ---
 
-### GET /jobs/{uuid}/status
+### GET /api/v1/jobs/{uuid}
 Get the processing status of a specific job.
 
 **Request:**
 ```http
-GET /jobs/550e8400-e29b-41d4-a716-446655440000/status
+GET /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000
 ```
 
 **Response:**
@@ -154,12 +154,12 @@ GET /jobs/550e8400-e29b-41d4-a716-446655440000/status
 
 ---
 
-### GET /jobs/{uuid}/filename
+### GET /api/v1/jobs/{uuid} (alternate response)
 Retrieve the filename associated with a specific UUID.
 
 **Request:**
 ```http
-GET /jobs/550e8400-e29b-41d4-a716-446655440000/filename
+GET /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000
 ```
 
 **Response (Success):**
@@ -181,12 +181,12 @@ GET /jobs/550e8400-e29b-41d4-a716-446655440000/filename
 
 ---
 
-### PATCH /jobs/{uuid}/rename
+### PATCH /api/v1/jobs/{uuid}
 Rename a job file. Handles filename collisions by appending "(Copy)" if needed.
 
 **Request:**
 ```http
-PATCH /jobs/550e8400-e29b-41d4-a716-446655440000/rename?new_name=quarterly-review.wav
+PATCH /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000?new_name=quarterly-review.wav
 ```
 
 **Query Parameters:**
@@ -211,12 +211,12 @@ PATCH /jobs/550e8400-e29b-41d4-a716-446655440000/rename?new_name=quarterly-revie
 
 ---
 
-### DELETE /jobs/{uuid}
+### DELETE /api/v1/jobs/{uuid}
 Delete a job and all associated files (audio, transcript, summary).
 
 **Request:**
 ```http
-DELETE /jobs/550e8400-e29b-41d4-a716-446655440000
+DELETE /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000
 ```
 
 **Response (Success):**
@@ -241,12 +241,12 @@ DELETE /jobs/550e8400-e29b-41d4-a716-446655440000
 
 ## Transcripts
 
-### GET /jobs/{uuid}/transcript
+### GET /api/v1/jobs/{uuid}/transcript
 Retrieve the transcript for a specific job. Returns edited version if available, otherwise returns original.
 
 **Request:**
 ```http
-GET /jobs/550e8400-e29b-41d4-a716-446655440000/transcript
+GET /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/transcript
 ```
 
 **Response (Success):**
@@ -275,12 +275,12 @@ GET /jobs/550e8400-e29b-41d4-a716-446655440000/transcript
 
 ---
 
-### PATCH /jobs/{uuid}/transcript
+### PATCH /api/v1/jobs/{uuid}/transcript
 Update the transcript content. Saves to `transcripts/edited/` directory, preserving the original.
 
 **Request:**
 ```http
-PATCH /jobs/550e8400-e29b-41d4-a716-446655440000/transcript
+PATCH /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/transcript
 Content-Type: application/json
 
 {
@@ -318,17 +318,17 @@ Content-Type: application/json
 
 ## Summaries
 
-### POST /jobs/{uuid}/summarise
+### POST /api/v1/jobs/{uuid}/summary
 Generate an AI summary of the transcript. Returns cached version if available, otherwise generates new summary.
 
 **Request (Default Prompts):**
 ```http
-POST /jobs/550e8400-e29b-41d4-a716-446655440000/summarise
+POST /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/summary
 ```
 
 **Request (Custom Prompts):**
 ```http
-POST /jobs/550e8400-e29b-41d4-a716-446655440000/summarise
+POST /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/summary
 Content-Type: application/json
 
 {
@@ -373,12 +373,12 @@ Content-Type: application/json
 
 ---
 
-### DELETE /jobs/{uuid}/summary
+### DELETE /api/v1/jobs/{uuid}/summary
 Delete the cached summary for a job. Next summarize request will generate a fresh summary.
 
 **Request:**
 ```http
-DELETE /jobs/550e8400-e29b-41d4-a716-446655440000/summary
+DELETE /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/summary
 ```
 
 **Response (Success):**
@@ -407,12 +407,12 @@ DELETE /jobs/550e8400-e29b-41d4-a716-446655440000/summary
 
 ## Speaker Management
 
-### PATCH /jobs/{uuid}/speakers
+### PATCH /api/v1/jobs/{uuid}/speakers
 Update speaker names in the transcript. Maps generic speaker IDs to custom names.
 
 **Request:**
 ```http
-PATCH /jobs/550e8400-e29b-41d4-a716-446655440000/speakers
+PATCH /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/speakers
 Content-Type: application/json
 
 {
@@ -446,17 +446,17 @@ Content-Type: application/json
 
 ---
 
-### POST /jobs/{uuid}/identify-speakers
+### POST /api/v1/jobs/{uuid}/speaker-identifications
 Use AI to identify and suggest speaker names based on transcript content.
 
 **Request (Without Context):**
 ```http
-POST /jobs/550e8400-e29b-41d4-a716-446655440000/identify-speakers
+POST /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/speaker-identifications
 ```
 
 **Request (With Context):**
 ```http
-POST /jobs/550e8400-e29b-41d4-a716-446655440000/identify-speakers
+POST /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/speaker-identifications
 Content-Type: application/json
 
 {
@@ -502,12 +502,12 @@ Content-Type: application/json
 
 ## Export Functions
 
-### POST /jobs/{uuid}/pdf
+### GET /api/v1/jobs/{uuid}/exports/pdf
 Export the summary and transcript as a professionally formatted PDF.
 
 **Request:**
 ```http
-POST /jobs/550e8400-e29b-41d4-a716-446655440000/pdf
+GET /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/exports/pdf
 Content-Type: application/json
 
 {
@@ -539,12 +539,12 @@ Content-Type: application/json
 
 ---
 
-### POST /jobs/{uuid}/markdown
+### GET /api/v1/jobs/{uuid}/exports/markdown
 Export the summary and transcript as a markdown file.
 
 **Request:**
 ```http
-POST /jobs/550e8400-e29b-41d4-a716-446655440000/markdown
+GET /api/v1/jobs/550e8400-e29b-41d4-a716-446655440000/exports/markdown
 Content-Type: application/json
 
 {
@@ -683,60 +683,60 @@ The backend automatically cleans up files older than 12 hours:
 ### Complete Transcription Workflow
 ```bash
 # 1. Upload audio file
-curl -X POST http://localhost:8000/jobs \
+curl -X POST http://localhost:8000/api/v1/jobs \
   -F "file=@meeting.mp3" \
   -F "model_name=turbo"
 # Returns: {"uuid": "550e8400...", "file_name": "meeting.wav", "transcript": [...]}
 
 # 2. Check status
-curl http://localhost:8000/jobs/550e8400.../status
+curl http://localhost:8000/api/v1/jobs/550e8400...
 # Returns: {"status": "completed", "status_code": "200"}
 
 # 3. Get transcript
-curl http://localhost:8000/jobs/550e8400.../transcript
+curl http://localhost:8000/api/v1/jobs/550e8400.../transcript
 # Returns: Full transcript JSON
 
 # 4. Identify speakers with AI
-curl -X POST http://localhost:8000/jobs/550e8400.../identify-speakers \
+curl -X POST http://localhost:8000/api/v1/jobs/550e8400.../speaker-identifications \
   -H "Content-Type: application/json" \
   -d '{"context": "Engineering team meeting"}'
 # Returns: {"suggestions": {"Speaker 1": "John (Engineer)", ...}}
 
 # 5. Update speaker names
-curl -X PATCH http://localhost:8000/jobs/550e8400.../speakers \
+curl -X PATCH http://localhost:8000/api/v1/jobs/550e8400.../speakers \
   -H "Content-Type: application/json" \
   -d '{"mapping": {"SPEAKER_00": "John", "SPEAKER_01": "Sarah"}}'
 
 # 6. Generate summary
-curl -X POST http://localhost:8000/jobs/550e8400.../summarise
+curl -X POST http://localhost:8000/api/v1/jobs/550e8400.../summary
 # Returns: {"summary": "# Meeting Summary\n..."}
 
 # 7. Export as PDF
-curl -X POST http://localhost:8000/jobs/550e8400.../pdf \
+curl http://localhost:8000/api/v1/jobs/550e8400.../exports/pdf \
   --output meeting-summary.pdf
 
 # 8. Export as Markdown
-curl -X POST http://localhost:8000/jobs/550e8400.../markdown \
+curl http://localhost:8000/api/v1/jobs/550e8400.../exports/markdown \
   --output meeting-summary.md
 ```
 
 ### Edit and Regenerate Workflow
 ```bash
 # 1. Get original transcript
-curl http://localhost:8000/jobs/550e8400.../transcript
+curl http://localhost:8000/api/v1/jobs/550e8400.../transcript
 
 # 2. Edit transcript content
-curl -X PATCH http://localhost:8000/jobs/550e8400.../transcript \
+curl -X PATCH http://localhost:8000/api/v1/jobs/550e8400.../transcript \
   -H "Content-Type: application/json" \
   -d '{"transcript": [{"speaker": "John", "text": "Edited text", ...}]}'
 
 # 3. Delete cached summary (optional - happens automatically)
-curl -X DELETE http://localhost:8000/jobs/550e8400.../summary
+curl -X DELETE http://localhost:8000/api/v1/jobs/550e8400.../summary
 
 # 4. Regenerate summary with edited transcript
-curl -X POST http://localhost:8000/jobs/550e8400.../summarise
+curl -X POST http://localhost:8000/api/v1/jobs/550e8400.../summary
 
 # 5. Export updated PDF
-curl -X POST http://localhost:8000/jobs/550e8400.../pdf \
+curl http://localhost:8000/api/v1/jobs/550e8400.../exports/pdf \
   --output updated-meeting-summary.pdf
 ```

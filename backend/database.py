@@ -1,4 +1,5 @@
 """Database module for managing jobs using PostgreSQL with async support."""
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -55,7 +56,13 @@ async def get_db():
 # Jobs table functions
 # ============================================================================
 
-async def add_job(uuid: str, file_name: str, status_code: int, file_hash: Optional[str] = None, workflow_state: str = 'uploaded') -> None:
+async def add_job(
+    uuid: str,
+    file_name: str,
+    status_code: int,
+    file_hash: Optional[str] = None,
+    workflow_state: str = 'uploaded'
+) -> None:
     """Add new job to database with workflow state."""
     async with get_db() as conn:
         await conn.execute(
@@ -63,7 +70,11 @@ async def add_job(uuid: str, file_name: str, status_code: int, file_hash: Option
                VALUES ($1, $2, $3, $4, $5)""",
             uuid, file_name, status_code, file_hash, workflow_state
         )
-    logger.info("Added job %s with file %s (hash: %s...) state: %s", uuid, file_name, file_hash[:16] if file_hash else 'None', workflow_state)
+    hash_preview = file_hash[:16] if file_hash else 'None'
+    logger.info(
+        "Added job %s with file %s (hash: %s...) state: %s",
+        uuid, file_name, hash_preview, workflow_state
+    )
 
 
 async def update_status(uuid: str, new_status: int) -> None:
@@ -207,7 +218,12 @@ async def cleanup_old_jobs(max_age_hours: int = 12) -> list[dict]:
 # Export jobs table functions
 # ============================================================================
 
-async def add_export_job(export_uuid: str, job_uuid: str, export_type: str, status_code: int) -> None:
+async def add_export_job(
+    export_uuid: str,
+    job_uuid: str,
+    export_type: str,
+    status_code: int
+) -> None:
     """Add new export job to database."""
     async with get_db() as conn:
         await conn.execute(
@@ -301,7 +317,10 @@ async def cleanup_old_export_jobs(max_age_hours: int = 24) -> list[dict]:
                 uuids
             )
 
-            logger.info("Cleaned up %s export jobs older than %s hours", len(old_exports), max_age_hours)
+            logger.info(
+                "Cleaned up %s export jobs older than %s hours",
+                len(old_exports), max_age_hours
+            )
 
         return old_exports
 
@@ -359,7 +378,6 @@ async def update_step_progress(uuid: str, progress: int) -> None:
 async def save_transcription_data(uuid: str, transcription_data: dict) -> None:
     """Save raw transcription data from Whisper."""
     async with get_db() as conn:
-        import json
         await conn.execute(
             """UPDATE jobs
                SET transcription_data = $1
@@ -372,7 +390,6 @@ async def save_transcription_data(uuid: str, transcription_data: dict) -> None:
 async def save_diarization_data(uuid: str, diarization_data: dict) -> None:
     """Save raw diarization data from PyAnnote."""
     async with get_db() as conn:
-        import json
         await conn.execute(
             """UPDATE jobs
                SET diarization_data = $1
@@ -390,7 +407,6 @@ async def get_transcription_data(uuid: str) -> Optional[dict]:
             uuid
         )
         if row and row['transcription_data']:
-            import json
             return json.loads(row['transcription_data'])
         return None
 
@@ -403,6 +419,5 @@ async def get_diarization_data(uuid: str) -> Optional[dict]:
             uuid
         )
         if row and row['diarization_data']:
-            import json
             return json.loads(row['diarization_data'])
         return None
