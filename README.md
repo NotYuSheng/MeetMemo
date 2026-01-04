@@ -14,12 +14,18 @@ A meeting transcription app that runs entirely offline. It converts speech to te
 
 The `sample-files/` directory contains example outputs to showcase MeetMemo's capabilities:
 
-- **`GenAI Week - AI x SaaS.wav`** - Sample audio file for testing (37MB, ~1 hour)
-- **`genai-week---ai-x-saas_transcript_2025-08-31.json`** - Complete diarized transcript with speaker identification
-- **`genai-week---ai-x-saas_summary_2025-08-31.pdf`** - Professional PDF summary with key insights and action items
-- **`genai-week---ai-x-saas_summary_2025-08-31.markdown`** - Markdown version of the AI-generated summary
-- **`MeetMemo-DEMO_v2.0.0.gif`** - Application demonstration GIF (v2.0.0)
-- **`MeetMemo_Demo_v1.0.0.gif`** - Legacy demonstration GIF (v1.0.0)
+#### v2.0.0 Outputs (Latest)
+- **`GenAI Week - AI x SaaS.wav`** - Sample audio file for testing (36MB, ~1 hour)
+- **`GenAI_Week_-_AI_x_SaaS_Transcript_2026-01-04_23-47.pdf`** - Professional PDF transcript with speaker labels
+- **`GenAI_Week_-_AI_x_SaaS_Transcript_2026-01-04_23-47.md`** - Markdown transcript export
+- **`GenAI_Week_-_AI_x_SaaS_2026-01-04_23-46.md`** - AI-generated summary with key insights and action items
+- **`MeetMemo-DEMO_v2.0.0.gif`** - Application demonstration GIF showcasing new UI
+
+#### v1.0.0 Outputs (Legacy)
+- **`genai-week---ai-x-saas_transcript_2025-08-31_v1.0.0.json`** - Complete diarized transcript with speaker identification
+- **`genai-week---ai-x-saas_summary_2025-08-31_v1.0.0.pdf`** - Professional PDF summary
+- **`genai-week---ai-x-saas_summary_2025-08-31_v1.0.0.markdown`** - Markdown version of summary
+- **`MeetMemo_Demo_v1.0.0.gif`** - Legacy demonstration GIF
 
 These files demonstrate the complete workflow from audio upload to final deliverables, showing the quality and format of MeetMemo's output.
 
