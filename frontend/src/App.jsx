@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Container, Row, Col, Card, Button, Badge, ProgressBar, Alert, Modal, Form } from '@govtechsg/sgds-react'
-import { Mic, Upload as UploadIcon, FileText, Users, Sparkles, Download, Clock, CheckCircle, AlertCircle, Edit2, Check, X } from 'lucide-react'
+import { Mic, Upload as UploadIcon, FileText, Users, Sparkles, Download, Clock, CheckCircle, AlertCircle, Edit2, Check, X, Pencil, Trash2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import * as api from './services/api'
-import { getSpeakerBadgeVariant, getSpeakerBorderColor } from './utils/speakerColors'
+import { getSpeakerBadgeVariant, getSpeakerBorderColor, initializeSpeakerColors } from './utils/speakerColors'
 import './App.css'
 
 function App() {
@@ -27,6 +27,9 @@ function App() {
   const [loadingJobs, setLoadingJobs] = useState(false)
   const [identifyingSpeakers, setIdentifyingSpeakers] = useState(false)
   const [speakerSuggestions, setSpeakerSuggestions] = useState(null)
+  const [showFullTranscript, setShowFullTranscript] = useState(false)
+  const [showEditSummaryModal, setShowEditSummaryModal] = useState(false)
+  const [editingSummary, setEditingSummary] = useState('')
 
   // Backend health check
   const [backendReady, setBackendReady] = useState(false)
@@ -34,6 +37,17 @@ function App() {
 
   // Track which workflow steps have been started (to prevent race conditions)
   const workflowStepsStarted = useRef(new Set())
+
+  // Track polling interval for cleanup
+  const pollingIntervalRef = useRef(null)
+
+  // Helper function to set transcript and initialize speaker colors
+  const setTranscriptWithColors = (transcriptData) => {
+    setTranscript(transcriptData)
+    if (transcriptData?.segments) {
+      initializeSpeakerColors(transcriptData.segments)
+    }
+  }
 
   // Check backend health on mount
   useEffect(() => {
@@ -62,33 +76,33 @@ function App() {
     checkBackendHealth()
   }, [])
 
+  // Fetch recent jobs
+  const fetchRecentJobs = async () => {
+    try {
+      setLoadingJobs(true)
+      const response = await api.getJobs()
+
+      // Convert jobs object to array
+      const jobsArray = Object.entries(response.jobs || {}).map(([uuid, job]) => ({
+        uuid,
+        filename: job.file_name,
+        status_code: job.status_code,
+        created_at: job.created_at
+      }))
+
+      // Sort by most recent (you could also keep original order) and limit to 5
+      const sortedJobs = jobsArray.slice(0, 5)
+      setRecentJobs(sortedJobs)
+    } catch (err) {
+      console.error('Failed to fetch recent jobs:', err)
+    } finally {
+      setLoadingJobs(false)
+    }
+  }
+
   // Fetch recent jobs on mount (only after backend is ready)
   useEffect(() => {
     if (!backendReady) return
-
-    const fetchRecentJobs = async () => {
-      try {
-        setLoadingJobs(true)
-        const response = await api.getJobs()
-
-        // Convert jobs object to array
-        const jobsArray = Object.entries(response.jobs || {}).map(([uuid, job]) => ({
-          uuid,
-          filename: job.file_name,
-          status_code: job.status_code,
-          created_at: job.created_at
-        }))
-
-        // Sort by most recent (you could also keep original order) and limit to 5
-        const sortedJobs = jobsArray.slice(0, 5)
-        setRecentJobs(sortedJobs)
-      } catch (err) {
-        console.error('Failed to fetch recent jobs:', err)
-      } finally {
-        setLoadingJobs(false)
-      }
-    }
-
     fetchRecentJobs()
   }, [backendReady])
 
@@ -97,23 +111,43 @@ function App() {
     try {
       setError(null)
       setJobId(job.uuid)
+      setSelectedFile({ name: job.filename || 'Recording' })
 
-      // Fetch transcript
-      const transcriptData = await api.getTranscript(job.uuid)
-      if (transcriptData.full_transcript && typeof transcriptData.full_transcript === 'string') {
-        try {
-          const parsed = JSON.parse(transcriptData.full_transcript)
-          setTranscript({ segments: parsed })
-        } catch (e) {
-          console.error('Failed to parse transcript:', e)
-          setTranscript(transcriptData)
-        }
-      } else {
-        setTranscript(transcriptData)
+      // Check if job is still processing
+      if (job.status_code === 202 || job.status_code === '202') {
+        setCurrentStep('processing')
+        // Resume polling for this job (handleUpload will set uploading to false)
+        handleUpload(null, job.uuid)
+        return
       }
 
-      setSelectedFile({ name: job.filename || 'Recording' })
-      setCurrentStep('transcript')
+      // Try to fetch transcript
+      try {
+        const transcriptData = await api.getTranscript(job.uuid)
+        if (transcriptData.full_transcript && typeof transcriptData.full_transcript === 'string') {
+          try {
+            const parsed = JSON.parse(transcriptData.full_transcript)
+            setTranscriptWithColors({ segments: parsed })
+          } catch (e) {
+            console.error('Failed to parse transcript:', e)
+            setTranscriptWithColors(transcriptData)
+          }
+        } else {
+          setTranscriptWithColors(transcriptData)
+        }
+
+        setCurrentStep('transcript')
+
+        // Auto-identify speakers in the background (if not already done)
+        autoIdentifySpeakers(job.uuid)
+      } catch (err) {
+        // Transcript not found - might be incomplete job
+        if (err.message?.includes('404')) {
+          setError('Transcript not found for this meeting. It may have been deleted or failed to process.')
+        } else {
+          throw err
+        }
+      }
     } catch (err) {
       setError(err.message || 'Failed to load job')
     }
@@ -153,15 +187,23 @@ function App() {
   }
 
   // Handle file upload
-  const handleUpload = async (file) => {
+  const handleUpload = async (file, existingUuid = null) => {
     setError(null)
     setUploading(true)
     setProcessingProgress(0)
 
     try {
-      // Note: Backend now uses async processing with 202 response
-      const response = await api.uploadAudio(file)
+      // If resuming an existing job, skip upload and start polling
+      if (existingUuid) {
+        setJobId(existingUuid)
+        setCurrentStep('processing')
+        setUploading(false)
+        startPolling(existingUuid)
+        return
+      }
 
+      // Upload new file
+      const response = await api.uploadAudio(file)
       setJobId(response.uuid)
 
       // Backend returns 202 immediately and processes in background
@@ -174,7 +216,7 @@ function App() {
         setUploading(false)
         setProcessingProgress(100)
         if (response.transcript) {
-          setTranscript(response.transcript)
+          setTranscriptWithColors(response.transcript)
           setTimeout(() => {
             setCurrentStep('transcript')
           }, 500)
@@ -198,10 +240,15 @@ function App() {
 
   // Poll job status with workflow state tracking
   const startPolling = (uuid) => {
+    // Clear any existing polling interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+    }
+
     // Reset the workflow steps tracker for this new job
     workflowStepsStarted.current = new Set()
 
-    const pollInterval = setInterval(async () => {
+    pollingIntervalRef.current = setInterval(async () => {
       try {
         const status = await api.getJobStatus(uuid)
         console.log('Workflow Debug:', {
@@ -222,6 +269,8 @@ function App() {
             workflowStepsStarted.current.add('transcription')
             try {
               await api.startTranscription(uuid)
+              // Set progress to 1% to show transcription is starting
+              setProcessingProgress(1)
             } catch (err) {
               console.error('Failed to start transcription:', err)
               workflowStepsStarted.current.delete('transcription')
@@ -229,7 +278,8 @@ function App() {
           }
         } else if (workflowState === 'transcribing') {
           // Map transcription progress to 0-30%
-          setProcessingProgress(Math.floor(stepProgress * 0.3))
+          // Ensure at least 1% to show as active
+          setProcessingProgress(Math.max(1, Math.floor(stepProgress * 0.3)))
         } else if (workflowState === 'transcribed') {
           setProcessingProgress(30)
           // Auto-start diarization (only once)
@@ -237,6 +287,8 @@ function App() {
             workflowStepsStarted.current.add('diarization')
             try {
               await api.startDiarization(uuid)
+              // Set progress to 31% to show diarization is starting
+              setProcessingProgress(31)
             } catch (err) {
               console.error('Failed to start diarization:', err)
               workflowStepsStarted.current.delete('diarization')
@@ -244,7 +296,8 @@ function App() {
           }
         } else if (workflowState === 'diarizing') {
           // Map diarization progress to 30-90%
-          setProcessingProgress(30 + Math.floor(stepProgress * 0.6))
+          // Ensure at least 31% to show as active
+          setProcessingProgress(Math.max(31, 30 + Math.floor(stepProgress * 0.6)))
         } else if (workflowState === 'diarized') {
           setProcessingProgress(90)
           // Auto-start alignment (only once)
@@ -252,6 +305,8 @@ function App() {
             workflowStepsStarted.current.add('alignment')
             try {
               await api.startAlignment(uuid)
+              // Set progress to 91% to show alignment is starting
+              setProcessingProgress(91)
             } catch (err) {
               console.error('Failed to start alignment:', err)
               workflowStepsStarted.current.delete('alignment')
@@ -259,27 +314,33 @@ function App() {
           }
         } else if (workflowState === 'aligning') {
           // Map alignment progress to 90-100%
-          setProcessingProgress(90 + Math.floor(stepProgress * 0.1))
+          // Ensure at least 91% to show as active
+          setProcessingProgress(Math.max(91, 90 + Math.floor(stepProgress * 0.1)))
         } else if (workflowState === 'completed') {
-          clearInterval(pollInterval)
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
           setProcessingProgress(100)
           // Fetch the transcript
           const transcriptData = await api.getTranscript(uuid)
           if (transcriptData.full_transcript && typeof transcriptData.full_transcript === 'string') {
             try {
               const parsed = JSON.parse(transcriptData.full_transcript)
-              setTranscript({ segments: parsed })
+              setTranscriptWithColors({ segments: parsed })
             } catch (e) {
               console.error('Failed to parse transcript:', e)
-              setTranscript(transcriptData)
+              setTranscriptWithColors(transcriptData)
             }
           } else {
-            setTranscript(transcriptData)
+            setTranscriptWithColors(transcriptData)
           }
           setCurrentStep('transcript')
           setUploading(false)
+
+          // Auto-identify speakers in the background
+          autoIdentifySpeakers(uuid)
         } else if (workflowState === 'error' || status.status_code === '500' || status.status_code === 500) {
-          clearInterval(pollInterval)
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
           const errorMsg = status.error_message || 'Processing failed. Please try again.'
           setError(errorMsg)
           setUploading(false)
@@ -287,12 +348,22 @@ function App() {
         }
       } catch (err) {
         console.error('Polling error:', err)
-        clearInterval(pollInterval)
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
         setError('Failed to check processing status')
         setUploading(false)
       }
     }, 2000) // Poll every 2 seconds
   }
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [])
 
   // Generate summary
   const handleGenerateSummary = async () => {
@@ -327,21 +398,73 @@ function App() {
     setShowEditSpeakersModal(true)
   }
 
-  // AI identify speakers
-  const handleIdentifySpeakers = async () => {
-    if (!jobId) return
+  // Auto-identify speakers and apply valid names automatically
+  const autoIdentifySpeakers = async (uuid) => {
+    if (!uuid) return
 
     try {
-      setError(null)
       setIdentifyingSpeakers(true)
-      const result = await api.identifySpeakers(jobId)
+      const result = await api.identifySpeakers(uuid)
 
       if (result.status === 'success' && result.suggestions) {
-        setSpeakerSuggestions(result.suggestions)
-        // Don't auto-fill - let user accept/reject suggestions individually
+        // Build mapping for speakers with valid identified names
+        const speakerMapping = {}
+
+        Object.entries(result.suggestions).forEach(([speakerLabel, suggestedName]) => {
+          // Convert "Speaker 1" to SPEAKER_00, "Speaker 2" to SPEAKER_01, etc.
+          const speakerNumber = parseInt(speakerLabel.replace('Speaker ', '')) - 1
+          const speakerKey = `SPEAKER_${String(speakerNumber).padStart(2, '0')}`
+
+          // Only auto-accept if a valid name/role was identified
+          // Reject if the suggestion is generic/unclear (contains these keywords)
+          const lowerSuggestion = (suggestedName || '').toLowerCase().trim()
+          const isGeneric =
+            !suggestedName ||
+            lowerSuggestion.includes('speaker') ||
+            lowerSuggestion.includes('unknown') ||
+            lowerSuggestion.includes('cannot') ||
+            lowerSuggestion.includes('not determined') ||
+            lowerSuggestion.includes('not be determined') ||
+            lowerSuggestion.includes('unclear') ||
+            lowerSuggestion.includes('unidentified') ||
+            lowerSuggestion === 'n/a' ||
+            lowerSuggestion === '-'
+
+          if (!isGeneric) {
+            // Valid name/role identified - auto-apply it
+            speakerMapping[speakerKey] = suggestedName
+          }
+          // For generic/undetermined speakers, don't add to mapping or suggestions
+          // They will remain as SPEAKER_00, SPEAKER_01, etc.
+        })
+
+        // Auto-apply identified speaker names to backend
+        if (Object.keys(speakerMapping).length > 0) {
+          try {
+            await api.updateSpeakers(uuid, speakerMapping)
+
+            // Reload transcript to reflect updated speaker names
+            const transcriptData = await api.getTranscript(uuid)
+            if (transcriptData.full_transcript && typeof transcriptData.full_transcript === 'string') {
+              try {
+                const parsed = JSON.parse(transcriptData.full_transcript)
+                setTranscriptWithColors({ segments: parsed })
+              } catch (e) {
+                console.error('Failed to parse transcript:', e)
+                setTranscriptWithColors(transcriptData)
+              }
+            } else {
+              setTranscriptWithColors(transcriptData)
+            }
+          } catch (err) {
+            console.error('Failed to auto-apply speaker names:', err)
+          }
+        }
+        // Undetermined speakers will remain as SPEAKER_00, SPEAKER_01, etc.
       }
     } catch (err) {
-      setError(err.message || 'Failed to identify speakers')
+      console.error('Failed to auto-identify speakers:', err)
+      // Don't show error to user - this is a background enhancement
     } finally {
       setIdentifyingSpeakers(false)
     }
@@ -381,13 +504,16 @@ function App() {
     try {
       setError(null)
 
-      // Update speaker names in the transcript
+      // Call backend API to persist speaker name changes
+      await api.updateSpeakers(jobId, editingSpeakers)
+
+      // Update speaker names in the local transcript state
       const updatedSegments = transcript.segments.map(segment => ({
         ...segment,
         speaker: editingSpeakers[segment.speaker] || segment.speaker
       }))
 
-      setTranscript({ ...transcript, segments: updatedSegments })
+      setTranscriptWithColors({ ...transcript, segments: updatedSegments })
       setShowEditSpeakersModal(false)
     } catch (err) {
       setError(err.message || 'Failed to update speakers')
@@ -401,8 +527,8 @@ function App() {
   }
 
   // Save edited segment text
-  const handleSaveSegmentText = () => {
-    if (!editingSegment || !transcript) return
+  const handleSaveSegmentText = async () => {
+    if (!editingSegment || !transcript || !jobId) return
 
     try {
       setError(null)
@@ -413,7 +539,10 @@ function App() {
         text: editingSegment.text
       }
 
-      setTranscript({ ...transcript, segments: updatedSegments })
+      // Call backend API to persist transcript changes
+      await api.updateTranscript(jobId, updatedSegments)
+
+      setTranscriptWithColors({ ...transcript, segments: updatedSegments })
       setShowEditTextModal(false)
       setEditingSegment(null)
     } catch (err) {
@@ -421,17 +550,77 @@ function App() {
     }
   }
 
+  // Open edit summary modal
+  const handleEditSummary = () => {
+    if (!summary?.summary) return
+    setEditingSummary(summary.summary)
+    setShowEditSummaryModal(true)
+  }
+
+  // Save edited summary
+  const handleSaveSummary = async () => {
+    if (!editingSummary || !jobId) return
+
+    try {
+      setError(null)
+
+      // Call backend API to persist summary changes
+      await api.updateSummary(jobId, editingSummary)
+
+      // Update local summary state
+      setSummary({
+        ...summary,
+        summary: editingSummary
+      })
+      setShowEditSummaryModal(false)
+    } catch (err) {
+      setError(err.message || 'Failed to update summary')
+    }
+  }
+
+  // Delete a job
+  const handleDeleteJob = async (uuid, event) => {
+    event.stopPropagation() // Prevent triggering the job load
+
+    if (!window.confirm('Are you sure you want to delete this meeting? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setError(null)
+      await api.deleteJob(uuid)
+
+      // Refresh the jobs list
+      await fetchRecentJobs()
+
+      // If the deleted job was the current job, reset the view
+      if (jobId === uuid) {
+        handleStartNewMeeting()
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete meeting')
+    }
+  }
+
   // Start new meeting
   const handleStartNewMeeting = () => {
+    // Clear any active polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+
     setCurrentStep('upload')
     setSelectedFile(null)
     setJobId(null)
-    setJobStatus(null)
     setTranscript(null)
     setSummary(null)
     setError(null)
     setProcessingProgress(0)
     setUploading(false)
+
+    // Refresh recent jobs list when returning to home
+    fetchRecentJobs()
   }
 
   // Show loading screen while backend is initializing
@@ -662,15 +851,26 @@ function App() {
                           style={{ cursor: 'pointer' }}
                           onClick={() => handleLoadJob(job)}
                         >
-                          <div>
+                          <div className="flex-grow-1">
                             <div className="fw-medium">{job.filename || 'Untitled Recording'}</div>
                             <small className="text-muted">
                               {job.created_at ? new Date(job.created_at).toLocaleString() : 'Date unknown'}
                             </small>
                           </div>
-                          <Badge bg={job.status_code === 200 || job.status_code === '200' ? 'success' : job.status_code === 202 || job.status_code === '202' ? 'warning' : 'secondary'}>
-                            {job.status_code === 200 || job.status_code === '200' ? 'Complete' : job.status_code === 202 || job.status_code === '202' ? 'Processing' : 'Unknown'}
-                          </Badge>
+                          <div className="d-flex gap-2 align-items-center">
+                            <Badge bg={job.status_code === 200 || job.status_code === '200' ? 'success' : job.status_code === 202 || job.status_code === '202' ? 'warning' : 'secondary'}>
+                              {job.status_code === 200 || job.status_code === '200' ? 'Complete' : job.status_code === 202 || job.status_code === '202' ? 'Processing' : 'Unknown'}
+                            </Badge>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 text-danger"
+                              onClick={(e) => handleDeleteJob(job.uuid, e)}
+                              title="Delete this meeting"
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -679,6 +879,10 @@ function App() {
                       <p className="mb-0">No recent meetings. Upload or record your first meeting to get started!</p>
                     </div>
                   )}
+                  <div className="card-footer text-muted small">
+                    <AlertCircle size={14} className="me-1" />
+                    Meetings are automatically deleted after 12 hours
+                  </div>
                 </Card.Body>
               </Card>
             </Col>
@@ -742,6 +946,19 @@ function App() {
                     </div>
                   </div>
 
+                  <div className="progress mb-3" style={{ height: '25px' }}>
+                    <div
+                      className="progress-bar progress-bar-animated progress-bar-striped"
+                      role="progressbar"
+                      style={{ width: `${processingProgress}%` }}
+                      aria-valuenow={processingProgress}
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    >
+                      {processingProgress}%
+                    </div>
+                  </div>
+
                   <div className="text-center">
                     <small className="text-muted">
                       This usually takes 2-3 minutes for a 10-minute recording
@@ -786,11 +1003,12 @@ function App() {
                               <Button
                                 variant="link"
                                 size="sm"
-                                className="text-muted p-0"
+                                className="p-0"
                                 onClick={() => handleEditText(segment, index)}
                                 title="Edit this segment"
+                                style={{ color: '#f0ad4e' }}
                               >
-                                <FileText size={14} />
+                                <Pencil size={14} />
                               </Button>
                             </div>
                           </div>
@@ -829,7 +1047,7 @@ function App() {
                     </div>
                     <div className="info-item mb-3">
                       <small className="text-muted">Speakers</small>
-                      <div>
+                      <div className="mb-2">
                         {transcript?.segments ? (
                           [...new Set(transcript.segments.map(s => s.speaker))].map((speaker) => (
                             <Badge
@@ -843,6 +1061,16 @@ function App() {
                         ) : (
                           <span className="text-muted">N/A</span>
                         )}
+                      </div>
+                      {identifyingSpeakers && (
+                        <div className="small text-muted">
+                          <Sparkles size={12} className="me-1" />
+                          AI is identifying speakers...
+                        </div>
+                      )}
+                      <div className="small text-muted" style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>
+                        <AlertCircle size={12} className="me-1" />
+                        Speaker names are auto-identified by AI when possible. Use "Edit Speakers" to make changes.
                       </div>
                     </div>
                   </div>
@@ -869,11 +1097,11 @@ function App() {
                         </>
                       )}
                     </Button>
-                    <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadMarkdown(jobId)}>
+                    <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadTranscriptMarkdown(jobId)}>
                       <Download size={18} className="me-2" />
                       Export Markdown
                     </Button>
-                    <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadPDF(jobId, selectedFile?.name || 'transcript')}>
+                    <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadTranscriptPDF(jobId, selectedFile?.name || 'transcript')}>
                       <Download size={18} className="me-2" />
                       Export PDF
                     </Button>
@@ -895,10 +1123,9 @@ function App() {
                     AI-Generated Summary
                   </h5>
                   <div className="d-flex gap-2">
-                    <Button variant="outline-primary" size="sm">Regenerate</Button>
-                    <Button variant="primary" size="sm">
-                      <Download size={16} className="me-2" />
-                      Export
+                    <Button variant="outline-primary" size="sm" onClick={handleEditSummary} disabled={!summary?.summary}>
+                      <Edit2 size={16} className="me-1" />
+                      Edit
                     </Button>
                   </div>
                 </Card.Header>
@@ -942,12 +1169,44 @@ function App() {
               </Card>
 
               <Card>
-                <Card.Header>
-                  <h5 className="mb-0">Full Transcript</h5>
+                <Card.Header
+                  onClick={() => setShowFullTranscript(!showFullTranscript)}
+                  style={{ cursor: 'pointer' }}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <h5 className="mb-0">
+                    <FileText size={20} className="me-2" />
+                    Full Transcript
+                  </h5>
+                  <span className="text-muted">
+                    {showFullTranscript ? '▼' : '▶'}
+                  </span>
                 </Card.Header>
-                <Card.Body>
-                  <small className="text-muted">Click to expand full transcript</small>
-                </Card.Body>
+                {showFullTranscript && (
+                  <Card.Body>
+                    {transcript && transcript.segments ? (
+                      <div className="transcript-content">
+                        {transcript.segments.map((segment, index) => (
+                          <div key={index} className="transcript-segment mb-3 p-3 border-start border-3" style={{ borderColor: getSpeakerBorderColor(segment.speaker) }}>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                              <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>
+                                {segment.speaker}
+                              </Badge>
+                              <small className="text-muted">
+                                {Math.floor(segment.start / 60)}:{String(Math.floor(segment.start % 60)).padStart(2, '0')} - {Math.floor(segment.end / 60)}:{String(Math.floor(segment.end % 60)).padStart(2, '0')}
+                              </small>
+                            </div>
+                            <p className="mb-0">{segment.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted py-3">
+                        <p className="mb-0">No transcript available</p>
+                      </div>
+                    )}
+                  </Card.Body>
+                )}
               </Card>
             </Col>
 
@@ -957,13 +1216,24 @@ function App() {
                   <h5 className="mb-0">Export Options</h5>
                 </Card.Header>
                 <Card.Body>
+                  <h6 className="mb-2 small text-muted">AI Summary + Transcript</h6>
                   <Button variant="outline-primary" className="w-100 mb-2" onClick={() => api.downloadPDF(jobId, selectedFile?.name || 'transcript')}>
                     <Download size={18} className="me-2" />
-                    Download PDF
+                    Export PDF
                   </Button>
-                  <Button variant="outline-primary" className="w-100 mb-2" onClick={() => api.downloadMarkdown(jobId)}>
+                  <Button variant="outline-primary" className="w-100 mb-3" onClick={() => api.downloadMarkdown(jobId)}>
                     <Download size={18} className="me-2" />
-                    Download Markdown
+                    Export Markdown
+                  </Button>
+
+                  <h6 className="mb-2 small text-muted">Transcript Only</h6>
+                  <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadTranscriptPDF(jobId, selectedFile?.name || 'transcript')}>
+                    <Download size={18} className="me-2" />
+                    Export PDF
+                  </Button>
+                  <Button variant="outline-secondary" className="w-100 mb-3" onClick={() => api.downloadTranscriptMarkdown(jobId)}>
+                    <Download size={18} className="me-2" />
+                    Export Markdown
                   </Button>
 
                   <hr />
@@ -1027,28 +1297,16 @@ function App() {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <p className="text-muted mb-0">
-              Replace speaker labels with actual names. These changes will be reflected in the transcript and exports.
+          <div className="mb-4">
+            <p className="text-muted mb-2">
+              Replace speaker labels with actual names. AI suggestions are automatically applied when available.
             </p>
-            <Button
-              variant="outline-primary"
-              size="sm"
-              onClick={handleIdentifySpeakers}
-              disabled={identifyingSpeakers}
-            >
-              {identifyingSpeakers ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Identifying...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} className="me-2" />
-                  AI Suggest
-                </>
-              )}
-            </Button>
+            {identifyingSpeakers && (
+              <div className="text-muted small">
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Identifying speakers...
+              </div>
+            )}
           </div>
 
           {/* AI Suggestions Section */}
@@ -1169,6 +1427,39 @@ function App() {
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSaveSegmentText}>
+            Save Changes
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Edit Summary Modal */}
+      <Modal show={showEditSummaryModal} onHide={() => setShowEditSummaryModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <Edit2 size={20} className="me-2" />
+            Edit AI Summary
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-muted mb-3">
+            Edit the AI-generated summary to correct any inaccuracies or add additional details before exporting.
+          </p>
+          <Form.Group>
+            <Form.Label>Summary Text</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={15}
+              value={editingSummary}
+              onChange={(e) => setEditingSummary(e.target.value)}
+              placeholder="Enter summary text..."
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowEditSummaryModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSaveSummary}>
             Save Changes
           </Button>
         </Modal.Footer>

@@ -88,6 +88,7 @@ MeetMemo is a containerized application with three main services:
    LLM_API_URL=your_llm_url_here
    LLM_MODEL_NAME=your_llm_model_name_here
    LLM_API_KEY=your_llm_api_key_here
+   TIMEZONE_OFFSET=+8
    ```
 
 5. **Build and run:**
@@ -207,6 +208,23 @@ MeetMemo provides a comprehensive REST API for programmatic access:
 | `LLM_API_URL` | External LLM service endpoint | `http://localhost:8000/v1/chat/completions` |
 | `LLM_MODEL_NAME` | LLM model identifier | `qwen2.5-32b-instruct` |
 | `LLM_API_KEY` | Authentication key for LLM service | Optional |
+| `TIMEZONE_OFFSET` | Timezone offset in hours for timestamps | `+8` (GMT+8/Singapore) |
+
+### Timezone Configuration
+MeetMemo uses a configurable timezone for all timestamps in exported PDFs and Markdown files. The timezone is set via the `TIMEZONE_OFFSET` environment variable in your `.env` file.
+
+**Default**: Singapore Time (GMT+8)
+
+**To change the timezone:**
+1. Edit your `.env` file
+2. Update the `TIMEZONE_OFFSET` value with your desired offset:
+   - UTC: `TIMEZONE_OFFSET=0`
+   - EST (GMT-5): `TIMEZONE_OFFSET=-5`
+   - JST (GMT+9): `TIMEZONE_OFFSET=+9`
+   - GMT+8 (Singapore/Default): `TIMEZONE_OFFSET=+8`
+3. Restart the backend service: `docker compose restart meetmemo-backend`
+
+All export functions (PDF and Markdown) will use this configured timezone when generating timestamps.
 
 ### Whisper Model Selection
 Available models (size/speed trade-off):

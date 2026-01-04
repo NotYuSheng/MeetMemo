@@ -82,6 +82,28 @@ export async function updateSpeakers(uuid, mapping) {
   })
 }
 
+// Update transcript content
+export async function updateTranscript(uuid, transcript) {
+  return await apiCall(`/jobs/${uuid}/transcript`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ transcript }),
+  })
+}
+
+// Update summary content
+export async function updateSummary(uuid, summary) {
+  return await apiCall(`/jobs/${uuid}/summary`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ summary }),
+  })
+}
+
 // Generate summary
 export async function generateSummary(uuid, customPrompt = null) {
   const body = customPrompt
@@ -164,6 +186,66 @@ export async function downloadMarkdown(uuid) {
     return { success: true }
   } catch (error) {
     console.error('Markdown Download Error:', error)
+    throw error
+  }
+}
+
+// Download Transcript PDF (transcript only, no AI summary)
+export async function downloadTranscriptPDF(uuid, filename) {
+  try {
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/pdf`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+
+    // Get the blob from the response
+    const blob = await response.blob()
+
+    // Create a download link
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `${filename || 'transcript'}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Transcript PDF Download Error:', error)
+    throw error
+  }
+}
+
+// Download Transcript Markdown (transcript only, no AI summary)
+export async function downloadTranscriptMarkdown(uuid) {
+  try {
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/markdown`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+
+    // Get the blob from the response
+    const blob = await response.blob()
+
+    // Create a download link
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `transcript_${uuid}.md`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Transcript Markdown Download Error:', error)
     throw error
   }
 }
