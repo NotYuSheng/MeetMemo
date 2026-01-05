@@ -1,39 +1,370 @@
+/* MeetMemo App Styles - Professional & Minimalistic */
+
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --secondary: #64748b;
+  --success: #2563eb;
+  --muted: #94a3b8;
+  --border: #e2e8f0;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+}
+
 .app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background);
+}
+
+/* Header */
+.app-header {
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Workflow Steps */
+.workflow-steps {
+  border-bottom: 1px solid var(--border);
+}
+
+.steps-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.step.active {
+  color: var(--primary);
+}
+
+.step.completed {
+  color: var(--text-secondary);
+}
+
+.step-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.step.active .step-icon {
+  background-color: var(--primary);
+  color: white;
+}
+
+.step.completed .step-icon {
+  background-color: var(--text-secondary);
+  color: white;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  font-weight: 500;
   text-align: center;
 }
 
-.app-logo {
-  height: 40vmin;
-  pointer-events: none;
+.step-divider {
+  width: 60px;
+  height: 2px;
+  background-color: var(--border);
+  margin: 0 1rem;
+  margin-bottom: 24px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .app-logo {
-    animation: app-logo-spin infinite 20s linear;
+.step.completed ~ .step-divider {
+  background-color: var(--text-secondary);
+}
+
+/* Upload and Record Cards */
+.upload-card,
+.record-card {
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+}
+
+.record-card:hover {
+  border-color: var(--secondary);
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.12);
+}
+
+.upload-icon,
+.record-icon {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }
 
-.app-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Upload Dropzone */
+.upload-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 0.5rem;
+  padding: 2rem 1rem;
+  background-color: var(--background);
+  transition: all 0.3s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+/* Processing Animation */
+.processing-animation {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+.processing-steps {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.processing-step {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  background-color: var(--background);
+  border-radius: 0.5rem;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.processing-step.active {
+  opacity: 1;
+  background-color: var(--primary-light);
+  border-left: 3px solid var(--primary);
+}
+
+.processing-step.completed {
+  opacity: 1;
+  background-color: #f1f5f9;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Sidebar */
+.sticky-sidebar {
+  position: sticky;
+  top: 100px;
+}
+
+.info-item {
+  padding-bottom: 0.75rem;
+}
+
+.info-item small {
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Transcript and Summary placeholders */
+.transcript-placeholder,
+.summary-placeholder {
+  min-height: 300px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.app-link {
-  color: #61dafb;
+/* Transcript Content */
+.transcript-content {
+  max-height: 600px;
+  overflow-y: auto;
 }
 
-@keyframes app-logo-spin {
-  from {
-    transform: rotate(0deg);
+.transcript-segment {
+  background-color: var(--background);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.transcript-segment:hover {
+  background-color: #f1f5f9;
+  transform: translateX(4px);
+}
+
+/* Summary Content */
+.summary-content h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.summary-content ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.summary-content li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.summary-content li:before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+/* Footer */
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+}
+
+/* Card improvements */
+.card {
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .steps-container {
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
-  to {
-    transform: rotate(360deg);
+  .step-divider {
+    display: none;
   }
+
+  .step {
+    flex: 1 1 40%;
+    min-width: 120px;
+  }
+
+  .sticky-sidebar {
+    position: static;
+    margin-top: 1rem;
+  }
+
+  .upload-dropzone {
+    padding: 1.5rem 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .step {
+    flex: 1 1 100%;
+  }
+
+  .step-label {
+    font-size: 0.75rem;
+  }
+
+  .step-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .step-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Utility Classes */
+.opacity-50 {
+  opacity: 0.5;
+}
+
+/* Icon alignment */
+.lucide {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Button improvements */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Progress bar */
+.progress {
+  background-color: #f1f5f9;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.4s ease;
+  background-color: var(--primary);
 }

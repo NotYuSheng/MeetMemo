@@ -15,7 +15,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt \
     && pip uninstall -y torch torchvision torchaudio \
     && pip install --index-url https://download.pytorch.org/whl/cu118 \
-         torch torchvision torchaudio
+         torch==2.5.1 torchvision torchaudio
 
 # Install system dependencies
 RUN apt-get update && \

@@ -1,4 +1,23 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: meetmemo-postgres
+    environment:
+      - POSTGRES_DB=meetmemo
+      - POSTGRES_USER=meetmemo
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - meetmemo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meetmemo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   meetmemo-backend:
     build:
       context: ./backend
@@ -9,47 +28,50 @@ services:
       - logs:/app/logs
       - transcripts:/app/transcripts
       - summary:/app/summary
+      - exports:/app/exports
       - whisper_cache:/root/.cache/whisper
+      - huggingface_cache:/root/.cache/huggingface
+      - torch_cache:/root/.cache/torch
     runtime: nvidia
     environment:
       - HF_TOKEN=${HF_TOKEN:-CHANGEME}
       - LLM_API_URL=${LLM_API_URL:-CHANGEME}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
+      - TIMEZONE_OFFSET=${TIMEZONE_OFFSET:-+8}
+      - DATABASE_URL=postgresql://meetmemo:${POSTGRES_PASSWORD:-changeme}@postgres:5432/meetmemo
       - PYTHONUNBUFFERED=1
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      # Required for PyAnnote models - newer PyTorch defaults to weights_only=True for security,
+      # but PyAnnote's pickled models require full unpickling. Only use with trusted model sources.
+      - TORCH_LOAD_WEIGHTS_ONLY=0
     networks:
       - meetmemo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   meetmemo-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: meetmemo-frontend
-    depends_on:
-      - meetmemo-backend
-    networks:
-      - meetmemo-network
-
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: meetmemo-nginx
     ports:
       - "80:80"
-      - "443:443"
     depends_on:
-      - meetmemo-frontend
       - meetmemo-backend
     networks:
       - meetmemo-network
 
 volumes:
+  postgres_data:
   audiofiles:
   logs:
   transcripts:
   whisper_cache:
+  huggingface_cache:
+  torch_cache:
   summary:
+  exports:
 
 networks:
   meetmemo-network:
