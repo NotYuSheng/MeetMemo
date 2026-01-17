@@ -34,26 +34,18 @@ jobs:
         cd frontend
         npm ci
         
-    - name: Create environment file
-      run: |
-        cp example.env .env
-        
     - name: Build project
-      env:
-        CI: false
-        GENERATE_SOURCEMAP: false
-        PUBLIC_URL: /MeetMemo
       run: |
         cd frontend
         npm run build
-      
+
     - name: Setup Pages
       uses: actions/configure-pages@v4
       
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: ./frontend/build
+        path: ./frontend/dist
         
   deploy:
     environment:
