@@ -28,7 +28,7 @@ A meeting transcription application that runs entirely offline. It converts spee
 
 <div align="center">
 
-![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/MeetMemo-DEMO_v2.0.0.gif)
+![MeetMemo Demo](https://raw.githubusercontent.com/NotYuSheng/MeetMemo/main/sample-files/MeetMemo-DEMO_v2.0.0.gif)
 
 </div>
 
@@ -429,7 +429,7 @@ cloudflared tunnel create meetmemo
 
 # Configure (~/.cloudflared/config.yml)
 tunnel: <tunnel-id>
-credentials-file: /home/user/.cloudflared/<tunnel-id>.json
+credentials-file: ~/.cloudflared/<tunnel-id>.json
 ingress:
   - hostname: meetmemo.yourdomain.com
     service: http://localhost:80
@@ -460,8 +460,11 @@ Access via `https://<machine-name>.tail-scale.ts.net`
 <summary><strong>Option 3: Caddy (Auto-HTTPS)</strong></summary>
 
 ```bash
-# Install Caddy
-sudo apt install caddy
+# Install Caddy (add repository first)
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
 
 # /etc/caddy/Caddyfile
 meetmemo.yourdomain.com {
@@ -480,6 +483,8 @@ sudo systemctl restart caddy
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d meetmemo.yourdomain.com
 ```
+
+> **Important:** To avoid port conflicts with the host's Nginx, change the port mapping for the `meetmemo-frontend` service in `docker-compose.yml` from `"80:80"` to `"8080:80"`. Then configure your Nginx to `proxy_pass http://localhost:8080`.
 
 </details>
 
