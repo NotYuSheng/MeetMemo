@@ -11,8 +11,8 @@ import os
 import aiofiles
 
 from config import Settings
-from repositories.job_repository import JobRepository
 from database import update_error, update_status
+from repositories.job_repository import JobRepository
 
 logger = logging.getLogger(__name__)
 

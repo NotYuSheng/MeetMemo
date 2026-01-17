@@ -7,6 +7,7 @@ with proper lifecycle management and dependency injection.
 from typing import Optional
 
 import httpx
+from fastapi import Depends
 
 from config import Settings, get_settings
 
@@ -88,9 +89,6 @@ def get_export_repository():
 # ============================================================================
 # Service Factories
 # ============================================================================
-
-from functools import lru_cache
-from fastapi import Depends
 
 
 def get_audio_service(

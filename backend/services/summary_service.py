@@ -5,8 +5,6 @@ This service handles LLM API calls for transcript summarization, speaker identif
 and summary caching.
 """
 import logging
-import os
-from pathlib import Path
 from typing import Optional
 
 import aiofiles

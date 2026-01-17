@@ -11,7 +11,6 @@ import aiofiles
 
 from config import Settings
 from utils.formatters import format_speaker_name, format_transcript_for_llm
-from utils.file_utils import get_unique_filename
 
 logger = logging.getLogger(__name__)
 

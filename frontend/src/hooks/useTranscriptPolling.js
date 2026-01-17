@@ -29,7 +29,8 @@ export default function useTranscriptPolling(
     // Reset the workflow steps tracker for this new job
     workflowStepsStarted.current = new Set();
 
-    pollingIntervalRef.current = setInterval(async () => {
+    // Define the polling function so we can call it immediately
+    const pollJobStatus = async () => {
       try {
         const status = await api.getJobStatus(uuid);
         console.log('Workflow Debug:', {
@@ -140,7 +141,11 @@ export default function useTranscriptPolling(
         pollingIntervalRef.current = null;
         setUploading(false);
       }
-    }, 2000); // Poll every 2 seconds
+    };
+
+    // Call immediately to avoid initial delay, then set up interval
+    pollJobStatus();
+    pollingIntervalRef.current = setInterval(pollJobStatus, 2000);
   };
 
   // Stop polling

@@ -4,7 +4,6 @@ Centralized configuration management using Pydantic Settings.
 This module provides type-safe configuration loading from environment variables
 with validation, defaults, and computed properties.
 """
-import os
 from datetime import timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -65,6 +64,13 @@ class Settings(BaseSettings):
     # Database Pool Settings
     db_pool_min_size: int = 5
     db_pool_max_size: int = 20
+
+    # Logging Configuration
+    log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    log_file: str = "logs/app.log"
+    log_max_bytes: int = 10 * 1024 * 1024  # 10MB per file
+    log_backup_count: int = 5  # Keep 5 backup files
+    log_to_console: bool = True  # Also log to stdout/stderr
 
     class Config:
         """Pydantic configuration."""

@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from dependencies import get_export_service, get_job_repository
-from models import ExportJobRequest, ExportJobResponse, ExportJobStatusResponse
+from models import CreateExportRequest, ExportJobResponse, ExportJobStatusResponse
 from repositories.job_repository import JobRepository
 from services.export_service import ExportService
 
@@ -21,7 +21,7 @@ router = APIRouter()
 @router.post("/jobs/{uuid}/export-jobs", response_model=ExportJobResponse, status_code=202)
 async def create_export_job(
     uuid: str,
-    request: ExportJobRequest,
+    request: CreateExportRequest,
     background_tasks: BackgroundTasks,
     export_service: ExportService = Depends(get_export_service),
     job_repo: JobRepository = Depends(get_job_repository)

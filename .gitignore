@@ -93,9 +93,8 @@ yarn-error.log*
 # -----------------------------
 .DS_Store
 .idea/
-backend/audiofiles/
-backend/transcripts/
 frontend/package.json
+CLAUDE.md
 
 # -----------------------------
 # SSL Certificates

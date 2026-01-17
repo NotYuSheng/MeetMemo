@@ -11,8 +11,8 @@ import torch
 from pyannote.audio import Pipeline
 
 from config import Settings
-from repositories.job_repository import JobRepository
 from database import update_error
+from repositories.job_repository import JobRepository
 
 logger = logging.getLogger(__name__)
 

@@ -15,28 +15,70 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import get_settings
-from database import init_database, close_database
-from dependencies import init_http_client, close_http_client
-from services.cleanup_service import CleanupService
-from services.transcription_service import TranscriptionService
-from services.diarization_service import DiarizationService
-from repositories.job_repository import JobRepository
-from repositories.export_repository import ExportRepository
 from api.v1 import api_router
+from config import get_settings
+from database import close_database, init_database
+from dependencies import close_http_client, init_http_client
+from repositories.export_repository import ExportRepository
+from repositories.job_repository import JobRepository
+from services.cleanup_service import CleanupService
+from services.diarization_service import DiarizationService
+from services.transcription_service import TranscriptionService
 
 # Load environment variables
 load_dotenv('.env')
 
-# Configure logging
-os.makedirs("logs", exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    filename='logs/app.log',
-    filemode='a',
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Configure logging with rotation and console output
+# This function will be called properly after Settings initialization
+def configure_logging(settings=None):
+    """Configure logging with rotation and console output."""
+    from logging.handlers import RotatingFileHandler
+
+    # Use settings if provided, otherwise use defaults
+    log_level = getattr(settings, 'log_level', 'INFO') if settings else os.getenv('LOG_LEVEL', 'INFO')
+    log_file = getattr(settings, 'log_file', 'logs/app.log') if settings else 'logs/app.log'
+    log_max_bytes = getattr(settings, 'log_max_bytes', 10 * 1024 * 1024) if settings else 10 * 1024 * 1024
+    log_backup_count = getattr(settings, 'log_backup_count', 5) if settings else 5
+    log_to_console = getattr(settings, 'log_to_console', True) if settings else True
+
+    # Create logs directory
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+    # Clear any existing handlers
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+
+    # Set root logger level
+    root_logger.setLevel(getattr(logging, log_level.upper()))
+
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # File handler with rotation
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=log_max_bytes,
+        backupCount=log_backup_count,
+        encoding='utf-8'
+    )
+    file_handler.setLevel(getattr(logging, log_level.upper()))
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+
+    # Console handler (for Docker logs visibility)
+    if log_to_console:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(getattr(logging, log_level.upper()))
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
+
+    return logging.getLogger(__name__)
+
+# Initial logging setup with defaults (will be reconfigured in lifespan)
+logger = configure_logging()
 
 # Validate required environment variables
 REQUIRED_ENV_VARS = {
@@ -76,7 +118,11 @@ async def lifespan(app: FastAPI):
     Modern FastAPI pattern replacing @app.on_event decorators.
     """
     settings = get_settings()
-    logger.info("Starting MeetMemo API...")
+
+    # Reconfigure logging with settings
+    global logger
+    logger = configure_logging(settings)
+    logger.info("Starting MeetMemo API with configured logging...")
 
     # Startup
     try:
@@ -136,7 +182,7 @@ async def lifespan(app: FastAPI):
 
         # Stop cleanup scheduler
         if 'cleanup_service' in locals():
-            cleanup_service.stop_scheduler()
+            await cleanup_service.stop_scheduler()
 
         # Close HTTP client
         await close_http_client()
@@ -154,6 +200,53 @@ app = FastAPI(
     description="Audio transcription and speaker diarization API with modular architecture",
     lifespan=lifespan
 )
+
+
+# Request/Response Logging Middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    """Log all HTTP requests and responses with timing."""
+    import time
+
+
+    request_logger = logging.getLogger("api.requests")
+    start_time = time.time()
+
+    # Log request
+    request_logger.info(
+        "Request: %s %s from %s",
+        request.method,
+        request.url.path,
+        request.client.host if request.client else "unknown"
+    )
+
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+
+        # Log response
+        request_logger.info(
+            "Response: %s %s - Status: %d - Duration: %.3fs",
+            request.method,
+            request.url.path,
+            response.status_code,
+            process_time
+        )
+
+        return response
+
+    except Exception as e:
+        process_time = time.time() - start_time
+        request_logger.error(
+            "Request failed: %s %s - Error: %s - Duration: %.3fs",
+            request.method,
+            request.url.path,
+            str(e),
+            process_time,
+            exc_info=True
+        )
+        raise
+
 
 # CORS Configuration
 app.add_middleware(

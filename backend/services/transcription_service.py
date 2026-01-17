@@ -5,14 +5,12 @@ This service handles Whisper model loading, caching, and transcription processin
 with progress tracking.
 """
 import logging
-from functools import lru_cache
-from typing import Optional
 
 import whisper
 
 from config import Settings
-from repositories.job_repository import JobRepository
 from database import update_error
+from repositories.job_repository import JobRepository
 
 logger = logging.getLogger(__name__)
 

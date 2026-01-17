@@ -5,15 +5,7 @@ This module registers all v1 API routers with their respective prefixes and tags
 """
 from fastapi import APIRouter
 
-from api.v1 import (
-    health,
-    jobs,
-    transcripts,
-    summaries,
-    speakers,
-    exports,
-    export_jobs
-)
+from api.v1 import export_jobs, exports, health, jobs, speakers, summaries, transcripts
 
 # Create v1 API router
 api_router = APIRouter()

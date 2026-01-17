@@ -3,7 +3,6 @@ Summaries router for AI summary operations.
 
 This router handles summary generation, updates, and deletion.
 """
-import json
 import logging
 import os
 
@@ -12,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from config import Settings, get_settings
 from dependencies import get_job_repository, get_summary_service
-from models import SummaryResponse, SummarizeRequest
+from models import SummarizeRequest, SummaryResponse
 from repositories.job_repository import JobRepository
 from services.summary_service import SummaryService
 from utils.formatters import format_transcript_for_llm
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/jobs/{uuid}/summary", response_model=SummaryResponse)
+@router.get("/jobs/{uuid}/summaries", response_model=SummaryResponse)
 async def get_summary(
     uuid: str,
     job_repo: JobRepository = Depends(get_job_repository),
@@ -78,7 +77,7 @@ async def get_summary(
     )
 
 
-@router.post("/jobs/{uuid}/summary", response_model=SummaryResponse)
+@router.post("/jobs/{uuid}/summaries", response_model=SummaryResponse)
 async def create_summary(
     uuid: str,
     request: SummarizeRequest = None,
@@ -131,7 +130,7 @@ async def create_summary(
     )
 
 
-@router.patch("/jobs/{uuid}/summary")
+@router.patch("/jobs/{uuid}/summaries")
 async def update_summary(
     uuid: str,
     request: dict,
@@ -160,7 +159,7 @@ async def update_summary(
     )
 
 
-@router.delete("/jobs/{uuid}/summary")
+@router.delete("/jobs/{uuid}/summaries")
 async def delete_summary_cache(
     uuid: str,
     job_repo: JobRepository = Depends(get_job_repository),

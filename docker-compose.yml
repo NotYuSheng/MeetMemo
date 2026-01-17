@@ -55,12 +55,26 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: meetmemo-frontend
-    ports:
-      - "80:80"
+    # No external ports - accessed via nginx
     depends_on:
       - meetmemo-backend
     networks:
       - meetmemo-network
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: meetmemo-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - meetmemo-frontend
+      - meetmemo-backend
+    networks:
+      - meetmemo-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:

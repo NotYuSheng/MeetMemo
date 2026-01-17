@@ -10,33 +10,41 @@ import uuid as uuid_lib
 
 import aiofiles
 import aiofiles.os
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 
 from config import Settings, get_settings
+from database import update_status
 from dependencies import (
-    get_audio_service,
-    get_transcription_service,
-    get_diarization_service,
     get_alignment_service,
-    get_job_repository
+    get_audio_service,
+    get_diarization_service,
+    get_job_repository,
+    get_transcription_service,
 )
 from models import (
+    DeleteResponse,
+    DiarizationDataResponse,
+    JobListResponse,
     JobResponse,
     JobStatusResponse,
     RenameJobRequest,
     RenameResponse,
-    DeleteResponse,
-    WorkflowActionResponse,
     TranscriptionDataResponse,
-    DiarizationDataResponse,
-    JobListResponse
+    WorkflowActionResponse,
 )
 from repositories.job_repository import JobRepository
-from services.audio_service import AudioService
-from services.transcription_service import TranscriptionService
-from services.diarization_service import DiarizationService
 from services.alignment_service import AlignmentService
-from database import update_status
+from services.audio_service import AudioService
+from services.diarization_service import DiarizationService
+from services.transcription_service import TranscriptionService
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +134,7 @@ async def list_jobs(
     """List all jobs with pagination."""
     try:
         jobs, total = await job_repo.get_all(limit, offset)
-        jobs_dict = {job['uuid']: job for job in jobs}
+        jobs_dict = {str(job['uuid']): job for job in jobs}
 
         return JobListResponse(
             jobs=jobs_dict,
@@ -166,7 +174,7 @@ async def get_job_status(
         available_actions = ['export', 'delete']
 
     return JobStatusResponse(
-        uuid=job['uuid'],
+        uuid=str(job['uuid']),
         file_name=job['file_name'],
         status_code=job['status_code'],
         status="completed" if job['status_code'] == 200 else "processing",
