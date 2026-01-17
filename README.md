@@ -431,7 +431,7 @@ cloudflared tunnel create meetmemo
 tunnel: <tunnel-id>
 credentials-file: ~/.cloudflared/<tunnel-id>.json
 ingress:
-  - hostname: meetmemo.yourdomain.com
+  - hostname: meetmemo.your-domain.com # Replace with your domain
     service: http://localhost:80
   - service: http_status:404
 
