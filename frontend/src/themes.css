@@ -61,7 +61,7 @@
    THEME 2: Teal Professional
    Modern teal and turquoise theme
    =================================== */
-[data-theme="teal"] {
+[data-theme='teal'] {
   --primary-50: #d0f5f3;
   --primary-100: #a8efeb;
   --primary-200: #7ae7e1;
@@ -83,7 +83,7 @@
    THEME 3: Purple Modern
    Creative purple gradient theme
    =================================== */
-[data-theme="purple"] {
+[data-theme='purple'] {
   --primary-50: #f3e8ff;
   --primary-100: #e9d5ff;
   --primary-200: #d8b4fe;
@@ -105,7 +105,7 @@
    THEME 4: Emerald Green
    Fresh, eco-friendly green theme
    =================================== */
-[data-theme="emerald"] {
+[data-theme='emerald'] {
   --primary-50: #d1fae5;
   --primary-100: #a7f3d0;
   --primary-200: #6ee7b7;
@@ -127,7 +127,7 @@
    THEME 5: Indigo Deep
    Deep, sophisticated indigo theme
    =================================== */
-[data-theme="indigo"] {
+[data-theme='indigo'] {
   --primary-50: #eef2ff;
   --primary-100: #e0e7ff;
   --primary-200: #c7d2fe;
@@ -149,7 +149,7 @@
    THEME 6: Rose Elegant
    Elegant rose and pink theme
    =================================== */
-[data-theme="rose"] {
+[data-theme='rose'] {
   --primary-50: #fff1f2;
   --primary-100: #ffe4e6;
   --primary-200: #fecdd3;
@@ -171,7 +171,7 @@
    THEME 7: Orange Vibrant
    Energetic orange theme
    =================================== */
-[data-theme="orange"] {
+[data-theme='orange'] {
   --primary-50: #fff7ed;
   --primary-100: #ffedd5;
   --primary-200: #fed7aa;
@@ -193,7 +193,7 @@
    THEME 8: Dark Mode
    Professional dark theme
    =================================== */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --primary-50: #1e3a8a;
   --primary-100: #1e40af;
   --primary-200: #1d4ed8;

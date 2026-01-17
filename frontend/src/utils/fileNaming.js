@@ -9,17 +9,17 @@
  */
 export function sanitizeFilename(filename) {
   if (!filename || filename === 'Unknown' || filename === 'Recording') {
-    return 'MeetMemo'
+    return 'MeetMemo';
   }
 
   // Remove file extension
-  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '')
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
 
   // Replace special characters with underscores, keep alphanumeric, spaces, hyphens
-  const cleaned = nameWithoutExt.replace(/[^a-zA-Z0-9\s-]/g, '_')
+  const cleaned = nameWithoutExt.replace(/[^a-zA-Z0-9\s-]/g, '_');
 
   // Collapse multiple spaces/underscores
-  return cleaned.replace(/[\s_]+/g, '_').trim()
+  return cleaned.replace(/[\s_]+/g, '_').trim();
 }
 
 /**
@@ -27,14 +27,14 @@ export function sanitizeFilename(filename) {
  * @returns {string} - Timestamp like "2024-01-15_14-30"
  */
 export function getTimestamp() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
 
-  return `${year}-${month}-${day}_${hours}-${minutes}`
+  return `${year}-${month}-${day}_${hours}-${minutes}`;
 }
 
 /**
@@ -43,9 +43,9 @@ export function getTimestamp() {
  * @returns {string} - e.g., "MeetMemo_Team_Meeting_2024-01-15_14-30.pdf"
  */
 export function generatePDFFilename(originalFilename) {
-  const baseName = sanitizeFilename(originalFilename)
-  const timestamp = getTimestamp()
-  return `${baseName}_${timestamp}.pdf`
+  const baseName = sanitizeFilename(originalFilename);
+  const timestamp = getTimestamp();
+  return `${baseName}_${timestamp}.pdf`;
 }
 
 /**
@@ -54,9 +54,9 @@ export function generatePDFFilename(originalFilename) {
  * @returns {string} - e.g., "MeetMemo_Team_Meeting_2024-01-15_14-30.md"
  */
 export function generateMarkdownFilename(originalFilename) {
-  const baseName = sanitizeFilename(originalFilename)
-  const timestamp = getTimestamp()
-  return `${baseName}_${timestamp}.md`
+  const baseName = sanitizeFilename(originalFilename);
+  const timestamp = getTimestamp();
+  return `${baseName}_${timestamp}.md`;
 }
 
 /**
@@ -65,9 +65,9 @@ export function generateMarkdownFilename(originalFilename) {
  * @returns {string} - e.g., "MeetMemo_Team_Meeting_Transcript_2024-01-15_14-30.pdf"
  */
 export function generateTranscriptPDFFilename(originalFilename) {
-  const baseName = sanitizeFilename(originalFilename)
-  const timestamp = getTimestamp()
-  return `${baseName}_Transcript_${timestamp}.pdf`
+  const baseName = sanitizeFilename(originalFilename);
+  const timestamp = getTimestamp();
+  return `${baseName}_Transcript_${timestamp}.pdf`;
 }
 
 /**
@@ -76,7 +76,7 @@ export function generateTranscriptPDFFilename(originalFilename) {
  * @returns {string} - e.g., "MeetMemo_Team_Meeting_Transcript_2024-01-15_14-30.md"
  */
 export function generateTranscriptMarkdownFilename(originalFilename) {
-  const baseName = sanitizeFilename(originalFilename)
-  const timestamp = getTimestamp()
-  return `${baseName}_Transcript_${timestamp}.md`
+  const baseName = sanitizeFilename(originalFilename);
+  const timestamp = getTimestamp();
+  return `${baseName}_Transcript_${timestamp}.md`;
 }

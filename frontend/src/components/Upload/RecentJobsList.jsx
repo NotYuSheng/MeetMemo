@@ -1,11 +1,11 @@
-import { Card, Badge, Button, Alert } from '@govtechsg/sgds-react'
-import { Clock, AlertCircle, Trash2 } from 'lucide-react'
+import { Card, Badge, Button, Alert } from '@govtechsg/sgds-react';
+import { Clock, AlertCircle, Trash2 } from 'lucide-react';
 
 export default function RecentJobsList({
   recentJobs,
   loadingJobs,
   handleLoadJob,
-  handleDeleteJob
+  handleDeleteJob,
 }) {
   return (
     <Card className="mt-4">
@@ -39,8 +39,20 @@ export default function RecentJobsList({
                   </small>
                 </div>
                 <div className="d-flex gap-2 align-items-center">
-                  <Badge bg={job.status_code === 200 || job.status_code === '200' ? 'success' : job.status_code === 202 || job.status_code === '202' ? 'warning' : 'secondary'}>
-                    {job.status_code === 200 || job.status_code === '200' ? 'Complete' : job.status_code === 202 || job.status_code === '202' ? 'Processing' : 'Unknown'}
+                  <Badge
+                    bg={
+                      job.status_code === 200 || job.status_code === '200'
+                        ? 'success'
+                        : job.status_code === 202 || job.status_code === '202'
+                          ? 'warning'
+                          : 'secondary'
+                    }
+                  >
+                    {job.status_code === 200 || job.status_code === '200'
+                      ? 'Complete'
+                      : job.status_code === 202 || job.status_code === '202'
+                        ? 'Processing'
+                        : 'Unknown'}
                   </Badge>
                   <Button
                     variant="link"
@@ -57,7 +69,9 @@ export default function RecentJobsList({
           </div>
         ) : (
           <div className="text-center text-muted py-4">
-            <p className="mb-0">No recent meetings. Upload or record your first meeting to get started!</p>
+            <p className="mb-0">
+              No recent meetings. Upload or record your first meeting to get started!
+            </p>
           </div>
         )}
         <div className="card-footer text-muted small">
@@ -66,5 +80,5 @@ export default function RecentJobsList({
         </div>
       </Card.Body>
     </Card>
-  )
+  );
 }

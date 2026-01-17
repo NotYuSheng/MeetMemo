@@ -1,42 +1,42 @@
-import { useState, useEffect } from 'react'
-import * as api from '../services/api'
+import { useState, useEffect } from 'react';
+import * as api from '../services/api';
 
 /**
  * Custom hook for backend health checking and connection management
  * Retries connection up to 30 times (30 seconds) before showing error
  */
 export default function useBackendHealth() {
-  const [backendReady, setBackendReady] = useState(false)
-  const [backendError, setBackendError] = useState(null)
+  const [backendReady, setBackendReady] = useState(false);
+  const [backendError, setBackendError] = useState(null);
 
   useEffect(() => {
     const checkBackendHealth = async () => {
-      let retryCount = 0
-      const maxRetries = 30 // 30 retries = 30 seconds
+      let retryCount = 0;
+      const maxRetries = 30; // 30 retries = 30 seconds
 
       while (retryCount < maxRetries) {
         try {
-          await api.healthCheck()
-          setBackendReady(true)
-          setBackendError(null)
-          return
+          await api.healthCheck();
+          setBackendReady(true);
+          setBackendError(null);
+          return;
         } catch (err) {
-          retryCount++
+          retryCount++;
           if (retryCount >= maxRetries) {
-            setBackendError('Backend is not responding. Please check if the service is running.')
-            return
+            setBackendError('Backend is not responding. Please check if the service is running.');
+            return;
           }
           // Wait 1 second before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
-    }
+    };
 
-    checkBackendHealth()
-  }, [])
+    checkBackendHealth();
+  }, []);
 
   return {
     backendReady,
-    backendError
-  }
+    backendError,
+  };
 }

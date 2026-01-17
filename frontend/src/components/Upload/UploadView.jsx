@@ -1,7 +1,7 @@
-import { Row, Col } from '@govtechsg/sgds-react'
-import FileUploadCard from './FileUploadCard'
-import RecordingCard from './RecordingCard'
-import RecentJobsList from './RecentJobsList'
+import { Row, Col } from '@govtechsg/sgds-react';
+import FileUploadCard from './FileUploadCard';
+import RecordingCard from './RecordingCard';
+import RecentJobsList from './RecentJobsList';
 
 export default function UploadView({
   uploading,
@@ -15,14 +15,17 @@ export default function UploadView({
   handleLoadJob,
   handleDeleteJob,
   onStartRecording,
-  isRecording
+  isRecording,
 }) {
   return (
     <Row className="justify-content-center">
       <Col lg={10}>
         <div className="text-center mb-4">
           <h2 className="mb-2">Start Your Meeting Transcription</h2>
-          <p className="text-muted">Upload a recording or record live to get AI-powered transcription with speaker identification</p>
+          <p className="text-muted">
+            Upload a recording or record live to get AI-powered transcription with speaker
+            identification
+          </p>
         </div>
 
         <Row className="g-4">
@@ -38,10 +41,7 @@ export default function UploadView({
           </Col>
 
           <Col md={6}>
-            <RecordingCard
-              onStartRecording={onStartRecording}
-              isRecording={isRecording}
-            />
+            <RecordingCard onStartRecording={onStartRecording} isRecording={isRecording} />
           </Col>
         </Row>
 
@@ -53,5 +53,5 @@ export default function UploadView({
         />
       </Col>
     </Row>
-  )
+  );
 }

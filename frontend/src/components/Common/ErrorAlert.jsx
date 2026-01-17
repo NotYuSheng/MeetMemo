@@ -1,8 +1,8 @@
-import { Row, Col, Alert } from '@govtechsg/sgds-react'
-import { AlertCircle } from 'lucide-react'
+import { Row, Col, Alert } from '@govtechsg/sgds-react';
+import { AlertCircle } from 'lucide-react';
 
 export default function ErrorAlert({ error, onClose }) {
-  if (!error) return null
+  if (!error) return null;
 
   return (
     <Row className="justify-content-center mb-4">
@@ -13,5 +13,5 @@ export default function ErrorAlert({ error, onClose }) {
         </Alert>
       </Col>
     </Row>
-  )
+  );
 }

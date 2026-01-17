@@ -1,10 +1,10 @@
-import { Card, Button, Alert } from '@govtechsg/sgds-react'
-import { Mic, AlertCircle } from 'lucide-react'
-import { getRecordingUnavailableReason } from '../../utils/browserUtils'
+import { Card, Button, Alert } from '@govtechsg/sgds-react';
+import { Mic, AlertCircle } from 'lucide-react';
+import { getRecordingUnavailableReason } from '../../utils/browserUtils';
 
 export default function RecordingCard({ onStartRecording, isRecording }) {
-  const unavailableReason = getRecordingUnavailableReason()
-  const isDisabled = !!unavailableReason || isRecording
+  const unavailableReason = getRecordingUnavailableReason();
+  const isDisabled = !!unavailableReason || isRecording;
 
   return (
     <Card className="h-100 record-card">
@@ -13,9 +13,7 @@ export default function RecordingCard({ onStartRecording, isRecording }) {
           <Mic size={64} strokeWidth={1.5} className="text-danger" />
         </div>
         <h4 className="mb-3">Record Live Meeting</h4>
-        <p className="text-muted mb-4">
-          Record audio directly from your microphone
-        </p>
+        <p className="text-muted mb-4">Record audio directly from your microphone</p>
         <div className="record-info mb-4">
           {unavailableReason ? (
             <Alert variant="warning" className="mb-0">
@@ -27,7 +25,8 @@ export default function RecordingCard({ onStartRecording, isRecording }) {
           ) : (
             <Alert variant="info" className="mb-0">
               <small>
-                <strong>Tip:</strong> For best results, use a quality microphone and minimize background noise
+                <strong>Tip:</strong> For best results, use a quality microphone and minimize
+                background noise
               </small>
             </Alert>
           )}
@@ -46,5 +45,5 @@ export default function RecordingCard({ onStartRecording, isRecording }) {
         </div>
       </Card.Body>
     </Card>
-  )
+  );
 }

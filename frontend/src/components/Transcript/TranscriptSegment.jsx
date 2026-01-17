@@ -1,6 +1,6 @@
-import { Badge, Button } from '@govtechsg/sgds-react'
-import { Pencil } from 'lucide-react'
-import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors'
+import { Badge, Button } from '@govtechsg/sgds-react';
+import { Pencil } from 'lucide-react';
+import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors';
 
 export default function TranscriptSegment({ segment, index, handleEditText }) {
   return (
@@ -9,12 +9,12 @@ export default function TranscriptSegment({ segment, index, handleEditText }) {
       style={{ borderColor: getSpeakerBorderColor(segment.speaker) }}
     >
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>
-          {segment.speaker}
-        </Badge>
+        <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>{segment.speaker}</Badge>
         <div className="d-flex gap-2 align-items-center">
           <small className="text-muted">
-            {Math.floor(segment.start / 60)}:{String(Math.floor(segment.start % 60)).padStart(2, '0')} - {Math.floor(segment.end / 60)}:{String(Math.floor(segment.end % 60)).padStart(2, '0')}
+            {Math.floor(segment.start / 60)}:
+            {String(Math.floor(segment.start % 60)).padStart(2, '0')} -{' '}
+            {Math.floor(segment.end / 60)}:{String(Math.floor(segment.end % 60)).padStart(2, '0')}
           </small>
           <Button
             variant="link"
@@ -30,5 +30,5 @@ export default function TranscriptSegment({ segment, index, handleEditText }) {
       </div>
       <p className="mb-0">{segment.text}</p>
     </div>
-  )
+  );
 }

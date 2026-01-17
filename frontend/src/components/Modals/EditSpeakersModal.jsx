@@ -1,5 +1,5 @@
-import { Modal, Button, Form, Alert } from '@govtechsg/sgds-react'
-import { Users, Sparkles, Check, X } from 'lucide-react'
+import { Modal, Button, Form, Alert } from '@govtechsg/sgds-react';
+import { Users, Sparkles, Check, X } from 'lucide-react';
 
 export default function EditSpeakersModal({
   show,
@@ -10,7 +10,7 @@ export default function EditSpeakersModal({
   identifyingSpeakers,
   speakerSuggestions,
   handleAcceptSuggestion,
-  handleRejectSuggestion
+  handleRejectSuggestion,
 }) {
   return (
     <Modal show={show} onHide={onHide} size="lg">
@@ -23,11 +23,16 @@ export default function EditSpeakersModal({
       <Modal.Body>
         <div className="mb-4">
           <p className="text-muted mb-2">
-            Replace speaker labels with actual names. AI suggestions are automatically applied when available.
+            Replace speaker labels with actual names. AI suggestions are automatically applied when
+            available.
           </p>
           {identifyingSpeakers && (
             <div className="text-muted small">
-              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
               Identifying speakers...
             </div>
           )}
@@ -41,7 +46,7 @@ export default function EditSpeakersModal({
               AI Suggestions
             </h6>
             {Object.entries(speakerSuggestions).map(([speakerLabel, suggestedName]) => {
-              const isUndetermined = suggestedName === 'Cannot be determined'
+              const isUndetermined = suggestedName === 'Cannot be determined';
               return (
                 <Alert
                   key={speakerLabel}
@@ -75,7 +80,7 @@ export default function EditSpeakersModal({
                     </Button>
                   </div>
                 </Alert>
-              )
+              );
             })}
             <hr className="my-4" />
           </div>
@@ -109,5 +114,5 @@ export default function EditSpeakersModal({
         </Button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }
