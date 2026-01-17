@@ -111,25 +111,21 @@ async def _process_export_job_task(  # pylint: disable=too-many-arguments,too-ma
                 meeting_title, summary_content, transcript_json
             )
             file_ext = 'pdf'
-            media_type = 'application/pdf'
         elif export_type == 'markdown':
             file_buffer = export_service.generate_summary_markdown_export(
                 meeting_title, summary_content, transcript_json
             )
             file_ext = 'md'
-            media_type = 'text/markdown'
         elif export_type == 'transcript_pdf':
             file_buffer = export_service.generate_transcript_pdf_export(
                 meeting_title, transcript_json
             )
             file_ext = 'pdf'
-            media_type = 'application/pdf'
         elif export_type == 'transcript_markdown':
             file_buffer = export_service.generate_transcript_markdown_export(
                 meeting_title, transcript_json
             )
             file_ext = 'md'
-            media_type = 'text/markdown'
         else:
             await export_repo.update_error(export_uuid, f"Invalid export type: {export_type}")
             await export_repo.update_status(export_uuid, 400)
