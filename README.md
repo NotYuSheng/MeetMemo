@@ -254,9 +254,3 @@ If you find MeetMemo useful, consider giving it a star! ⭐
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <sub>Built with AI assistance from Claude</sub>
-</p>
