@@ -8,20 +8,16 @@ export const isSecureContext = () => {
     window.location.protocol === 'https:' ||
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1'
-  )
-}
+  );
+};
 
 /**
  * Check if browser supports audio recording
  * @returns {boolean} True if MediaRecorder and getUserMedia are supported
  */
 export const isRecordingSupported = () => {
-  return !!(
-    navigator.mediaDevices &&
-    navigator.mediaDevices.getUserMedia &&
-    window.MediaRecorder
-  )
-}
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+};
 
 /**
  * Get recording unavailability reason
@@ -29,12 +25,12 @@ export const isRecordingSupported = () => {
  */
 export const getRecordingUnavailableReason = () => {
   if (!isRecordingSupported()) {
-    return 'Your browser does not support audio recording'
+    return 'Your browser does not support audio recording';
   }
 
   if (!isSecureContext()) {
-    return 'Recording requires HTTPS. Please access this page via HTTPS to enable microphone access'
+    return 'Recording requires HTTPS. Please access this page via HTTPS to enable microphone access';
   }
 
-  return null
-}
+  return null;
+};

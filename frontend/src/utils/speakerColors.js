@@ -2,13 +2,13 @@
 
 // Define a muted, professional color palette for speakers
 const SPEAKER_COLOR_PALETTE = [
-  { bg: 'primary', border: '#2563eb' },    // Blue - SPEAKER_00
-  { bg: 'secondary', border: '#64748b' },  // Slate - SPEAKER_01
-  { bg: 'info', border: '#0891b2' },       // Cyan - SPEAKER_02
-  { bg: 'dark', border: '#334155' },       // Dark Slate - SPEAKER_03
-  { bg: 'primary', border: '#3b82f6', opacity: 0.8 },    // Light Blue - SPEAKER_04
-  { bg: 'secondary', border: '#475569', opacity: 0.8 },  // Medium Slate - SPEAKER_05
-  { bg: 'info', border: '#06b6d4', opacity: 0.8 },       // Light Cyan - SPEAKER_06
+  { bg: 'primary', border: '#2563eb' }, // Blue - SPEAKER_00
+  { bg: 'secondary', border: '#64748b' }, // Slate - SPEAKER_01
+  { bg: 'info', border: '#0891b2' }, // Cyan - SPEAKER_02
+  { bg: 'dark', border: '#334155' }, // Dark Slate - SPEAKER_03
+  { bg: 'primary', border: '#3b82f6', opacity: 0.8 }, // Light Blue - SPEAKER_04
+  { bg: 'secondary', border: '#475569', opacity: 0.8 }, // Medium Slate - SPEAKER_05
+  { bg: 'info', border: '#06b6d4', opacity: 0.8 }, // Light Cyan - SPEAKER_06
 ];
 
 // Keep track of speaker name -> color mapping

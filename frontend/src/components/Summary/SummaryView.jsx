@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { Row, Col, Card, Button } from '@govtechsg/sgds-react'
-import { Sparkles, Edit2 } from 'lucide-react'
-import SummaryContent from './SummaryContent'
-import CollapsibleTranscript from './CollapsibleTranscript'
-import ExportSidebar from './ExportSidebar'
+import { useState } from 'react';
+import { Row, Col, Card, Button } from '@govtechsg/sgds-react';
+import { Sparkles, Edit2 } from 'lucide-react';
+import SummaryContent from './SummaryContent';
+import CollapsibleTranscript from './CollapsibleTranscript';
+import ExportSidebar from './ExportSidebar';
 
 export default function SummaryView({
   summary,
@@ -11,9 +11,9 @@ export default function SummaryView({
   selectedFile,
   jobId,
   handleEditSummary,
-  handleStartNewMeeting
+  handleStartNewMeeting,
 }) {
-  const [showFullTranscript, setShowFullTranscript] = useState(false)
+  const [showFullTranscript, setShowFullTranscript] = useState(false);
 
   return (
     <Row>
@@ -25,7 +25,12 @@ export default function SummaryView({
               AI-Generated Summary
             </h5>
             <div className="d-flex gap-2">
-              <Button variant="outline-primary" size="sm" onClick={handleEditSummary} disabled={!summary?.summary}>
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={handleEditSummary}
+                disabled={!summary?.summary}
+              >
                 <Edit2 size={16} className="me-1" />
                 Edit
               </Button>
@@ -51,5 +56,5 @@ export default function SummaryView({
         />
       </Col>
     </Row>
-  )
+  );
 }

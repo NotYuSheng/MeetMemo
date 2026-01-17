@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Dropdown, Button } from '@govtechsg/sgds-react'
-import { Palette } from 'lucide-react'
+import { useState } from 'react';
+import { Dropdown, Button } from '@govtechsg/sgds-react';
+import { Palette } from 'lucide-react';
 
 const THEMES = [
   { id: 'default', name: 'Singapore Blue', color: '#0d6efd' },
@@ -11,31 +11,31 @@ const THEMES = [
   { id: 'rose', name: 'Rose Elegant', color: '#f43f5e' },
   { id: 'orange', name: 'Orange Vibrant', color: '#f97316' },
   { id: 'dark', name: 'Dark Mode', color: '#1a1a1a' },
-]
+];
 
 function ThemeSwitcher() {
-  const [currentTheme, setCurrentTheme] = useState('default')
+  const [currentTheme, setCurrentTheme] = useState('default');
 
   const changeTheme = (themeId) => {
-    setCurrentTheme(themeId)
+    setCurrentTheme(themeId);
     if (themeId === 'default') {
-      document.documentElement.removeAttribute('data-theme')
+      document.documentElement.removeAttribute('data-theme');
     } else {
-      document.documentElement.setAttribute('data-theme', themeId)
+      document.documentElement.setAttribute('data-theme', themeId);
     }
     // Save to localStorage
-    localStorage.setItem('meetmemo-theme', themeId)
-  }
+    localStorage.setItem('meetmemo-theme', themeId);
+  };
 
   // Load theme from localStorage on mount
   useState(() => {
-    const savedTheme = localStorage.getItem('meetmemo-theme')
+    const savedTheme = localStorage.getItem('meetmemo-theme');
     if (savedTheme && savedTheme !== 'default') {
-      changeTheme(savedTheme)
+      changeTheme(savedTheme);
     }
-  }, [])
+  }, []);
 
-  const currentThemeName = THEMES.find(t => t.id === currentTheme)?.name || 'Singapore Blue'
+  const currentThemeName = THEMES.find((t) => t.id === currentTheme)?.name || 'Singapore Blue';
 
   return (
     <Dropdown>
@@ -58,7 +58,7 @@ function ThemeSwitcher() {
                   height: '20px',
                   borderRadius: '4px',
                   backgroundColor: theme.color,
-                  border: theme.id === 'dark' ? '1px solid #fff' : 'none'
+                  border: theme.id === 'dark' ? '1px solid #fff' : 'none',
                 }}
               />
               <span>{theme.name}</span>
@@ -67,7 +67,7 @@ function ThemeSwitcher() {
         ))}
       </Dropdown.Menu>
     </Dropdown>
-  )
+  );
 }
 
-export default ThemeSwitcher
+export default ThemeSwitcher;

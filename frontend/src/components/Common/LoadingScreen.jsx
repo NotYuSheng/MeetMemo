@@ -1,11 +1,14 @@
-import { Container, Row, Col, Card, ProgressBar, Button, Alert } from '@govtechsg/sgds-react'
-import { FileText, AlertCircle } from 'lucide-react'
+import { Container, Row, Col, Card, ProgressBar, Button, Alert } from '@govtechsg/sgds-react';
+import { FileText, AlertCircle } from 'lucide-react';
 
 export default function LoadingScreen({ backendError }) {
   // Show error screen if backend failed to load
   if (backendError) {
     return (
-      <div className="app d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      <div
+        className="app d-flex align-items-center justify-content-center"
+        style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}
+      >
         <Container>
           <Row className="justify-content-center">
             <Col md={6} className="text-center">
@@ -28,12 +31,15 @@ export default function LoadingScreen({ backendError }) {
           </Row>
         </Container>
       </div>
-    )
+    );
   }
 
   // Show loading screen while backend is initializing
   return (
-    <div className="app d-flex align-items-center justify-content-center" style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+    <div
+      className="app d-flex align-items-center justify-content-center"
+      style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}
+    >
       <Container>
         <Row className="justify-content-center">
           <Col md={6} className="text-center">
@@ -53,5 +59,5 @@ export default function LoadingScreen({ backendError }) {
         </Row>
       </Container>
     </div>
-  )
+  );
 }

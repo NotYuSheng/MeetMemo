@@ -4,14 +4,14 @@ import {
   generatePDFFilename,
   generateMarkdownFilename,
   generateTranscriptPDFFilename,
-  generateTranscriptMarkdownFilename
-} from '../utils/fileNaming'
+  generateTranscriptMarkdownFilename,
+} from '../utils/fileNaming';
 
-const API_BASE_URL = '/api/v1'
+const API_BASE_URL = '/api/v1';
 
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`
+  const url = `${API_BASE_URL}${endpoint}`;
 
   try {
     const response = await fetch(url, {
@@ -19,55 +19,55 @@ async function apiCall(endpoint, options = {}) {
       headers: {
         ...options.headers,
       },
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`)
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
     }
 
-    return await response.json()
+    return await response.json();
   } catch (error) {
-    console.error('API Error:', error)
-    throw error
+    console.error('API Error:', error);
+    throw error;
   }
 }
 
 // Upload audio file
 export async function uploadAudio(file, model = 'turbo') {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('model', model)
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('model', model);
 
   const response = await fetch(`${API_BASE_URL}/jobs`, {
     method: 'POST',
     body: formData,
-  })
+  });
 
   if (!response.ok) {
-    throw new Error(`Upload failed: ${response.status}`)
+    throw new Error(`Upload failed: ${response.status}`);
   }
 
-  return await response.json()
+  return await response.json();
 }
 
 // Get all jobs
 export async function getJobs() {
-  return await apiCall('/jobs')
+  return await apiCall('/jobs');
 }
 
 // Get job status by UUID
 export async function getJobStatus(uuid) {
-  return await apiCall(`/jobs/${uuid}`)
+  return await apiCall(`/jobs/${uuid}`);
 }
 
 // Get transcript
 export async function getTranscript(uuid) {
-  return await apiCall(`/jobs/${uuid}/transcript`)
+  return await apiCall(`/jobs/${uuid}/transcript`);
 }
 
 // Identify speakers with AI
 export async function identifySpeakers(uuid, context = null) {
-  const body = context ? { context } : {}
+  const body = context ? { context } : {};
 
   return await apiCall(`/jobs/${uuid}/speaker-identifications`, {
     method: 'POST',
@@ -75,7 +75,7 @@ export async function identifySpeakers(uuid, context = null) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  })
+  });
 }
 
 // Update speaker names
@@ -86,7 +86,7 @@ export async function updateSpeakers(uuid, mapping) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ mapping }),
-  })
+  });
 }
 
 // Update transcript content
@@ -97,7 +97,7 @@ export async function updateTranscript(uuid, transcript) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ transcript }),
-  })
+  });
 }
 
 // Update summary content
@@ -108,14 +108,12 @@ export async function updateSummary(uuid, summary) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ summary }),
-  })
+  });
 }
 
 // Generate summary
 export async function generateSummary(uuid, customPrompt = null) {
-  const body = customPrompt
-    ? { custom_prompt: customPrompt }
-    : {}
+  const body = customPrompt ? { custom_prompt: customPrompt } : {};
 
   return await apiCall(`/jobs/${uuid}/summary`, {
     method: 'POST',
@@ -123,7 +121,7 @@ export async function generateSummary(uuid, customPrompt = null) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  })
+  });
 }
 
 // Get summary - uses the same endpoint, returns generated summary
@@ -134,138 +132,138 @@ export async function getSummary(uuid) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({}),
-  })
+  });
 }
 
 // Download PDF (Summary + Transcript)
 export async function downloadPDF(uuid, originalFilename) {
   try {
-    const url = `${API_BASE_URL}/jobs/${uuid}/exports/pdf`
-    const response = await fetch(url)
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/pdf`;
+    const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`)
+      throw new Error(`Download failed: ${response.status}`);
     }
 
     // Get the blob from the response
-    const blob = await response.blob()
+    const blob = await response.blob();
 
     // Generate clean filename
-    const filename = generatePDFFilename(originalFilename)
+    const filename = generatePDFFilename(originalFilename);
 
     // Create a download link
-    const downloadUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(downloadUrl)
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error('PDF Download Error:', error)
-    throw error
+    console.error('PDF Download Error:', error);
+    throw error;
   }
 }
 
 // Download Markdown (Summary + Transcript)
 export async function downloadMarkdown(uuid, originalFilename) {
   try {
-    const url = `${API_BASE_URL}/jobs/${uuid}/exports/markdown`
-    const response = await fetch(url)
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/markdown`;
+    const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`)
+      throw new Error(`Download failed: ${response.status}`);
     }
 
     // Get the blob from the response
-    const blob = await response.blob()
+    const blob = await response.blob();
 
     // Generate clean filename
-    const filename = generateMarkdownFilename(originalFilename)
+    const filename = generateMarkdownFilename(originalFilename);
 
     // Create a download link
-    const downloadUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(downloadUrl)
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error('Markdown Download Error:', error)
-    throw error
+    console.error('Markdown Download Error:', error);
+    throw error;
   }
 }
 
 // Download Transcript PDF (transcript only, no AI summary)
 export async function downloadTranscriptPDF(uuid, originalFilename) {
   try {
-    const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/pdf`
-    const response = await fetch(url)
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/pdf`;
+    const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`)
+      throw new Error(`Download failed: ${response.status}`);
     }
 
     // Get the blob from the response
-    const blob = await response.blob()
+    const blob = await response.blob();
 
     // Generate clean filename
-    const filename = generateTranscriptPDFFilename(originalFilename)
+    const filename = generateTranscriptPDFFilename(originalFilename);
 
     // Create a download link
-    const downloadUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(downloadUrl)
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error('Transcript PDF Download Error:', error)
-    throw error
+    console.error('Transcript PDF Download Error:', error);
+    throw error;
   }
 }
 
 // Download Transcript Markdown (transcript only, no AI summary)
 export async function downloadTranscriptMarkdown(uuid, originalFilename) {
   try {
-    const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/markdown`
-    const response = await fetch(url)
+    const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/markdown`;
+    const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`)
+      throw new Error(`Download failed: ${response.status}`);
     }
 
     // Get the blob from the response
-    const blob = await response.blob()
+    const blob = await response.blob();
 
     // Generate clean filename
-    const filename = generateTranscriptMarkdownFilename(originalFilename)
+    const filename = generateTranscriptMarkdownFilename(originalFilename);
 
     // Create a download link
-    const downloadUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(downloadUrl)
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error('Transcript Markdown Download Error:', error)
-    throw error
+    console.error('Transcript Markdown Download Error:', error);
+    throw error;
   }
 }
 
@@ -273,12 +271,12 @@ export async function downloadTranscriptMarkdown(uuid, originalFilename) {
 export async function deleteJob(uuid) {
   return await apiCall(`/jobs/${uuid}`, {
     method: 'DELETE',
-  })
+  });
 }
 
 // Health check
 export async function healthCheck() {
-  return await apiCall('/health')
+  return await apiCall('/health');
 }
 
 // ============================================================================
@@ -289,29 +287,29 @@ export async function healthCheck() {
 export async function startTranscription(uuid, model = 'turbo') {
   return await apiCall(`/jobs/${uuid}/transcriptions?model_name=${model}`, {
     method: 'POST',
-  })
+  });
 }
 
 // Get transcription data
 export async function getTranscriptionData(uuid) {
-  return await apiCall(`/jobs/${uuid}/transcriptions`)
+  return await apiCall(`/jobs/${uuid}/transcriptions`);
 }
 
 // Start diarization step
 export async function startDiarization(uuid) {
   return await apiCall(`/jobs/${uuid}/diarizations`, {
     method: 'POST',
-  })
+  });
 }
 
 // Get diarization data
 export async function getDiarizationData(uuid) {
-  return await apiCall(`/jobs/${uuid}/diarizations`)
+  return await apiCall(`/jobs/${uuid}/diarizations`);
 }
 
 // Start alignment step
 export async function startAlignment(uuid) {
   return await apiCall(`/jobs/${uuid}/alignments`, {
     method: 'POST',
-  })
+  });
 }

@@ -1,12 +1,12 @@
-import { Modal, Button, Form } from '@govtechsg/sgds-react'
-import { Edit2 } from 'lucide-react'
+import { Modal, Button, Form } from '@govtechsg/sgds-react';
+import { Edit2 } from 'lucide-react';
 
 export default function EditSummaryModal({
   show,
   onHide,
   editingSummary,
   setEditingSummary,
-  handleSaveSummary
+  handleSaveSummary,
 }) {
   return (
     <Modal show={show} onHide={onHide} size="lg">
@@ -18,7 +18,8 @@ export default function EditSummaryModal({
       </Modal.Header>
       <Modal.Body>
         <p className="text-muted mb-3">
-          Edit the AI-generated summary to correct any inaccuracies or add additional details before exporting.
+          Edit the AI-generated summary to correct any inaccuracies or add additional details before
+          exporting.
         </p>
         <Form.Group>
           <Form.Label>Summary Text</Form.Label>
@@ -40,5 +41,5 @@ export default function EditSummaryModal({
         </Button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }

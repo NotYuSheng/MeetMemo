@@ -1,8 +1,12 @@
-import { Card, Badge } from '@govtechsg/sgds-react'
-import { FileText } from 'lucide-react'
-import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors'
+import { Card, Badge } from '@govtechsg/sgds-react';
+import { FileText } from 'lucide-react';
+import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors';
 
-export default function CollapsibleTranscript({ transcript, showFullTranscript, setShowFullTranscript }) {
+export default function CollapsibleTranscript({
+  transcript,
+  showFullTranscript,
+  setShowFullTranscript,
+}) {
   return (
     <Card>
       <Card.Header
@@ -14,9 +18,7 @@ export default function CollapsibleTranscript({ transcript, showFullTranscript, 
           <FileText size={20} className="me-2" />
           Full Transcript
         </h5>
-        <span className="text-muted">
-          {showFullTranscript ? '▼' : '▶'}
-        </span>
+        <span className="text-muted">{showFullTranscript ? '▼' : '▶'}</span>
       </Card.Header>
       {showFullTranscript && (
         <Card.Body>
@@ -29,11 +31,12 @@ export default function CollapsibleTranscript({ transcript, showFullTranscript, 
                   style={{ borderColor: getSpeakerBorderColor(segment.speaker) }}
                 >
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>
-                      {segment.speaker}
-                    </Badge>
+                    <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>{segment.speaker}</Badge>
                     <small className="text-muted">
-                      {Math.floor(segment.start / 60)}:{String(Math.floor(segment.start % 60)).padStart(2, '0')} - {Math.floor(segment.end / 60)}:{String(Math.floor(segment.end % 60)).padStart(2, '0')}
+                      {Math.floor(segment.start / 60)}:
+                      {String(Math.floor(segment.start % 60)).padStart(2, '0')} -{' '}
+                      {Math.floor(segment.end / 60)}:
+                      {String(Math.floor(segment.end % 60)).padStart(2, '0')}
                     </small>
                   </div>
                   <p className="mb-0">{segment.text}</p>
@@ -48,5 +51,5 @@ export default function CollapsibleTranscript({ transcript, showFullTranscript, 
         </Card.Body>
       )}
     </Card>
-  )
+  );
 }

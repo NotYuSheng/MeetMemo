@@ -1,7 +1,7 @@
-import { Row, Col, Card, Button } from '@govtechsg/sgds-react'
-import { FileText, Users } from 'lucide-react'
-import TranscriptSegment from './TranscriptSegment'
-import MeetingInfoSidebar from './MeetingInfoSidebar'
+import { Row, Col, Card, Button } from '@govtechsg/sgds-react';
+import { FileText, Users } from 'lucide-react';
+import TranscriptSegment from './TranscriptSegment';
+import MeetingInfoSidebar from './MeetingInfoSidebar';
 
 export default function TranscriptView({
   transcript,
@@ -11,7 +11,7 @@ export default function TranscriptView({
   handleEditText,
   handleGenerateSummary,
   generatingSummary,
-  identifyingSpeakers
+  identifyingSpeakers,
 }) {
   return (
     <Row>
@@ -63,5 +63,5 @@ export default function TranscriptView({
         />
       </Col>
     </Row>
-  )
+  );
 }
