@@ -16,7 +16,6 @@ from datetime import datetime, timezone, timedelta
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
-from threading import Thread
 from typing import Optional
 
 import aiofiles
@@ -1120,22 +1119,20 @@ async def cleanup_expired_files():
         logger.error("Error during file cleanup: %s", e, exc_info=True)
 
 
+async def cleanup_worker():
+    """Background cleanup worker that runs in the main event loop."""
+    while True:
+        try:
+            await cleanup_expired_files()
+            await asyncio.sleep(3600)  # Sleep for 1 hour
+        except Exception as e:
+            logger.error("Error in cleanup worker: %s", e, exc_info=True)
+            await asyncio.sleep(600)  # Sleep for 10 minutes on error
+
+
 def start_cleanup_scheduler():
-    """Start background cleanup thread."""
-    async def cleanup_worker():
-        while True:
-            try:
-                await cleanup_expired_files()
-                await asyncio.sleep(3600)  # Sleep for 1 hour
-            except Exception as e:
-                logger.error("Error in cleanup worker: %s", e, exc_info=True)
-                await asyncio.sleep(600)  # Sleep for 10 minutes on error
-
-    def run_async_cleanup():
-        asyncio.run(cleanup_worker())
-
-    cleanup_thread = Thread(target=run_async_cleanup, daemon=True)
-    cleanup_thread.start()
+    """Start background cleanup task in the current event loop."""
+    asyncio.create_task(cleanup_worker())
     logger.info("Started file cleanup scheduler")
 
 

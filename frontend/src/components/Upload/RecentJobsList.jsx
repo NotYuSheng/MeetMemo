@@ -1,5 +1,13 @@
-import { Card, Badge, Button, Alert } from '@govtechsg/sgds-react';
+import { Card, Badge, Button } from '@govtechsg/sgds-react';
 import { Clock, AlertCircle, Trash2 } from 'lucide-react';
+
+const DATE_TIME_FORMAT_OPTIONS = {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+};
 
 export default function RecentJobsList({
   recentJobs,
@@ -35,7 +43,9 @@ export default function RecentJobsList({
                 <div className="flex-grow-1">
                   <div className="fw-medium">{job.filename || 'Untitled Recording'}</div>
                   <small className="text-muted">
-                    {job.created_at ? new Date(job.created_at).toLocaleString() : 'Date unknown'}
+                    {job.created_at
+                      ? new Date(job.created_at).toLocaleString('en-GB', DATE_TIME_FORMAT_OPTIONS)
+                      : 'Date unknown'}
                   </small>
                 </div>
                 <div className="d-flex gap-2 align-items-center">
