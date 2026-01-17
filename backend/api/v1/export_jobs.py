@@ -25,6 +25,7 @@ from repositories.export_repository import ExportRepository
 from repositories.job_repository import JobRepository
 from services.export_service import ExportService
 from services.summary_service import SummaryService
+from utils.file_utils import get_transcript_path
 from utils.formatters import format_transcript_for_llm
 
 logger = logging.getLogger(__name__)
@@ -70,12 +71,13 @@ async def _process_export_job_task(
         base_name = os.path.splitext(meeting_title)[0]
 
         # Get transcript
-        edited_path = os.path.join(settings.transcript_edited_dir, f"{base_name}.json")
-        original_path = os.path.join(settings.transcript_dir, f"{base_name}.json")
-
-        transcript_path = edited_path if await aiofiles.os.path.exists(edited_path) else original_path
-
-        if not await aiofiles.os.path.exists(transcript_path):
+        try:
+            transcript_path = await get_transcript_path(
+                base_name,
+                settings.transcript_dir,
+                settings.transcript_edited_dir
+            )
+        except FileNotFoundError:
             await export_repo.update_error(export_uuid, "Transcript not found")
             await export_repo.update_status(export_uuid, 404)
             return
@@ -292,22 +294,15 @@ async def download_export(
     export_type = export_job.get('export_type', 'pdf')
     meeting_title = job['file_name']
 
-    if export_type in ['pdf', 'transcript_pdf']:
-        media_type = 'application/pdf'
-        is_transcript_only = export_type == 'transcript_pdf'
-        filename = export_service.generate_filename(
-            meeting_title,
-            'pdf',
-            is_transcript_only=is_transcript_only
-        )
-    else:  # markdown or transcript_markdown
-        media_type = 'text/markdown'
-        is_transcript_only = export_type == 'transcript_markdown'
-        filename = export_service.generate_filename(
-            meeting_title,
-            'md',
-            is_transcript_only=is_transcript_only
-        )
+    is_transcript_only = 'transcript' in export_type
+    file_ext = 'pdf' if 'pdf' in export_type else 'md'
+    media_type = 'application/pdf' if file_ext == 'pdf' else 'text/markdown'
+
+    filename = export_service.generate_filename(
+        meeting_title,
+        file_ext,
+        is_transcript_only=is_transcript_only
+    )
 
     logger.info("Serving export file %s for job %s", export_uuid, uuid)
 

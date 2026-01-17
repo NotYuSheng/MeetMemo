@@ -20,6 +20,7 @@ from models import (
 from repositories.job_repository import JobRepository
 from services.speaker_service import SpeakerService
 from services.summary_service import SummaryService
+from utils.file_utils import get_transcript_path
 from utils.formatters import format_transcript_for_llm
 
 logger = logging.getLogger(__name__)
@@ -91,12 +92,13 @@ async def identify_speakers(
         base_name = os.path.splitext(file_name)[0]
 
         # Get transcript
-        edited_path = os.path.join(settings.transcript_edited_dir, f"{base_name}.json")
-        original_path = os.path.join(settings.transcript_dir, f"{base_name}.json")
-
-        transcript_path = edited_path if await aiofiles.os.path.exists(edited_path) else original_path
-
-        if not await aiofiles.os.path.exists(transcript_path):
+        try:
+            transcript_path = await get_transcript_path(
+                base_name,
+                settings.transcript_dir,
+                settings.transcript_edited_dir
+            )
+        except FileNotFoundError:
             raise HTTPException(status_code=404, detail="Transcript not found")
 
         async with aiofiles.open(transcript_path, "r", encoding="utf-8") as f:

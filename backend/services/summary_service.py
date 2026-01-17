@@ -4,6 +4,7 @@ Summary service for LLM-powered summarization and speaker identification.
 This service handles LLM API calls for transcript summarization, speaker identification,
 and summary caching.
 """
+import json
 import logging
 from typing import Optional
 
@@ -198,7 +199,6 @@ The recording was too brief to generate a detailed meeting summary."""
             content = data["choices"][0]["message"]["content"].strip()
 
             # Try to parse JSON from response
-            import json
             # Extract JSON from markdown code blocks if present
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()

@@ -6,6 +6,8 @@ This module provides utilities for file handling, hashing, and audio conversion.
 import hashlib
 import os
 
+import aiofiles
+import aiofiles.os
 from pydub import AudioSegment
 
 
@@ -83,3 +85,40 @@ def convert_to_wav(input_path: str, output_path: str, sample_rate: int = 16000) 
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_frame_rate(sample_rate).set_channels(1)
     audio.export(output_path, format="wav")
+
+
+async def get_transcript_path(
+    base_name: str,
+    transcript_dir: str,
+    transcript_edited_dir: str
+) -> str:
+    """
+    Get the path to the transcript file, preferring the edited version.
+
+    Args:
+        base_name: Base filename without extension
+        transcript_dir: Directory containing original transcripts
+        transcript_edited_dir: Directory containing edited transcripts
+
+    Returns:
+        Path to the transcript file (edited if exists, otherwise original)
+
+    Raises:
+        FileNotFoundError: If no transcript file exists
+
+    Example:
+        >>> await get_transcript_path("meeting", "/transcripts", "/transcripts_edited")
+        '/transcripts_edited/meeting.json'
+    """
+    edited_path = os.path.join(transcript_edited_dir, f"{base_name}.json")
+    original_path = os.path.join(transcript_dir, f"{base_name}.json")
+
+    # Check edited version first
+    if await aiofiles.os.path.exists(edited_path):
+        return edited_path
+
+    # Fall back to original
+    if await aiofiles.os.path.exists(original_path):
+        return original_path
+
+    raise FileNotFoundError(f"No transcript found for {base_name}")

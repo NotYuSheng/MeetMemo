@@ -9,7 +9,6 @@ import os
 import uuid as uuid_lib
 
 import aiofiles
-import aiofiles.os
 import aiofiles.os as aioos
 from fastapi import (
     APIRouter,
