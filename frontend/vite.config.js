@@ -1,13 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Base path for GitHub Pages deployment
-const GITHUB_PAGES_BASE = '/MeetMemo/';
-
 // https://vite.dev/config/
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   plugins: [react()],
-  base: command === 'build' ? GITHUB_PAGES_BASE : '/',
+  // Use /MeetMemo/ base path only for GitHub Pages (when VITE_DEMO_MODE is set)
+  base: process.env.VITE_DEMO_MODE === 'true' ? '/MeetMemo/' : '/',
   server: {
     host: '0.0.0.0',
     port: 3000,
