@@ -1,400 +1,551 @@
-# MeetMemo
+<h1 align="center">MeetMemo</h1>
 
-A meeting transcription app that runs entirely offline. It converts speech to text, separates speakers (diarization), and generates summaries of discussions. You can also configure custom prompts and connect it to your local LLM server. Use it for meetings, interviews, lectures, or any audio where you need a clear transcript and summary.
+<p align="center">
+  <strong>AI-powered meeting transcription with speaker diarization and intelligent summarization</strong>
+</p>
 
-## Demo
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#api-reference">API</a> •
+  <a href="#deployment">Deployment</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black" alt="React"/>
+  <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white" alt="PyTorch"/>
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker"/>
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
+  <img src="https://img.shields.io/badge/NVIDIA-CUDA-76B900?style=flat&logo=nvidia&logoColor=white" alt="CUDA"/>
+  <img src="https://img.shields.io/github/license/NotYuSheng/MeetMemo" alt="License"/>
+</p>
+
+---
+
+A meeting transcription application that runs entirely offline. It converts speech to text, identifies different speakers (diarization), and generates intelligent summaries of discussions. Connect it to your local LLM server for customized summarization. Perfect for meetings, interviews, lectures, or any audio where you need a clear transcript and actionable insights.
 
 <div align="center">
 
-![MeetMemo Demo](https://github.com/NotYuSheng/MeetMemo/blob/main/sample-files/MeetMemo-DEMO_v2.0.0.gif) <br>
+![MeetMemo Demo](https://raw.githubusercontent.com/NotYuSheng/MeetMemo/main/sample-files/MeetMemo-DEMO_v2.0.0.gif)
 
 </div>
 
-### Sample Files
+## Table of Contents
 
-The `sample-files/` directory contains example outputs to showcase MeetMemo's capabilities:
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [API Reference](#api-reference)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Security](#security)
+- [License](#license)
 
-#### v2.0.0 Outputs (Latest)
-- **`GenAI Week - AI x SaaS.wav`** - Sample audio file for testing (36MB, ~1 hour)
-- **`GenAI_Week_-_AI_x_SaaS_Transcript_2026-01-04_23-47.pdf`** - Professional PDF transcript with speaker labels
-- **`GenAI_Week_-_AI_x_SaaS_Transcript_2026-01-04_23-47.md`** - Markdown transcript export
-- **`GenAI_Week_-_AI_x_SaaS_2026-01-04_23-46.md`** - AI-generated summary with key insights and action items
-- **`MeetMemo-DEMO_v2.0.0.gif`** - Application demonstration GIF showcasing new UI
+## Features
 
-#### v1.0.0 Outputs (Legacy)
-- **`genai-week---ai-x-saas_transcript_2025-08-31_v1.0.0.json`** - Complete diarized transcript with speaker identification
-- **`genai-week---ai-x-saas_summary_2025-08-31_v1.0.0.pdf`** - Professional PDF summary
-- **`genai-week---ai-x-saas_summary_2025-08-31_v1.0.0.markdown`** - Markdown version of summary
-- **`MeetMemo_Demo_v1.0.0.gif`** - Legacy demonstration GIF
+| Feature | Description |
+|---------|-------------|
+| **Audio Recording & Upload** | Record meetings directly in browser or upload files (MP3, WAV, M4A, FLAC, WebM, OGG) |
+| **Speech Recognition** | OpenAI Whisper (turbo model) for high-accuracy transcription in 99+ languages |
+| **Speaker Diarization** | PyAnnote.audio 3.1 for automatic speaker identification and labeling |
+| **AI Summarization** | LLM-powered summaries with key points, action items, and insights |
+| **Real-time Progress** | Live status updates and job management for long-running tasks |
+| **Speaker Management** | Edit speaker names with persistent storage across sessions |
+| **Export Options** | Professional PDF and Markdown exports for transcripts and summaries |
+| **Dark/Light Mode** | Theme toggle with responsive design |
+| **Multi-language** | Automatic language detection or specify target language |
 
-These files demonstrate the complete workflow from audio upload to final deliverables, showing the quality and format of MeetMemo's output.
+## Sample Outputs
 
-## Key Features
+The [`sample-files/`](sample-files/) directory contains example outputs demonstrating MeetMemo's capabilities:
 
-- **Audio Recording & Upload**: Record meetings directly in the browser or upload existing audio files (MP3, WAV, M4A, FLAC, etc.)
-- **Advanced Speech Recognition**: Powered by OpenAI's Whisper for high-accuracy transcription in 99+ languages
-- **Speaker Diarization**: Automatically identify and label different speakers using PyAnnote.audio v3.1
-- **AI-Powered Summarization**: Generate concise summaries with key points, action items, and next steps using custom LLMs
-- **Real-time Processing**: Monitor transcription progress with live status updates and job management
-- **Speaker Management**: Edit and customize speaker names with persistent storage across sessions
-- **Export Options**: Download transcripts as TXT/PDF and summaries with professional formatting
-- **HTTPS Support**: Secure SSL setup with auto-generated certificates for production deployment
-- **Dark/Light Mode**: Toggle between themes for comfortable viewing with responsive design
-- **Multi-language Support**: Automatic language detection or specify target language for better accuracy
+<details>
+<summary><strong>v2.0.0 Outputs (Current)</strong></summary>
+
+| File | Description |
+|------|-------------|
+| `GenAI Week - AI x SaaS.wav` | Sample audio file (~36MB, ~1 hour) |
+| `GenAI_Week_-_AI_x_SaaS_Transcript_2026-01-04_23-47.pdf` | Professional PDF transcript with speaker labels |
+| `GenAI_Week_-_AI_x_SaaS_Transcript_2026-01-04_23-47.md` | Markdown transcript export |
+| `GenAI_Week_-_AI_x_SaaS_2026-01-04_23-46.md` | AI-generated summary with insights |
+| `MeetMemo-DEMO_v2.0.0.gif` | Application demo showcasing new UI |
+| `sample-test.mp3` | Quick test audio file |
+
+</details>
+
+<details>
+<summary><strong>v1.0.0 Outputs (Legacy)</strong></summary>
+
+| File | Description |
+|------|-------------|
+| `genai-week---ai-x-saas_transcript_2025-08-31_v1.0.0.json` | Diarized transcript JSON |
+| `genai-week---ai-x-saas_summary_2025-08-31_v1.0.0.pdf` | PDF summary |
+| `genai-week---ai-x-saas_summary_2025-08-31_v1.0.0.markdown` | Markdown summary |
+| `MeetMemo_Demo_v1.0.0.gif` | Legacy demo GIF |
+
+</details>
 
 ## Architecture
 
-MeetMemo is a containerized application with three main services:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Nginx (Port 80)                         │
+│                    Reverse Proxy + SSL Termination              │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+┌─────────────────────┐         ┌─────────────────────┐
+│   React Frontend    │         │   FastAPI Backend   │
+│   (meetmemo-frontend)│         │  (meetmemo-backend) │
+│                     │         │                     │
+│  • Recording UI     │  REST   │  • Whisper (turbo)  │
+│  • Transcript View  │◄───────►│  • PyAnnote 3.1     │
+│  • Summary Display  │   API   │  • LLM Integration  │
+│  • Export Options   │         │  • PDF Generation   │
+└─────────────────────┘         └──────────┬──────────┘
+                                           │
+                                           ▼
+                                ┌─────────────────────┐
+                                │     PostgreSQL      │
+                                │  (meetmemo-postgres)│
+                                │                     │
+                                │  • Job metadata     │
+                                │  • Export jobs      │
+                                │  • Transcriptions   │
+                                └─────────────────────┘
+```
 
-- **Backend**: FastAPI server with Whisper, PyAnnote, and LLM integration
-- **Frontend**: React 19 application with modern UI components
-- **Nginx**: Reverse proxy with SSL termination and request routing
+### Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| **Backend** | FastAPI, Python 3.10+, Uvicorn |
+| **Frontend** | React 19, Lucide Icons, jsPDF |
+| **ML Models** | OpenAI Whisper (turbo), PyAnnote.audio 3.1 |
+| **Database** | PostgreSQL 16 with asyncpg |
+| **Containerization** | Docker, Docker Compose, NVIDIA Container Toolkit |
+| **PDF Generation** | ReportLab, svglib |
 
 ## Prerequisites
 
 ### Required Software
-- **Docker**: [Install Docker](https://docs.docker.com/get-docker/)
-- **Docker Compose**: [Install Docker Compose](https://docs.docker.com/compose/install/)
+
+| Software | Purpose | Installation |
+|----------|---------|--------------|
+| Docker | Containerization | [Install Docker](https://docs.docker.com/get-docker/) |
+| Docker Compose | Multi-container orchestration | [Install Compose](https://docs.docker.com/compose/install/) |
+| NVIDIA Container Toolkit | GPU support | [Install Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) |
 
 ### Hardware Requirements
-- **NVIDIA GPU**: Required for optimal performance (CUDA-compatible)
-- **RAM**: Minimum 8GB recommended (16GB+ for large files)
-- **Storage**: At least 10GB free space for models and audio files
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| **GPU** | NVIDIA with CUDA 11.8+ | RTX 3060+ or equivalent |
+| **VRAM** | 4GB | 8GB+ |
+| **RAM** | 8GB | 16GB+ |
+| **Storage** | 10GB | 20GB+ (for models and audio) |
 
 ### External Services
-- **Hugging Face Account**: Required for PyAnnote model access
-- **LLM API**: External LLM service for summarization (OpenAI, Anthropic, etc.)
+
+| Service | Purpose | Setup |
+|---------|---------|-------|
+| **Hugging Face** | PyAnnote model access | [Create token](https://huggingface.co/settings/tokens) |
+| **LLM API** | Summarization | OpenAI-compatible endpoint |
 
 ## Quick Start
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/notyusheng/MeetMemo.git
-   cd MeetMemo
-   ```
+### 1. Clone the Repository
 
-2. **Accept Hugging Face model licenses:**
-   
-   Visit these pages and accept the licenses (fill in any required fields):
-   - [Speaker Diarization 3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
-   - [Segmentation 3.0](https://huggingface.co/pyannote/segmentation-3.0)
+```bash
+git clone https://github.com/NotYuSheng/MeetMemo.git
+cd MeetMemo
+```
 
-3. **Create Hugging Face access token:**
-   - Go to [Hugging Face tokens page](https://huggingface.co/settings/tokens)
-   - Click "New token", choose `Read` scope, and copy the token
+### 2. Accept Hugging Face Model Licenses
 
-4. **Set up environment file:**
-   ```bash
-   cp example.env .env
-   ```
-   
-   Edit `.env` and update the required variables:
-   ```env
-   HF_TOKEN=your_huggingface_token_here
-   LLM_API_URL=your_llm_url_here
-   LLM_MODEL_NAME=your_llm_model_name_here
-   LLM_API_KEY=your_llm_api_key_here
-   TIMEZONE_OFFSET=+8
-   ```
+Visit these pages and accept the user agreement:
 
-5. **Build and run:**
-   ```bash
-   docker compose build
-   docker compose up
-   ```
+- [Speaker Diarization 3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
+- [Segmentation 3.0](https://huggingface.co/pyannote/segmentation-3.0)
 
-6. **Access the application:**
-   
-   Open your browser and navigate to `https://localhost`
+### 3. Create Hugging Face Token
+
+1. Go to [Hugging Face Tokens](https://huggingface.co/settings/tokens)
+2. Click **New token** → Select **Read** scope → Copy token
+
+### 4. Configure Environment
+
+```bash
+cp example.env .env
+```
+
+Edit `.env` with your settings:
+
+```env
+# Required
+HF_TOKEN=hf_your_token_here
+LLM_API_URL=http://localhost:1234
+LLM_MODEL_NAME=qwen2.5-14b-instruct
+
+# Optional
+LLM_API_KEY=                    # Leave empty for local LLM servers
+POSTGRES_PASSWORD=changeme      # Change in production!
+TIMEZONE_OFFSET=+8              # Your timezone offset
+NVIDIA_VISIBLE_DEVICES=all      # GPU selection
+```
+
+### 5. Build and Run
+
+```bash
+docker compose build
+docker compose up
+```
+
+### 6. Access the Application
+
+Open your browser: **http://localhost**
+
+> **Note:** For recording features, HTTPS is required in production. See [Deployment](#deployment) for options.
 
 ## Usage
 
 ### Basic Workflow
-1. **Upload/Record**: Upload an audio file or record directly in the browser
-2. **Transcribe**: Click "Start Transcription" to begin processing  
-3. **Review**: View the diarized transcript with speaker labels
-4. **Customize**: Edit speaker names for better identification
-5. **Summarize**: Generate AI-powered summaries with key insights
-6. **Export**: Download transcripts and summaries for future reference
+
+```mermaid
+graph LR
+    A[Upload/Record Audio] --> B[Transcribe]
+    B --> C[Review Transcript]
+    C --> D[Edit Speaker Names]
+    D --> E[Generate Summary]
+    E --> F[Export PDF/Markdown]
+```
+
+1. **Upload/Record** - Upload an audio file or record directly in browser
+2. **Transcribe** - Click "Start Transcription" to process audio
+3. **Review** - View diarized transcript with speaker labels and timestamps
+4. **Customize** - Click speaker names to rename them (persists across sessions)
+5. **Summarize** - Generate AI summary with key insights and action items
+6. **Export** - Download professional PDF or Markdown files
 
 ### Advanced Features
-- **Speaker Management**: Click speaker labels to rename them with persistent storage
-- **Custom Prompts**: Use custom prompts for tailored summarization (technical analysis, action items only, etc.)
-- **Job Management**: Track multiple transcription jobs with unique UUIDs and status monitoring
-- **Export Options**: Multiple format support (TXT, PDF) for transcripts and summaries
-- **Batch Processing**: Handle multiple audio files simultaneously
-- **Language Selection**: Choose specific Whisper models for target languages (.en for English-only)
-- **Quality Control**: Automatic audio preprocessing (mono conversion, 16kHz resampling)
-- **Progress Tracking**: Real-time status updates with detailed processing logs
 
-## Development
-
-### Frontend Development
-```bash
-cd frontend
-npm install
-npm start          # Start development server
-npm run build      # Build for production
-npm test           # Run tests
-```
-
-### Backend Development  
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py     # Run FastAPI server directly
-```
-
-### Docker Development
-```bash
-docker compose build                    # Build containers
-docker compose up -d                   # Run in detached mode
-docker compose logs -f meetmemo-backend # View backend logs
-docker compose logs -f meetmemo-frontend # View frontend logs
-docker compose down                     # Stop all services
-docker compose restart meetmemo-backend # Restart specific service
-```
-
-### Linting and Testing
-```bash
-# Frontend
-cd frontend
-npm run lint:css                        # Lint CSS files  
-npm run lint:css:fix                    # Fix CSS linting issues
-
-# Backend  
-cd backend
-ruff check                              # Check Python code style
-ruff format                             # Format Python code
-```
-
-## Troubleshooting
-
-### Common Issues
-- **GPU not detected**: Verify NVIDIA Docker runtime is installed
-- **Model download fails**: Check Hugging Face token and license acceptance
-- **Audio upload issues**: Ensure supported file format (WAV recommended)
-- **PyTorch Lightning warning**: If you see checkpoint upgrade warnings, run the suggested upgrade command in the container
-
-### Performance Tips
-- **Faster processing**: Use smaller Whisper models (base, small)
-- **Higher accuracy**: Use larger models (medium, large) with quality audio input
-- **GPU optimization**: Ensure NVIDIA drivers and Docker GPU support are properly configured
-- **Memory management**: Restart backend service after processing large files to free memory
-- **Audio quality**: Use high-quality audio input (16kHz+) for better diarization results
-
-## API Reference
-
-MeetMemo provides a comprehensive REST API for programmatic access:
-
-### Core Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Health check and API status |
-| POST | `/upload` | Upload audio file for transcription |
-| GET | `/jobs` | List all transcription jobs |
-| DELETE | `/jobs/{uuid}` | Delete specific job |
-| GET | `/jobs/{uuid}/status` | Get job processing status |
-| GET | `/jobs/{uuid}/transcript` | Get diarized transcript |
-| POST | `/jobs/{uuid}/summarise` | Generate AI summary |
-| PATCH | `/jobs/{uuid}/speakers` | Update speaker names |
-| GET | `/logs` | View application logs |
-
-### WebSocket Events
-- Real-time job status updates
-- Progress notifications for long-running tasks
-- Error handling and retry mechanisms
+| Feature | Description |
+|---------|-------------|
+| **Custom Prompts** | Tailor summarization (technical analysis, action items only, etc.) |
+| **Speaker Identification** | AI-powered speaker name suggestions based on context |
+| **Batch Processing** | Handle multiple audio files with job management |
+| **Quality Control** | Automatic audio preprocessing (mono, 16kHz resampling) |
+| **Duplicate Detection** | Prevents re-uploading the same audio file |
 
 ## Configuration
 
 ### Environment Variables
-| Variable | Description | Default/Example |
-|----------|-------------|----------------|
-| `HF_TOKEN` | Hugging Face API token for model access | Required |
-| `LLM_API_URL` | External LLM service endpoint | `http://localhost:8000/v1/chat/completions` |
-| `LLM_MODEL_NAME` | LLM model identifier | `qwen2.5-32b-instruct` |
-| `LLM_API_KEY` | Authentication key for LLM service | Optional |
-| `TIMEZONE_OFFSET` | Timezone offset in hours for timestamps | `+8` (GMT+8/Singapore) |
 
-### Timezone Configuration
-MeetMemo uses a configurable timezone for all timestamps in exported PDFs and Markdown files. The timezone is set via the `TIMEZONE_OFFSET` environment variable in your `.env` file.
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `HF_TOKEN` | Yes | Hugging Face API token | - |
+| `LLM_API_URL` | Yes | LLM endpoint (base URL, no `/v1/chat/completions`) | - |
+| `LLM_MODEL_NAME` | Yes | Model identifier | - |
+| `LLM_API_KEY` | No | LLM authentication key | Empty |
+| `POSTGRES_PASSWORD` | No | Database password | `changeme` |
+| `TIMEZONE_OFFSET` | No | Hours offset from UTC | `+8` |
+| `NVIDIA_VISIBLE_DEVICES` | No | GPU selection (`all`, `0`, `0,1`) | `all` |
 
-**Default**: Singapore Time (GMT+8)
+### Whisper Models
 
-**To change the timezone:**
-1. Edit your `.env` file
-2. Update the `TIMEZONE_OFFSET` value with your desired offset:
-   - UTC: `TIMEZONE_OFFSET=0`
-   - EST (GMT-5): `TIMEZONE_OFFSET=-5`
-   - JST (GMT+9): `TIMEZONE_OFFSET=+9`
-   - GMT+8 (Singapore/Default): `TIMEZONE_OFFSET=+8`
-3. Restart the backend service: `docker compose restart meetmemo-backend`
-
-All export functions (PDF and Markdown) will use this configured timezone when generating timestamps.
-
-### Whisper Model Selection
-Available models (size/speed trade-off):
-- `tiny` - Fastest, least accurate (~1GB VRAM)
-- `base` - Good balance (~1GB VRAM) 
-- `small` - Better accuracy (~2GB VRAM)
-- `medium` - High accuracy (~5GB VRAM)
-- `large` - Best accuracy (~10GB VRAM)
-- `turbo` - Latest optimized model (default)
+| Model | VRAM | Speed | Accuracy | Use Case |
+|-------|------|-------|----------|----------|
+| `tiny` | ~1GB | Fastest | Basic | Quick drafts |
+| `base` | ~1GB | Fast | Good | General use |
+| `small` | ~2GB | Moderate | Better | Meetings |
+| `medium` | ~5GB | Slow | High | Important recordings |
+| `large` | ~10GB | Slowest | Highest | Critical accuracy |
+| `turbo` | ~6GB | Fast | High | **Default** - Best balance |
 
 ### Docker Volumes
-| Volume | Purpose | Location |
-|--------|---------|----------|
-| `audiofiles/` | Uploaded audio files | `/app/audiofiles` |
-| `transcripts/` | Generated transcriptions | `/app/transcripts` |
-| `summary/` | AI-generated summaries | `/app/summary` |
-| `logs/` | Application logs | `/app/logs` |
-| `whisper_cache/` | Model cache | `/app/whisper_cache` |
 
-## Security
+| Volume | Container Path | Purpose |
+|--------|----------------|---------|
+| `audiofiles` | `/app/audiofiles` | Uploaded audio files |
+| `transcripts` | `/app/transcripts` | Generated transcriptions |
+| `summary` | `/app/summary` | AI summaries |
+| `exports` | `/app/exports` | PDF/Markdown exports |
+| `logs` | `/app/logs` | Application logs |
+| `whisper_cache` | `/root/.cache/whisper` | Whisper model cache |
+| `huggingface_cache` | `/root/.cache/huggingface` | PyAnnote model cache |
+| `torch_cache` | `/root/.cache/torch` | PyTorch cache |
+| `postgres_data` | `/var/lib/postgresql/data` | Database storage |
 
-- **Local Processing**: All audio transcription and diarization happens locally
-- **Data Privacy**: Audio files never leave your infrastructure except for LLM summarization
-- **Secure Storage**: Files stored in Docker volumes with proper permissions
-- **HTTPS Support**: SSL certificates auto-generated for secure connections
-- **No Authentication**: Designed for local deployment - add authentication layer for production
-- **API Security**: CORS configured for frontend-backend communication
-- **File Validation**: Audio file type and size validation on upload
+## API Reference
+
+All endpoints are prefixed with `/api/v1`.
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check and system status |
+
+### Jobs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/jobs` | List all jobs (supports `?limit=` and `?offset=`) |
+| `POST` | `/jobs` | Create job with audio file upload |
+| `GET` | `/jobs/{uuid}` | Get job status and metadata |
+| `PATCH` | `/jobs/{uuid}` | Rename job |
+| `DELETE` | `/jobs/{uuid}` | Delete job and associated files |
+
+### Transcription Workflow
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/jobs/{uuid}/transcriptions` | Start Whisper transcription |
+| `GET` | `/jobs/{uuid}/transcriptions` | Get raw transcription data |
+| `POST` | `/jobs/{uuid}/diarizations` | Start speaker diarization |
+| `GET` | `/jobs/{uuid}/diarizations` | Get diarization data |
+| `POST` | `/jobs/{uuid}/alignments` | Align transcription with diarization |
+
+### Transcript
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/jobs/{uuid}/transcript` | Get aligned transcript |
+| `PATCH` | `/jobs/{uuid}/transcript` | Update transcript content |
+
+### Summary
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/jobs/{uuid}/summary` | Get or generate summary |
+| `POST` | `/jobs/{uuid}/summary` | Generate with custom prompt |
+| `PATCH` | `/jobs/{uuid}/summary` | Update cached summary |
+| `DELETE` | `/jobs/{uuid}/summary` | Delete cached summary |
+
+### Speakers
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `PATCH` | `/jobs/{uuid}/speakers` | Update speaker names |
+| `POST` | `/jobs/{uuid}/speaker-identifications` | AI speaker identification |
+
+### Exports
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/jobs/{uuid}/exports/pdf` | Download summary as PDF |
+| `GET` | `/jobs/{uuid}/exports/markdown` | Download summary as Markdown |
+| `GET` | `/jobs/{uuid}/exports/transcript/pdf` | Download transcript as PDF |
+| `GET` | `/jobs/{uuid}/exports/transcript/markdown` | Download transcript as Markdown |
+
+### Async Exports
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/jobs/{uuid}/exports` | Create async export job |
+| `GET` | `/jobs/{uuid}/exports/{export_uuid}` | Get export job status |
+| `GET` | `/jobs/{uuid}/exports/{export_uuid}/download` | Download completed export |
+| `DELETE` | `/jobs/{uuid}/exports/{export_uuid}` | Delete export job |
+
+## Development
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm start          # Development server (HTTPS)
+npm run build      # Production build
+npm test           # Run tests
+npm run lint:css   # Lint CSS
+```
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py     # Run FastAPI server
+```
+
+### Docker
+
+```bash
+# Build and run
+docker compose build
+docker compose up -d
+
+# View logs
+docker compose logs -f meetmemo-backend
+docker compose logs -f meetmemo-frontend
+
+# Restart service
+docker compose restart meetmemo-backend
+
+# Stop all
+docker compose down
+```
+
+### Code Quality
+
+```bash
+# Frontend CSS linting
+cd frontend && npm run lint:css:fix
+
+# Backend Python linting
+cd backend
+ruff check .
+ruff format .
+```
 
 ## Deployment
 
 ### HTTPS Requirement
 
-**HTTPS is required for the recording feature to work** (browsers require secure context for microphone access). For local development on `localhost`, HTTP works fine. For production deployments, choose one of the options below.
+**HTTPS is required for browser recording** (microphone access needs secure context). HTTP works on `localhost` for development.
 
 ### Deployment Options
 
-#### Option 1: Local Development (HTTP)
-For local testing, HTTP works on localhost:
-```bash
-docker compose up --build
-```
-Access at `http://localhost` - recording will work because browsers allow microphone access on localhost.
+<details>
+<summary><strong>Option 1: Cloudflare Tunnel (Recommended)</strong></summary>
 
-#### Option 2: Cloudflare Tunnel (Easiest for Production)
 Free HTTPS with zero certificate management:
 
 ```bash
-# Install cloudflared
+# Install
 curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-chmod +x cloudflared
-sudo mv cloudflared /usr/local/bin/
+chmod +x cloudflared && sudo mv cloudflared /usr/local/bin/
 
-# Authenticate and create tunnel
+# Setup
 cloudflared tunnel login
 cloudflared tunnel create meetmemo
 
-# Configure tunnel (~/.cloudflared/config.yml)
-tunnel: <your-tunnel-id>
-credentials-file: /home/user/.cloudflared/<tunnel-id>.json
+# Configure (~/.cloudflared/config.yml)
+tunnel: <tunnel-id>
+credentials-file: ~/.cloudflared/<tunnel-id>.json
 ingress:
-  - hostname: meetmemo.yourdomain.com
+  - hostname: meetmemo.your-domain.com # Replace with your domain
     service: http://localhost:80
   - service: http_status:404
 
-# Run tunnel
+# Run
 cloudflared tunnel run meetmemo
 ```
 
-#### Option 3: Tailscale (Private Network)
+</details>
+
+<details>
+<summary><strong>Option 2: Tailscale (Private Network)</strong></summary>
+
 Perfect for internal/team use:
 
 ```bash
-# Install Tailscale
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
-
-# Enable HTTPS serving
 tailscale serve https / proxy http://127.0.0.1:80
 ```
 
-Access via `https://<machine-name>.tail-scale.ts.net` with automatic HTTPS.
+Access via `https://<machine-name>.tail-scale.ts.net`
 
-#### Option 4: Caddy (Auto-HTTPS)
-Simple production deployment with automatic Let's Encrypt certificates:
+</details>
+
+<details>
+<summary><strong>Option 3: Caddy (Auto-HTTPS)</strong></summary>
 
 ```bash
-# Install Caddy
+# Install Caddy (add repository first)
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update && sudo apt install caddy
 
-# Create Caddyfile
-sudo nano /etc/caddy/Caddyfile
-```
-
-Add to Caddyfile:
-```
+# /etc/caddy/Caddyfile
 meetmemo.yourdomain.com {
     reverse_proxy localhost:80
 }
-```
 
-```bash
 sudo systemctl restart caddy
 ```
 
-#### Option 5: Nginx + Let's Encrypt
-Traditional setup for existing nginx infrastructure:
+</details>
+
+<details>
+<summary><strong>Option 4: Nginx + Let's Encrypt</strong></summary>
 
 ```bash
-# Install Certbot
 sudo apt install certbot python3-certbot-nginx
-
-# Get certificate
 sudo certbot --nginx -d meetmemo.yourdomain.com
-
-# Update docker-compose.yml
-# Change frontend port to avoid conflict
-ports:
-  - "8080:80"
 ```
 
-Certbot automatically configures nginx and handles certificate renewal.
+> **Important:** To avoid port conflicts with the host's Nginx, change the port mapping for the `meetmemo-frontend` service in `docker-compose.yml` from `"80:80"` to `"8080:80"`. Then configure your Nginx to `proxy_pass http://localhost:8080`.
 
-#### Option 6: Self-Signed Certificate (Testing Only)
-⚠️ Not recommended for production - browsers will show warnings:
+</details>
 
-```bash
-# Generate certificate
-mkdir -p nginx/ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx/ssl/nginx-selfsigned.key \
-  -out nginx/ssl/nginx-selfsigned.crt \
-  -subj "/C=US/ST=State/L=City/O=MeetMemo/CN=localhost"
+### Production Checklist
 
-# Update nginx config and docker-compose to use HTTPS
-```
+- [ ] Set strong `POSTGRES_PASSWORD`
+- [ ] Configure HTTPS (see options above)
+- [ ] Set up `HF_TOKEN` and LLM credentials
+- [ ] Test recording feature with HTTPS
+- [ ] Configure firewall rules
+- [ ] Set up backup for PostgreSQL volume
+- [ ] Configure log rotation
 
-### Production Considerations
-- **SSL Certificates**: Use proper SSL certificates in production (not self-signed)
-- **Authentication**: Add authentication layer for multi-user deployments
-- **Resource Limits**: Configure appropriate memory and CPU limits for containers
-- **Monitoring**: Set up logging and monitoring for production workloads
-- **Backup**: Regular backup of transcription data and speaker mappings
-- **Firewall**: Configure firewall rules appropriately based on your HTTPS option
+## Troubleshooting
 
-### Cloud Deployment
-- Ensure cloud instance has GPU support for optimal performance
-- Configure persistent volumes for data retention
-- Set up load balancing if scaling horizontally
+### Common Issues
 
-### Deployment Checklist
-Before deploying to production:
-- [ ] Choose and configure HTTPS option above
-- [ ] Set strong `POSTGRES_PASSWORD` in `.env`
-- [ ] Configure `HF_TOKEN` for speaker diarization
-- [ ] Set up `LLM_API_URL` and `LLM_MODEL_NAME`
-- [ ] Test recording feature works with HTTPS
-- [ ] Set up backup for PostgreSQL data volume
-- [ ] Configure firewall rules as needed
-- [ ] Set up log rotation for application logs
+| Issue | Solution |
+|-------|----------|
+| GPU not detected | Install NVIDIA Container Toolkit and restart Docker |
+| Model download fails | Verify HF token and license acceptance |
+| Recording not working | HTTPS required (use deployment options above) |
+| Out of memory | Use smaller Whisper model or restart backend |
+| PyTorch warning | Run suggested upgrade command in container |
+
+### Performance Tips
+
+- **Faster processing**: Use `base` or `small` Whisper models
+- **Better accuracy**: Use `turbo` or `large` with quality audio
+- **Memory**: Restart backend after large files to free VRAM
+- **Audio quality**: 16kHz+ mono WAV gives best diarization
+
+## Security
+
+| Aspect | Implementation |
+|--------|----------------|
+| **Local Processing** | Transcription and diarization run entirely on your infrastructure |
+| **Data Privacy** | Audio never leaves your server (except for LLM summarization) |
+| **Secure Storage** | Docker volumes with proper permissions |
+| **HTTPS** | SSL/TLS support for production deployments |
+| **File Validation** | Type and size validation on upload |
+| **No Auth by Default** | Add authentication layer for multi-user production |
+
+## Star History
+
+If you find MeetMemo useful, consider giving it a star! Your support helps others discover this project and motivates continued development.
+
+<a href="https://star-history.com/#NotYuSheng/MeetMemo&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NotYuSheng/MeetMemo&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NotYuSheng/MeetMemo&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NotYuSheng/MeetMemo&type=Date" />
+  </picture>
+</a>
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <sub>Built with AI assistance from Claude</sub>
+</p>
