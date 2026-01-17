@@ -10,6 +10,7 @@ import uuid as uuid_lib
 
 import aiofiles
 import aiofiles.os
+import aiofiles.os as aioos
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -45,6 +46,7 @@ from services.alignment_service import AlignmentService
 from services.audio_service import AudioService
 from services.diarization_service import DiarizationService
 from services.transcription_service import TranscriptionService
+from utils.file_utils import get_unique_filename
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +122,8 @@ async def create_job(
         logger.error("Error creating job: %s", e, exc_info=True)
         try:
             await update_status(job_uuid, 500)
-        except Exception:
-            pass
+        except Exception as status_error:
+            logger.error("Failed to update job status during error handling: %s", status_error)
         raise HTTPException(status_code=500, detail="Failed to create job") from e
 
 
@@ -199,8 +201,6 @@ async def rename_job(
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
-    from utils.file_utils import get_unique_filename
-
     new_name = request.file_name
     unique_new_name = get_unique_filename(settings.upload_dir, new_name)
 
@@ -226,8 +226,6 @@ async def delete_job(
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
     # Delete associated files
-    import aiofiles.os as aioos
-
     base_name = os.path.splitext(file_name)[0]
 
     # Audio file

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from config import Settings, get_settings
 from dependencies import get_job_repository, get_summary_service
-from models import SummarizeRequest, SummaryResponse
+from models import SummarizeRequest, SummaryResponse, UpdateSummaryRequest
 from repositories.job_repository import JobRepository
 from services.summary_service import SummaryService
 from utils.formatters import format_transcript_for_llm
@@ -133,7 +133,7 @@ async def create_summary(
 @router.patch("/jobs/{uuid}/summaries")
 async def update_summary(
     uuid: str,
-    request: dict,
+    request: UpdateSummaryRequest,
     job_repo: JobRepository = Depends(get_job_repository),
     summary_service: SummaryService = Depends(get_summary_service)
 ) -> SummaryResponse:
@@ -142,12 +142,8 @@ async def update_summary(
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
-    summary_text = request.get("summary", "")
-    if not summary_text:
-        raise HTTPException(status_code=400, detail="Summary text is required")
-
     # Save updated summary
-    await summary_service.save_summary(uuid, summary_text)
+    await summary_service.save_summary(uuid, request.summary)
     logger.info("Updated summary for %s", uuid)
 
     return SummaryResponse(
@@ -155,7 +151,7 @@ async def update_summary(
         file_name=job['file_name'],
         status="updated",
         status_code=200,
-        summary=summary_text
+        summary=request.summary
     )
 
 

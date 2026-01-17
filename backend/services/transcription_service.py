@@ -4,6 +4,7 @@ Transcription service using OpenAI Whisper.
 This service handles Whisper model loading, caching, and transcription processing
 with progress tracking.
 """
+import asyncio
 import logging
 
 import whisper
@@ -79,19 +80,23 @@ class TranscriptionService:
             # Get cached model
             model = self.get_model(model_name)
 
-            # Transcribe with optimized settings
+            # Transcribe with optimized settings - run in executor to avoid blocking event loop
             await self.job_repo.update_step_progress(job_uuid, 10)
-            asr = model.transcribe(
-                file_path,
-                language="en",
-                fp16=True,
-                beam_size=1,
-                best_of=1,
-                temperature=0.0,
-                no_speech_threshold=0.6,
-                logprob_threshold=-1.0,
-                compression_ratio_threshold=2.4,
-                condition_on_previous_text=False
+            loop = asyncio.get_event_loop()
+            asr = await loop.run_in_executor(
+                None,
+                lambda: model.transcribe(
+                    file_path,
+                    language="en",
+                    fp16=True,
+                    beam_size=1,
+                    best_of=1,
+                    temperature=0.0,
+                    no_speech_threshold=0.6,
+                    logprob_threshold=-1.0,
+                    compression_ratio_threshold=2.4,
+                    condition_on_previous_text=False
+                )
             )
 
             await self.job_repo.update_step_progress(job_uuid, 90)

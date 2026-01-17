@@ -207,21 +207,59 @@ AI-powered speaker name suggestions based on transcript context.
 
 ## Exports (Synchronous)
 
-### GET /jobs/{uuid}/exports/pdf
+> **Note:** Export endpoints use POST requests (not GET) to support optional request body parameters like `generated_on` timestamp. This is a breaking change from v1.0 which used GET requests.
 
-Download summary as PDF.
+### POST /jobs/{uuid}/exports/pdf
 
-### GET /jobs/{uuid}/exports/markdown
+Download summary as PDF (summary + transcript).
 
-Download summary as Markdown.
+**Request (optional):**
+```json
+{
+  "generated_on": "2026-01-17 14:30:00"
+}
+```
 
-### GET /jobs/{uuid}/exports/transcript/pdf
+**Response:** PDF file download
 
-Download transcript as PDF.
+### POST /jobs/{uuid}/exports/markdown
 
-### GET /jobs/{uuid}/exports/transcript/markdown
+Download summary as Markdown (summary + transcript).
 
-Download transcript as Markdown.
+**Request (optional):**
+```json
+{
+  "generated_on": "2026-01-17 14:30:00"
+}
+```
+
+**Response:** Markdown file download
+
+### POST /jobs/{uuid}/exports/transcript/pdf
+
+Download transcript-only PDF (no AI summary).
+
+**Request (optional):**
+```json
+{
+  "generated_on": "2026-01-17 14:30:00"
+}
+```
+
+**Response:** PDF file download
+
+### POST /jobs/{uuid}/exports/transcript/markdown
+
+Download transcript-only Markdown (no AI summary).
+
+**Request (optional):**
+```json
+{
+  "generated_on": "2026-01-17 14:30:00"
+}
+```
+
+**Response:** Markdown file download
 
 ## Export Jobs (Asynchronous)
 

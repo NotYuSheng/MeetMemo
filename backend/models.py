@@ -24,6 +24,11 @@ class SummarizeRequest(BaseModel):
     system_prompt: Optional[str] = None
 
 
+class UpdateSummaryRequest(BaseModel):
+    """Model for updating cached summary content."""
+    summary: str = Field(..., min_length=1)
+
+
 class SpeakerIdentificationRequest(BaseModel):
     """Model for LLM-based speaker identification requests."""
     context: Optional[str] = None

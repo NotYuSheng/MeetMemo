@@ -4,6 +4,7 @@ Audio service for file upload, validation, and conversion.
 This service handles audio file uploads, format conversion, duplicate detection,
 and file management operations.
 """
+import asyncio
 import os
 from pathlib import Path
 from typing import Optional
@@ -108,8 +109,9 @@ class AudioService:
         input_path = os.path.join(self.settings.upload_dir, input_filename)
         output_path = os.path.join(self.settings.upload_dir, output_filename)
 
-        # Run conversion (sync pydub operation)
-        convert_to_wav(input_path, output_path, sample_rate)
+        # Run conversion in thread pool to avoid blocking event loop
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, convert_to_wav, input_path, output_path, sample_rate)
 
     async def check_duplicate(self, file_hash: str) -> Optional[dict]:
         """

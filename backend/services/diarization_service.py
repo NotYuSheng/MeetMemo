@@ -4,6 +4,7 @@ Diarization service using PyAnnote.
 This service handles PyAnnote pipeline loading, caching, and speaker diarization
 processing with progress tracking.
 """
+import asyncio
 import logging
 from typing import Optional
 
@@ -73,9 +74,10 @@ class DiarizationService:
             # Get cached pipeline
             pipeline = self.get_pipeline()
 
-            # Diarize audio
+            # Diarize audio - run in executor to avoid blocking event loop
             await self.job_repo.update_step_progress(job_uuid, 10)
-            diarization = pipeline(file_path)
+            loop = asyncio.get_event_loop()
+            diarization = await loop.run_in_executor(None, pipeline, file_path)
 
             await self.job_repo.update_step_progress(job_uuid, 90)
             logger.info("Diarization complete for job %s", job_uuid)

@@ -20,6 +20,7 @@ from models import (
 from repositories.job_repository import JobRepository
 from services.speaker_service import SpeakerService
 from services.summary_service import SummaryService
+from utils.formatters import format_transcript_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,6 @@ async def identify_speakers(
         async with aiofiles.open(transcript_path, "r", encoding="utf-8") as f:
             transcript_json = await f.read()
 
-        from utils.formatters import format_transcript_for_llm
         formatted_transcript = format_transcript_for_llm(transcript_json)
 
         # Get context from request
