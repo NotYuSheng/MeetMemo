@@ -9,7 +9,9 @@ Refactored version using modular architecture with:
 """
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -30,16 +32,21 @@ load_dotenv('.env')
 
 # Configure logging with rotation and console output
 # This function will be called properly after Settings initialization
-def configure_logging(settings=None):
+def configure_logging(config_settings=None):
     """Configure logging with rotation and console output."""
-    from logging.handlers import RotatingFileHandler
-
     # Use settings if provided, otherwise use defaults
-    log_level = getattr(settings, 'log_level', 'INFO') if settings else os.getenv('LOG_LEVEL', 'INFO')
-    log_file = getattr(settings, 'log_file', 'logs/app.log') if settings else 'logs/app.log'
-    log_max_bytes = getattr(settings, 'log_max_bytes', 10 * 1024 * 1024) if settings else 10 * 1024 * 1024
-    log_backup_count = getattr(settings, 'log_backup_count', 5) if settings else 5
-    log_to_console = getattr(settings, 'log_to_console', True) if settings else True
+    if config_settings:
+        log_level = config_settings.log_level
+        log_file = config_settings.log_file
+        log_max_bytes = config_settings.log_max_bytes
+        log_backup_count = config_settings.log_backup_count
+        log_to_console = config_settings.log_to_console
+    else:
+        log_level = os.getenv('LOG_LEVEL', 'INFO')
+        log_file = 'logs/app.log'
+        log_max_bytes = 10 * 1024 * 1024
+        log_backup_count = 5
+        log_to_console = True
 
     # Create logs directory
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -93,7 +100,7 @@ for var, description in REQUIRED_ENV_VARS.items():
         missing_vars.append(f"  - {var}: {description}")
 
 if missing_vars:
-    error_message = (
+    ERROR_MESSAGE = (
         "\n╔════════════════════════════════════════════════════════════════╗\n"
         "║ ERROR: Missing Required Environment Variables                 ║\n"
         "╚════════════════════════════════════════════════════════════════╝\n"
@@ -102,8 +109,8 @@ if missing_vars:
         "\n\nPlease ensure these variables are defined in your .env file.\n"
         "See CLAUDE.md for more information on configuration.\n"
     )
-    logger.error(error_message)
-    raise EnvironmentError(error_message)
+    logger.error(ERROR_MESSAGE)
+    raise EnvironmentError(ERROR_MESSAGE)
 
 # Log warning for optional env vars
 if not os.getenv('LLM_API_KEY'):
@@ -111,27 +118,27 @@ if not os.getenv('LLM_API_KEY'):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fastapi_app: FastAPI):  # pylint: disable=unused-argument
     """
     Lifespan context manager for startup and shutdown events.
 
     Modern FastAPI pattern replacing @app.on_event decorators.
     """
-    settings = get_settings()
+    app_settings = get_settings()
 
     # Reconfigure logging with settings
-    global logger
-    logger = configure_logging(settings)
+    global logger  # pylint: disable=global-statement
+    logger = configure_logging(app_settings)
     logger.info("Starting MeetMemo API with configured logging...")
 
     # Startup
     try:
         # Ensure required directories exist
-        os.makedirs(settings.upload_dir, exist_ok=True)
-        os.makedirs(settings.transcript_dir, exist_ok=True)
-        os.makedirs(settings.transcript_edited_dir, exist_ok=True)
-        os.makedirs(settings.summary_dir, exist_ok=True)
-        os.makedirs(settings.export_dir, exist_ok=True)
+        os.makedirs(app_settings.upload_dir, exist_ok=True)
+        os.makedirs(app_settings.transcript_dir, exist_ok=True)
+        os.makedirs(app_settings.transcript_edited_dir, exist_ok=True)
+        os.makedirs(app_settings.summary_dir, exist_ok=True)
+        os.makedirs(app_settings.export_dir, exist_ok=True)
 
         # Initialize database
         await init_database()
@@ -143,29 +150,29 @@ async def lifespan(app: FastAPI):
 
         # Preload ML models
         transcription_service = TranscriptionService(
-            settings,
+            app_settings,
             JobRepository()
         )
         diarization_service = DiarizationService(
-            settings,
+            app_settings,
             JobRepository()
         )
 
         try:
             transcription_service.get_model("turbo")
             logger.info("Whisper model preloaded successfully")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to preload Whisper model: %s", e)
 
         try:
             diarization_service.get_pipeline()
             logger.info("PyAnnote pipeline preloaded successfully")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to preload PyAnnote pipeline: %s", e)
 
         # Start cleanup scheduler
         cleanup_service = CleanupService(
-            settings,
+            app_settings,
             JobRepository(),
             ExportRepository()
         )
@@ -206,9 +213,6 @@ app = FastAPI(
 @app.middleware("http")
 async def log_requests(request, call_next):
     """Log all HTTP requests and responses with timing."""
-    import time
-
-
     request_logger = logging.getLogger("api.requests")
     start_time = time.time()
 
