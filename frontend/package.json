@@ -8,8 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "lint:css": "stylelint \"src/**/*.css\"",
-    "lint:css:fix": "stylelint \"src/**/*.css\" --fix",
+    "lint:css": "stylelint \"src/**/*.{css,scss,less}\"",
+    "lint:css:fix": "stylelint \"src/**/*.{css,scss,less}\" --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview"
