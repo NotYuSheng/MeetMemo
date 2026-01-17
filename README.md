@@ -58,7 +58,6 @@ A meeting transcription application that runs entirely offline. It converts spee
 | **Real-time Progress** | Live status updates and job management for long-running tasks |
 | **Speaker Management** | Edit speaker names with persistent storage across sessions |
 | **Export Options** | Professional PDF and Markdown exports for transcripts and summaries |
-| **Dark/Light Mode** | Theme toggle with responsive design |
 | **Multi-language** | Automatic language detection or specify target language |
 
 ## Sample Outputs
