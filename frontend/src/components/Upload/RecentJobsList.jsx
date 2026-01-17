@@ -23,7 +23,7 @@ export default function RecentJobsList({
           Recent Meetings
         </h5>
       </Card.Header>
-      <Card.Body>
+      <Card.Body className="p-0">
         {loadingJobs ? (
           <div className="text-center text-muted py-4">
             <div className="spinner-border spinner-border-sm me-2" role="status">
