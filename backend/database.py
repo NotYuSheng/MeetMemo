@@ -10,12 +10,12 @@ import asyncpg
 logger = logging.getLogger(__name__)
 
 # Global connection pool
-_db_pool: Optional[asyncpg.Pool] = None
+_db_pool: Optional[asyncpg.Pool] = None  # pylint: disable=invalid-name
 
 
 async def init_database():
     """Initialize database connection pool."""
-    global _db_pool
+    global _db_pool  # pylint: disable=global-statement
 
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -36,7 +36,7 @@ async def init_database():
 
 async def close_database():
     """Close database connection pool."""
-    global _db_pool
+    global _db_pool  # pylint: disable=global-statement,global-variable-not-assigned
     if _db_pool:
         await _db_pool.close()
         logger.info("Database connection pool closed")

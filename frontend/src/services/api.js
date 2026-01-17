@@ -9,12 +9,83 @@ import {
 
 const API_BASE_URL = '/api/v1';
 
+/**
+ * Enhanced error logging for API calls
+ * Logs detailed error information to help with debugging
+ */
+function logApiError(method, endpoint, error, responseData = null) {
+  const errorDetails = {
+    timestamp: new Date().toISOString(),
+    method,
+    endpoint,
+    error: error.message,
+    stack: error.stack,
+    responseData,
+  };
+
+  console.error('API Error Details:', errorDetails);
+
+  // In production, you could send this to an error tracking service
+  // Example: sendToErrorTrackingService(errorDetails);
+}
+
+/**
+ * Categorize errors for better user messaging
+ */
+function categorizeError(response, error) {
+  if (!response) {
+    return {
+      type: 'NETWORK_ERROR',
+      message: 'Network error - please check your connection',
+      userMessage: 'Unable to connect to the server. Please check your internet connection.',
+    };
+  }
+
+  const status = response.status;
+
+  if (status === 404) {
+    return {
+      type: 'NOT_FOUND',
+      message: 'Resource not found',
+      userMessage: 'The requested resource was not found.',
+    };
+  } else if (status === 401 || status === 403) {
+    return {
+      type: 'AUTHENTICATION_ERROR',
+      message: 'Authentication failed',
+      userMessage: 'You are not authorized to access this resource.',
+    };
+  } else if (status >= 400 && status < 500) {
+    return {
+      type: 'CLIENT_ERROR',
+      message: `Client error: ${status}`,
+      userMessage: 'Invalid request. Please try again.',
+    };
+  } else if (status >= 500) {
+    return {
+      type: 'SERVER_ERROR',
+      message: `Server error: ${status}`,
+      userMessage: 'Server error. Please try again later.',
+    };
+  }
+
+  return {
+    type: 'UNKNOWN_ERROR',
+    message: error.message || 'An unknown error occurred',
+    userMessage: 'An unexpected error occurred. Please try again.',
+  };
+}
+
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
+  const method = options.method || 'GET';
+  let response;
 
   try {
-    const response = await fetch(url, {
+    console.log(`API Request: ${method} ${endpoint}`);
+
+    response = await fetch(url, {
       ...options,
       headers: {
         ...options.headers,
@@ -22,12 +93,35 @@ async function apiCall(endpoint, options = {}) {
     });
 
     if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      // Try to get error details from response body
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = null;
+      }
+
+      const errorCategory = categorizeError(response, new Error());
+      const error = new Error(errorData?.detail || errorCategory.userMessage);
+      error.status = response.status;
+      error.category = errorCategory.type;
+      error.responseData = errorData;
+
+      logApiError(method, endpoint, error, errorData);
+      throw error;
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log(`API Response: ${method} ${endpoint} - Success`);
+    return data;
   } catch (error) {
-    console.error('API Error:', error);
+    // If error wasn't thrown by our code above, it's a network error
+    if (!error.category) {
+      const errorCategory = categorizeError(null, error);
+      error.category = errorCategory.type;
+      error.message = errorCategory.userMessage;
+      logApiError(method, endpoint, error);
+    }
     throw error;
   }
 }
@@ -38,16 +132,43 @@ export async function uploadAudio(file, model = 'turbo') {
   formData.append('file', file);
   formData.append('model', model);
 
-  const response = await fetch(`${API_BASE_URL}/jobs`, {
-    method: 'POST',
-    body: formData,
-  });
+  try {
+    console.log('API Request: POST /jobs (File upload)');
 
-  if (!response.ok) {
-    throw new Error(`Upload failed: ${response.status}`);
+    const response = await fetch(`${API_BASE_URL}/jobs`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = null;
+      }
+
+      const errorCategory = categorizeError(response, new Error());
+      const error = new Error(errorData?.detail || errorCategory.userMessage);
+      error.status = response.status;
+      error.category = errorCategory.type;
+      error.responseData = errorData;
+
+      logApiError('POST', '/jobs', error, errorData);
+      throw error;
+    }
+
+    console.log('API Response: POST /jobs - Success');
+    return await response.json();
+  } catch (error) {
+    if (!error.category) {
+      const errorCategory = categorizeError(null, error);
+      error.category = errorCategory.type;
+      error.message = errorCategory.userMessage;
+      logApiError('POST', '/jobs', error);
+    }
+    throw error;
   }
-
-  return await response.json();
 }
 
 // Get all jobs
@@ -62,7 +183,7 @@ export async function getJobStatus(uuid) {
 
 // Get transcript
 export async function getTranscript(uuid) {
-  return await apiCall(`/jobs/${uuid}/transcript`);
+  return await apiCall(`/jobs/${uuid}/transcripts`);
 }
 
 // Identify speakers with AI
@@ -91,7 +212,7 @@ export async function updateSpeakers(uuid, mapping) {
 
 // Update transcript content
 export async function updateTranscript(uuid, transcript) {
-  return await apiCall(`/jobs/${uuid}/transcript`, {
+  return await apiCall(`/jobs/${uuid}/transcripts`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -102,7 +223,7 @@ export async function updateTranscript(uuid, transcript) {
 
 // Update summary content
 export async function updateSummary(uuid, summary) {
-  return await apiCall(`/jobs/${uuid}/summary`, {
+  return await apiCall(`/jobs/${uuid}/summaries`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -115,7 +236,7 @@ export async function updateSummary(uuid, summary) {
 export async function generateSummary(uuid, customPrompt = null) {
   const body = customPrompt ? { custom_prompt: customPrompt } : {};
 
-  return await apiCall(`/jobs/${uuid}/summary`, {
+  return await apiCall(`/jobs/${uuid}/summaries`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -126,7 +247,7 @@ export async function generateSummary(uuid, customPrompt = null) {
 
 // Get summary - uses the same endpoint, returns generated summary
 export async function getSummary(uuid) {
-  return await apiCall(`/jobs/${uuid}/summary`, {
+  return await apiCall(`/jobs/${uuid}/summaries`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -139,7 +260,13 @@ export async function getSummary(uuid) {
 export async function downloadPDF(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/pdf`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
 
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`);
@@ -172,7 +299,13 @@ export async function downloadPDF(uuid, originalFilename) {
 export async function downloadMarkdown(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/markdown`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
 
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`);
@@ -205,7 +338,13 @@ export async function downloadMarkdown(uuid, originalFilename) {
 export async function downloadTranscriptPDF(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/pdf`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
 
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`);
@@ -238,7 +377,13 @@ export async function downloadTranscriptPDF(uuid, originalFilename) {
 export async function downloadTranscriptMarkdown(uuid, originalFilename) {
   try {
     const url = `${API_BASE_URL}/jobs/${uuid}/exports/transcript/markdown`;
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
 
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`);

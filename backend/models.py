@@ -24,6 +24,11 @@ class SummarizeRequest(BaseModel):
     system_prompt: Optional[str] = None
 
 
+class UpdateSummaryRequest(BaseModel):
+    """Model for updating cached summary content."""
+    summary: str = Field(..., min_length=1)
+
+
 class SpeakerIdentificationRequest(BaseModel):
     """Model for LLM-based speaker identification requests."""
     context: Optional[str] = None
@@ -34,7 +39,7 @@ class RenameJobRequest(BaseModel):
     file_name: str = Field(..., min_length=1, max_length=255)
 
     @validator('file_name')
-    def validate_filename(cls, v):
+    def validate_filename(cls, v):  # pylint: disable=no-self-argument
         """Validate and sanitize the filename."""
         return sanitize_filename(v)
 
