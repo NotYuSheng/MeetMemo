@@ -3,7 +3,6 @@ Export jobs router for asynchronous PDF and Markdown exports.
 
 This router handles background export job creation, status checking, and downloads.
 """
-import asyncio
 import logging
 import os
 import uuid as uuid_lib
@@ -33,7 +32,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-async def _process_export_job_task(
+async def _process_export_job_task(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-statements
     export_uuid: str,
     job_uuid: str,
     export_type: str,
@@ -106,7 +105,6 @@ async def _process_export_job_task(
         # Generate file
         file_buffer: BytesIO
         file_ext: str
-        media_type: str
 
         if export_type == 'pdf':
             file_buffer = export_service.generate_summary_pdf_export(
@@ -154,14 +152,14 @@ async def _process_export_job_task(
 
         logger.info("Export job %s completed successfully", export_uuid)
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Export job %s failed: %s", export_uuid, str(e), exc_info=True)
         await export_repo.update_error(export_uuid, str(e))
         await export_repo.update_status(export_uuid, 500)
 
 
 @router.post("/jobs/{uuid}/export-jobs", response_model=ExportJobResponse, status_code=202)
-async def create_export_job(
+async def create_export_job(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     request: CreateExportRequest,
     background_tasks: BackgroundTasks,

@@ -31,7 +31,7 @@ class SummaryService:
         self.http_client = http_client
         self.settings = settings
 
-    async def summarize(
+    async def summarize(  # pylint: disable=too-many-locals
         self,
         transcript: str,
         custom_prompt: Optional[str] = None,
@@ -137,7 +137,7 @@ The recording was too brief to generate a detailed meeting summary."""
                 detail="Summary service temporarily unavailable"
             ) from e
 
-    async def identify_speakers(
+    async def identify_speakers(  # pylint: disable=too-many-locals
         self,
         transcript: str,
         context: Optional[str] = None
@@ -208,7 +208,7 @@ The recording was too brief to generate a detailed meeting summary."""
             suggestions = json.loads(content)
             return {"status": "success", "suggestions": suggestions}
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Speaker identification failed: %s", e, exc_info=True)
             return {
                 "status": "error",

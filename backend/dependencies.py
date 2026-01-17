@@ -3,7 +3,10 @@ Dependency injection factories for FastAPI.
 
 This module provides factory functions that create and manage service instances
 with proper lifecycle management and dependency injection.
+
+Note: Imports are intentionally placed inside functions to avoid circular dependencies.
 """
+# pylint: disable=import-outside-toplevel
 from typing import Optional
 
 import httpx
@@ -12,7 +15,7 @@ from fastapi import Depends
 from config import Settings, get_settings
 
 # Global HTTP client for LLM calls
-_http_client: Optional[httpx.AsyncClient] = None
+_http_client: Optional[httpx.AsyncClient] = None  # pylint: disable=invalid-name
 
 
 async def get_http_client() -> httpx.AsyncClient:
@@ -29,7 +32,7 @@ async def get_http_client() -> httpx.AsyncClient:
         >>> client = await get_http_client()
         >>> response = await client.post(url, json=data)
     """
-    global _http_client
+    global _http_client  # pylint: disable=global-statement,global-variable-not-assigned
     if _http_client is None:
         raise RuntimeError(
             "HTTP client not initialized. "
@@ -49,7 +52,7 @@ async def init_http_client(settings: Optional[Settings] = None) -> None:
         >>> # In FastAPI lifespan
         >>> await init_http_client()
     """
-    global _http_client
+    global _http_client  # pylint: disable=global-statement
     if settings is None:
         settings = get_settings()
 
@@ -64,7 +67,7 @@ async def close_http_client() -> None:
         >>> # In FastAPI lifespan
         >>> await close_http_client()
     """
-    global _http_client
+    global _http_client  # pylint: disable=global-statement
     if _http_client:
         await _http_client.aclose()
         _http_client = None

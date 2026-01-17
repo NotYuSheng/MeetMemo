@@ -29,13 +29,13 @@ router = APIRouter()
 
 
 @router.patch("/jobs/{uuid}/speakers", response_model=SpeakerUpdateResponse)
-async def update_speakers(
+async def update_speakers(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     speaker_map: SpeakerNameMapping,
     job_repo: JobRepository = Depends(get_job_repository),
     speaker_service: SpeakerService = Depends(get_speaker_service),
     summary_service: SummaryService = Depends(get_summary_service),
-    settings: Settings = Depends(get_settings)
+    settings: Settings = Depends(get_settings)  # pylint: disable=unused-argument
 ) -> SpeakerUpdateResponse:
     """Update speaker names in transcript."""
     try:
@@ -98,8 +98,8 @@ async def identify_speakers(
                 settings.transcript_dir,
                 settings.transcript_edited_dir
             )
-        except FileNotFoundError:
-            raise HTTPException(status_code=404, detail="Transcript not found")
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Transcript not found") from exc
 
         async with aiofiles.open(transcript_path, "r", encoding="utf-8") as f:
             transcript_json = await f.read()

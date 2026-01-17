@@ -57,8 +57,8 @@ async def get_summary(
             settings.transcript_dir,
             settings.transcript_edited_dir
         )
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Transcript not found")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Transcript not found") from exc
 
     async with aiofiles.open(transcript_path, "r", encoding="utf-8") as f:
         transcript_json = await f.read()
@@ -102,8 +102,8 @@ async def create_summary(
             settings.transcript_dir,
             settings.transcript_edited_dir
         )
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Transcript not found")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Transcript not found") from exc
 
     async with aiofiles.open(transcript_path, "r", encoding="utf-8") as f:
         transcript_json = await f.read()

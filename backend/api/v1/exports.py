@@ -99,7 +99,7 @@ async def _get_summary_content(
 
 
 @router.post("/jobs/{uuid}/exports/pdf", status_code=200)
-async def export_pdf(
+async def export_pdf(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     request: ExportRequest = None,
     job_repo: JobRepository = Depends(get_job_repository),
@@ -160,7 +160,7 @@ async def export_pdf(
 
 
 @router.post("/jobs/{uuid}/exports/markdown", status_code=200)
-async def export_markdown(
+async def export_markdown(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     request: ExportRequest = None,
     job_repo: JobRepository = Depends(get_job_repository),

@@ -39,7 +39,7 @@ class RenameJobRequest(BaseModel):
     file_name: str = Field(..., min_length=1, max_length=255)
 
     @validator('file_name')
-    def validate_filename(cls, v):
+    def validate_filename(cls, v):  # pylint: disable=no-self-argument
         """Validate and sanitize the filename."""
         return sanitize_filename(v)
 

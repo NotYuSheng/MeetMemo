@@ -32,7 +32,9 @@ def generate_summary_markdown(
         BytesIO buffer containing the Markdown content
 
     Example:
-        >>> transcript = [{'speaker': 'SPEAKER_00', 'text': 'Hello', 'start': '0.00', 'end': '1.00'}]
+        >>> transcript = [
+        ...     {'speaker': 'SPEAKER_00', 'text': 'Hello', 'start': '0.00', 'end': '1.00'}
+        ... ]
         >>> md_buffer = generate_summary_markdown('Team Meeting', '## Key Points', transcript)
     """
     if settings is None:
@@ -83,7 +85,9 @@ def generate_transcript_markdown(
         BytesIO buffer containing the Markdown content
 
     Example:
-        >>> transcript = [{'speaker': 'SPEAKER_00', 'text': 'Hello', 'start': '0.00', 'end': '1.00'}]
+        >>> transcript = [
+        ...     {'speaker': 'SPEAKER_00', 'text': 'Hello', 'start': '0.00', 'end': '1.00'}
+        ... ]
         >>> md_buffer = generate_transcript_markdown('Team Meeting', transcript)
     """
     if settings is None:

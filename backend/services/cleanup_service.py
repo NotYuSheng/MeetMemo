@@ -53,7 +53,7 @@ class CleanupService:
                 old_jobs = await self.job_repo.cleanup_old(
                     self.settings.job_retention_hours
                 )
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Failed to query old jobs: %s", e, exc_info=True)
                 old_jobs = []
 
@@ -66,7 +66,7 @@ class CleanupService:
                         try:
                             await aiofiles.os.remove(audio_path)
                             logger.debug("Deleted audio file: %s", audio_path)
-                        except Exception as e:
+                        except Exception as e:  # pylint: disable=broad-exception-caught
                             logger.error("Failed to delete audio file %s: %s", audio_path, e)
 
                     # Remove transcript files
@@ -79,7 +79,7 @@ class CleanupService:
                         try:
                             await aiofiles.os.remove(transcript_path)
                             logger.debug("Deleted transcript file: %s", transcript_path)
-                        except Exception as e:
+                        except Exception as e:  # pylint: disable=broad-exception-caught
                             logger.error("Failed to delete transcript %s: %s", transcript_path, e)
 
             # Cleanup old export jobs
@@ -87,7 +87,7 @@ class CleanupService:
                 old_exports = await self.export_repo.cleanup_old(
                     self.settings.export_retention_hours
                 )
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Failed to query old exports: %s", e, exc_info=True)
                 old_exports = []
 
@@ -97,7 +97,7 @@ class CleanupService:
                     try:
                         await aiofiles.os.remove(file_path)
                         logger.debug("Deleted export file: %s", file_path)
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         logger.error("Failed to delete export file %s: %s", file_path, e)
 
             logger.info(
@@ -106,7 +106,7 @@ class CleanupService:
                 len(old_exports)
             )
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error during file cleanup: %s", e, exc_info=True)
 
     async def _cleanup_worker(self) -> None:
@@ -125,7 +125,7 @@ class CleanupService:
             except asyncio.CancelledError:
                 logger.info("Cleanup worker cancelled")
                 break
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Error in cleanup worker: %s", e, exc_info=True)
                 # Sleep for 10 minutes on error before retrying
                 await asyncio.sleep(600)

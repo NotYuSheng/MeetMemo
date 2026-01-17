@@ -121,7 +121,7 @@ async def create_job(
         logger.error("Error creating job: %s", e, exc_info=True)
         try:
             await update_status(job_uuid, 500)
-        except Exception as status_error:
+        except Exception as status_error:  # pylint: disable=broad-exception-caught
             logger.error("Failed to update job status during error handling: %s", status_error)
         raise HTTPException(status_code=500, detail="Failed to create job") from e
 
@@ -260,7 +260,7 @@ async def delete_job(
 # ============================================================================
 
 @router.post("/jobs/{uuid}/transcriptions", response_model=WorkflowActionResponse, status_code=202)
-async def start_transcription(
+async def start_transcription(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     background_tasks: BackgroundTasks,
     model_name: str = Query(default="turbo"),

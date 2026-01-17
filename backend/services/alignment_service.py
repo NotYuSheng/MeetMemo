@@ -31,7 +31,9 @@ class AlignmentService:
         self.settings = settings
         self.job_repo = job_repo
 
-    async def align(self, job_uuid: str, file_name: str) -> list[dict]:
+    async def align(  # pylint: disable=too-many-locals
+        self, job_uuid: str, file_name: str
+    ) -> list[dict]:
         """
         Align transcription segments with speaker labels.
 
