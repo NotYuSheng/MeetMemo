@@ -1,5 +1,5 @@
-import { Row, Col, Card } from '@govtechsg/sgds-react'
-import { Users, CheckCircle } from 'lucide-react'
+import { Row, Col, Card } from '@govtechsg/sgds-react';
+import { Users, CheckCircle } from 'lucide-react';
 
 export default function ProcessingView({ processingProgress }) {
   return (
@@ -20,7 +20,9 @@ export default function ProcessingView({ processingProgress }) {
                 <CheckCircle size={20} className="text-secondary me-2" />
                 <span>Audio uploaded successfully</span>
               </div>
-              <div className={`processing-step ${processingProgress >= 30 ? 'completed' : processingProgress > 0 ? 'active' : ''}`}>
+              <div
+                className={`processing-step ${processingProgress >= 30 ? 'completed' : processingProgress > 0 ? 'active' : ''}`}
+              >
                 {processingProgress >= 30 ? (
                   <CheckCircle size={20} className="text-secondary me-2" />
                 ) : processingProgress > 0 ? (
@@ -32,7 +34,9 @@ export default function ProcessingView({ processingProgress }) {
                 )}
                 <span>Transcribing with Whisper AI...</span>
               </div>
-              <div className={`processing-step ${processingProgress >= 90 ? 'completed' : processingProgress >= 30 ? 'active' : ''}`}>
+              <div
+                className={`processing-step ${processingProgress >= 90 ? 'completed' : processingProgress >= 30 ? 'active' : ''}`}
+              >
                 {processingProgress >= 90 ? (
                   <CheckCircle size={20} className="text-secondary me-2" />
                 ) : processingProgress >= 30 ? (
@@ -44,7 +48,9 @@ export default function ProcessingView({ processingProgress }) {
                 )}
                 <span>Identifying speakers with PyAnnote (slowest step)</span>
               </div>
-              <div className={`processing-step ${processingProgress === 100 ? 'completed' : processingProgress >= 90 ? 'active' : ''}`}>
+              <div
+                className={`processing-step ${processingProgress === 100 ? 'completed' : processingProgress >= 90 ? 'active' : ''}`}
+              >
                 {processingProgress === 100 ? (
                   <CheckCircle size={20} className="text-secondary me-2" />
                 ) : processingProgress >= 90 ? (
@@ -80,5 +86,5 @@ export default function ProcessingView({ processingProgress }) {
         </Card>
       </Col>
     </Row>
-  )
+  );
 }

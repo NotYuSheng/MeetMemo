@@ -1,5 +1,5 @@
-import { Container } from '@govtechsg/sgds-react'
-import { FileText } from 'lucide-react'
+import { Container } from '@govtechsg/sgds-react';
+import { FileText } from 'lucide-react';
 
 export default function Header({ onStartNewMeeting }) {
   return (
@@ -20,5 +20,5 @@ export default function Header({ onStartNewMeeting }) {
         </div>
       </Container>
     </div>
-  )
+  );
 }

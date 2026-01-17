@@ -1,5 +1,5 @@
-import ReactMarkdown from 'react-markdown'
-import { Sparkles } from 'lucide-react'
+import ReactMarkdown from 'react-markdown';
+import { Sparkles } from 'lucide-react';
 
 export default function SummaryContent({ summary }) {
   if (!summary) {
@@ -8,7 +8,7 @@ export default function SummaryContent({ summary }) {
         <Sparkles size={48} className="mb-3 opacity-50" />
         <p>AI summary will appear here</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -24,7 +24,9 @@ export default function SummaryContent({ summary }) {
           <h6 className="mb-3">Key Points</h6>
           <ul>
             {summary.key_points.map((point, idx) => (
-              <li key={idx}><ReactMarkdown>{point}</ReactMarkdown></li>
+              <li key={idx}>
+                <ReactMarkdown>{point}</ReactMarkdown>
+              </li>
             ))}
           </ul>
         </div>
@@ -34,11 +36,13 @@ export default function SummaryContent({ summary }) {
           <h6 className="mb-3">Action Items</h6>
           <ul>
             {summary.action_items.map((item, idx) => (
-              <li key={idx}><ReactMarkdown>{item}</ReactMarkdown></li>
+              <li key={idx}>
+                <ReactMarkdown>{item}</ReactMarkdown>
+              </li>
             ))}
           </ul>
         </div>
       )}
     </div>
-  )
+  );
 }

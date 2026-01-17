@@ -1,4 +1,4 @@
-import { Container, Row, Col } from '@govtechsg/sgds-react'
+import { Container, Row, Col } from '@govtechsg/sgds-react';
 
 export default function Footer() {
   return (
@@ -13,5 +13,5 @@ export default function Footer() {
         </Row>
       </Container>
     </footer>
-  )
+  );
 }

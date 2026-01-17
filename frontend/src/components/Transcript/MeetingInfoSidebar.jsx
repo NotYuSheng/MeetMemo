@@ -1,7 +1,7 @@
-import { Card, Button, Badge } from '@govtechsg/sgds-react'
-import { Users, Sparkles, Download, AlertCircle } from 'lucide-react'
-import { getSpeakerBadgeVariant } from '../../utils/speakerColors'
-import * as api from '../../services/api'
+import { Card, Button, Badge } from '@govtechsg/sgds-react';
+import { Users, Sparkles, Download, AlertCircle } from 'lucide-react';
+import { getSpeakerBadgeVariant } from '../../utils/speakerColors';
+import * as api from '../../services/api';
 
 export default function MeetingInfoSidebar({
   selectedFile,
@@ -10,7 +10,7 @@ export default function MeetingInfoSidebar({
   handleEditSpeakers,
   handleGenerateSummary,
   generatingSummary,
-  jobId
+  jobId,
 }) {
   return (
     <Card className="sticky-sidebar">
@@ -35,12 +35,8 @@ export default function MeetingInfoSidebar({
             <small className="text-muted">Speakers</small>
             <div className="mb-2">
               {transcript?.segments ? (
-                [...new Set(transcript.segments.map(s => s.speaker))].map((speaker) => (
-                  <Badge
-                    key={speaker}
-                    bg={getSpeakerBadgeVariant(speaker)}
-                    className="me-1"
-                  >
+                [...new Set(transcript.segments.map((s) => s.speaker))].map((speaker) => (
+                  <Badge key={speaker} bg={getSpeakerBadgeVariant(speaker)} className="me-1">
                     {speaker}
                   </Badge>
                 ))
@@ -56,7 +52,8 @@ export default function MeetingInfoSidebar({
             )}
             <div className="small text-muted" style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>
               <AlertCircle size={12} className="me-1" />
-              Speaker names are auto-identified by AI when possible. Use "Edit Speakers" to make changes.
+              Speaker names are auto-identified by AI when possible. Use "Edit Speakers" to make
+              changes.
             </div>
           </div>
         </div>
@@ -73,7 +70,11 @@ export default function MeetingInfoSidebar({
           >
             {generatingSummary ? (
               <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Generating...
               </>
             ) : (
@@ -83,16 +84,24 @@ export default function MeetingInfoSidebar({
               </>
             )}
           </Button>
-          <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadTranscriptMarkdown(jobId, selectedFile?.name)}>
+          <Button
+            variant="outline-secondary"
+            className="w-100 mb-2"
+            onClick={() => api.downloadTranscriptMarkdown(jobId, selectedFile?.name)}
+          >
             <Download size={18} className="me-2" />
             Export Markdown
           </Button>
-          <Button variant="outline-secondary" className="w-100 mb-2" onClick={() => api.downloadTranscriptPDF(jobId, selectedFile?.name)}>
+          <Button
+            variant="outline-secondary"
+            className="w-100 mb-2"
+            onClick={() => api.downloadTranscriptPDF(jobId, selectedFile?.name)}
+          >
             <Download size={18} className="me-2" />
             Export PDF
           </Button>
         </div>
       </Card.Body>
     </Card>
-  )
+  );
 }
