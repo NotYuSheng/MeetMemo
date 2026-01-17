@@ -39,13 +39,13 @@ jobs:
         run: npm ci
 
       - name: Auto-fix ESLint issues
-        run: npx eslint src --fix
+        run: npx eslint src --fix || true
 
       - name: Auto-fix Prettier issues
         run: npx prettier --write .
 
       - name: Auto-fix Stylelint issues
-        run: npm run lint:css:fix
+        run: npm run lint:css:fix || true
 
       - name: Create PR with lint fixes (if any)
         env:
