@@ -38,6 +38,7 @@ A meeting transcription application that runs entirely offline. It converts spee
 | **Audio Recording & Upload** | Record meetings directly in browser or upload files (MP3, WAV, M4A, FLAC, WebM, OGG) |
 | **Speech Recognition** | OpenAI Whisper (turbo model) for high-accuracy transcription in 99+ languages |
 | **Speaker Diarization** | PyAnnote.audio 3.1 for automatic speaker identification and labeling |
+| **Audio Playback & Sync** | Built-in audio player with transcript synchronization - click any segment to jump to that timestamp |
 | **AI Summarization** | LLM-powered summaries with key points, action items, and insights |
 | **Real-time Progress** | Live status updates and job management for long-running tasks |
 | **Speaker Management** | Edit speaker names with persistent storage across sessions |
@@ -114,9 +115,10 @@ graph LR
 1. **Upload or Record** - Upload an audio file or record directly in browser (HTTPS required)
 2. **Transcribe** - Click "Start Transcription" to process with Whisper + PyAnnote
 3. **Review** - View diarized transcript with speaker labels and timestamps
-4. **Customize** - Click speaker names to rename them (persists across sessions)
-5. **Summarize** - Generate AI summary with key insights and action items
-6. **Export** - Download professional PDF or Markdown files
+4. **Playback** - Use the audio player to listen while following along with highlighted transcript segments
+5. **Customize** - Click speaker names to rename them (persists across sessions)
+6. **Summarize** - Generate AI summary with key insights and action items
+7. **Export** - Download professional PDF or Markdown files
 
 ### Supported Audio Formats
 
