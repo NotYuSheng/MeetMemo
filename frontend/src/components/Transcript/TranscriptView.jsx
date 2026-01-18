@@ -1,7 +1,32 @@
+import { useState, useRef, useCallback } from 'react';
 import { Row, Col, Card, Button } from '@govtechsg/sgds-react';
 import { FileText, Users } from 'lucide-react';
 import TranscriptSegment from './TranscriptSegment';
 import MeetingInfoSidebar from './MeetingInfoSidebar';
+import AudioPlayer from './AudioPlayer';
+
+/**
+ * Find the active segment index based on current playback time.
+ */
+function findActiveSegmentIndex(segments, currentTime) {
+  if (!segments || segments.length === 0) return -1;
+
+  for (let i = 0; i < segments.length; i++) {
+    const start = parseFloat(segments[i].start);
+    const end = parseFloat(segments[i].end);
+    if (currentTime >= start && currentTime < end) {
+      return i;
+    }
+  }
+
+  // If past the last segment, return last segment
+  const lastEnd = parseFloat(segments[segments.length - 1].end);
+  if (currentTime >= lastEnd) {
+    return segments.length - 1;
+  }
+
+  return -1;
+}
 
 export default function TranscriptView({
   transcript,
@@ -13,6 +38,27 @@ export default function TranscriptView({
   generatingSummary,
   identifyingSpeakers,
 }) {
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState(-1);
+  const audioPlayerRef = useRef(null);
+
+  // Handle time update from audio player
+  const handleTimeUpdate = useCallback(
+    (currentTime) => {
+      if (transcript?.segments) {
+        const newIndex = findActiveSegmentIndex(transcript.segments, currentTime);
+        setActiveSegmentIndex((prev) => (newIndex !== prev ? newIndex : prev));
+      }
+    },
+    [transcript]
+  );
+
+  // Handle seeking to a segment
+  const handleSeekToSegment = useCallback((time) => {
+    if (audioPlayerRef.current?.seekTo) {
+      audioPlayerRef.current.seekTo(time);
+    }
+  }, []);
+
   return (
     <Row>
       <Col lg={8}>
@@ -38,6 +84,8 @@ export default function TranscriptView({
                     segment={segment}
                     index={index}
                     handleEditText={handleEditText}
+                    isActive={index === activeSegmentIndex}
+                    onSeekToSegment={handleSeekToSegment}
                   />
                 ))}
               </div>
@@ -52,6 +100,11 @@ export default function TranscriptView({
       </Col>
 
       <Col lg={4}>
+        <AudioPlayer
+          jobId={jobId}
+          onTimeUpdate={handleTimeUpdate}
+          currentSegmentRef={audioPlayerRef}
+        />
         <MeetingInfoSidebar
           selectedFile={selectedFile}
           transcript={transcript}
