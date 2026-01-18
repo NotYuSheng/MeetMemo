@@ -458,3 +458,8 @@ export async function startAlignment(uuid) {
     method: 'POST',
   });
 }
+
+// Get audio stream URL for a job
+export function getAudioUrl(uuid) {
+  return `${API_BASE_URL}/jobs/${uuid}/audio`;
+}

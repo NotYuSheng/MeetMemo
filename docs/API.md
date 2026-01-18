@@ -123,6 +123,39 @@ Get diarization data (speaker segments).
 
 Align transcription with diarization to create final transcript.
 
+## Audio Playback
+
+### GET /jobs/{uuid}/audio
+
+Stream audio file for playback with HTTP range request support.
+
+**Headers:**
+- `Range` (optional): Byte range for partial content (e.g., `bytes=0-1023`)
+
+**Response (200 - Full Content):**
+- Audio file stream with appropriate content type
+
+**Response (206 - Partial Content):**
+- Partial audio content for the requested byte range
+- Headers include `Content-Range`, `Accept-Ranges`, `Content-Length`
+
+**Example:**
+```bash
+# Full audio download
+curl -o audio.wav http://localhost/api/v1/jobs/{uuid}/audio
+
+# Range request for seeking
+curl -H "Range: bytes=0-1000000" http://localhost/api/v1/jobs/{uuid}/audio
+```
+
+**Supported Formats:**
+- WAV (`audio/wav`)
+- MP3 (`audio/mpeg`)
+- MP4/M4A (`audio/mp4`)
+- WebM (`audio/webm`)
+- FLAC (`audio/flac`)
+- OGG (`audio/ogg`)
+
 ## Transcript
 
 ### GET /jobs/{uuid}/transcript
