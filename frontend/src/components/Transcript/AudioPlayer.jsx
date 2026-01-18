@@ -123,6 +123,7 @@ export default function AudioPlayer({
     setVolume(newVolume);
     if (audioRef.current) {
       audioRef.current.volume = newVolume;
+      audioRef.current.muted = newVolume === 0;
     }
     setIsMuted(newVolume === 0);
   }, []);

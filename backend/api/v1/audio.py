@@ -168,45 +168,35 @@ async def stream_audio(
     file_size = await get_file_size(file_path)
     content_type = get_content_type(file_name)
 
-    # Check for Range header
+    # Check for Range header and prepare response parameters
     range_header = request.headers.get("Range")
 
     if range_header:
         # Partial content response (206)
         start, end = parse_range_header(range_header, file_size)
-        content_length = end - start + 1
-
+        status_code = 206
         headers = {
             "Content-Range": f"bytes {start}-{end}/{file_size}",
             "Accept-Ranges": "bytes",
-            "Content-Length": str(content_length),
-            "Content-Type": content_type,
+            "Content-Length": str(end - start + 1),
         }
-
         logger.debug(
             "Streaming audio range for job %s: bytes %d-%d/%d",
             uuid, start, end, file_size
         )
-
-        return StreamingResponse(
-            stream_audio_range(file_path, start, end),
-            status_code=206,
-            headers=headers,
-            media_type=content_type
-        )
     else:
         # Full content response (200)
+        start, end = 0, file_size - 1
+        status_code = 200
         headers = {
             "Accept-Ranges": "bytes",
             "Content-Length": str(file_size),
-            "Content-Type": content_type,
         }
-
         logger.debug("Streaming full audio for job %s: %d bytes", uuid, file_size)
 
-        return StreamingResponse(
-            stream_audio_range(file_path, 0, file_size - 1),
-            status_code=200,
-            headers=headers,
-            media_type=content_type
-        )
+    return StreamingResponse(
+        stream_audio_range(file_path, start, end),
+        status_code=status_code,
+        headers=headers,
+        media_type=content_type
+    )
