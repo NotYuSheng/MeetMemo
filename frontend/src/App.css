@@ -370,3 +370,197 @@
   transition: width 0.4s ease;
   background-color: var(--primary);
 }
+
+/* ============================================================================
+   Audio Player Styles
+   ============================================================================ */
+
+.audio-player-card {
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+}
+
+.audio-player-card .card-body {
+  padding: 1rem;
+}
+
+/* Progress bar container */
+.audio-progress-container {
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 4px;
+}
+
+.audio-progress-bar {
+  position: relative;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.audio-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.audio-progress-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background-color: var(--primary);
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.audio-progress-container:hover .audio-progress-handle {
+  opacity: 1;
+}
+
+/* Time display */
+.audio-time-display {
+  font-size: 0.75rem;
+}
+
+/* Control buttons */
+.audio-control-btn {
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.audio-control-btn:hover {
+  color: var(--primary);
+}
+
+.audio-control-btn:disabled {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.audio-play-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Volume slider */
+.audio-volume-slider {
+  width: 60px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e2e8f0;
+  border-radius: 2px;
+  outline: none;
+  margin-left: 4px;
+}
+
+.audio-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.audio-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Error and loading states */
+.audio-error {
+  text-align: center;
+  padding: 0.5rem;
+  background-color: #fef2f2;
+  border-radius: 4px;
+}
+
+.audio-loading {
+  text-align: center;
+}
+
+/* ============================================================================
+   Transcript Segment Active Highlighting
+   ============================================================================ */
+
+.transcript-segment {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.transcript-segment-active {
+  background-color: var(--primary-light) !important;
+  border-left-color: var(--primary) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.transcript-segment-active:hover {
+  background-color: var(--primary-light) !important;
+}
+
+/* Playing indicator dot animation */
+.audio-playing-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.audio-playing-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  animation: audio-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes audio-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+/* Segment play button */
+.segment-play-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.transcript-segment:hover .segment-play-btn {
+  opacity: 1;
+}
+
+.transcript-segment-active .segment-play-btn {
+  opacity: 1;
+}
+
+/* Segment timestamp styling */
+.segment-timestamp {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+}
