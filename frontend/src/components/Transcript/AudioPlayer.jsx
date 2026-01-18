@@ -17,11 +17,7 @@ function formatTime(seconds) {
  * AudioPlayer component with playback controls and progress tracking.
  * Syncs with transcript segments via onTimeUpdate callback.
  */
-export default function AudioPlayer({
-  jobId,
-  onTimeUpdate,
-  currentSegmentRef,
-}) {
+export default function AudioPlayer({ jobId, onTimeUpdate, currentSegmentRef }) {
   const audioRef = useRef(null);
   const progressRef = useRef(null);
 
@@ -96,11 +92,14 @@ export default function AudioPlayer({
   }, [isMuted]);
 
   // Seek to specific time
-  const seekTo = useCallback((time) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, Math.min(time, duration));
-    }
-  }, [duration]);
+  const seekTo = useCallback(
+    (time) => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = Math.max(0, Math.min(time, duration));
+      }
+    },
+    [duration]
+  );
 
   // Handle progress bar click
   const handleProgressClick = useCallback(
@@ -169,17 +168,11 @@ export default function AudioPlayer({
           />
 
           {/* Error display */}
-          {error && (
-            <div className="audio-error text-danger small mb-2">
-              {error}
-            </div>
-          )}
+          {error && <div className="audio-error text-danger small mb-2">{error}</div>}
 
           {/* Loading state */}
           {isLoading && !error && (
-            <div className="audio-loading text-muted small mb-2">
-              Loading audio...
-            </div>
+            <div className="audio-loading text-muted small mb-2">Loading audio...</div>
           )}
 
           {/* Progress bar */}
@@ -195,14 +188,8 @@ export default function AudioPlayer({
             tabIndex={0}
           >
             <div className="audio-progress-bar">
-              <div
-                className="audio-progress-fill"
-                style={{ width: `${progressPercentage}%` }}
-              />
-              <div
-                className="audio-progress-handle"
-                style={{ left: `${progressPercentage}%` }}
-              />
+              <div className="audio-progress-fill" style={{ width: `${progressPercentage}%` }} />
+              <div className="audio-progress-handle" style={{ left: `${progressPercentage}%` }} />
             </div>
           </div>
 
@@ -259,11 +246,7 @@ export default function AudioPlayer({
                 onClick={toggleMute}
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted || volume === 0 ? (
-                  <VolumeX size={18} />
-                ) : (
-                  <Volume2 size={18} />
-                )}
+                {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </Button>
               <input
                 type="range"
