@@ -6,8 +6,6 @@ for seeking and efficient playback in the browser.
 """
 import logging
 import os
-import stat
-from typing import Optional
 
 import aiofiles
 import aiofiles.os
