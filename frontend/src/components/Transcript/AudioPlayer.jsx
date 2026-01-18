@@ -2,16 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { Card, Button } from '@govtechsg/sgds-react';
 import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward } from 'lucide-react';
 import * as api from '../../services/api';
-
-/**
- * Format seconds to MM:SS display format
- */
-function formatTime(seconds) {
-  if (isNaN(seconds) || seconds === Infinity) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+import { formatTime } from '../../utils/timeFormat';
 
 /**
  * AudioPlayer component with playback controls and progress tracking.

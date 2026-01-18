@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { Badge, Button } from '@govtechsg/sgds-react';
 import { Pencil, Play } from 'lucide-react';
 import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors';
+import { formatTime } from '../../utils/timeFormat';
 
 export default function TranscriptSegment({
   segment,
@@ -59,14 +60,12 @@ export default function TranscriptSegment({
             className="p-0 segment-play-btn"
             onClick={handlePlayFromHere}
             title="Play from here"
-            style={{ color: '#2563eb' }}
+            style={{ color: 'var(--primary)' }}
           >
             <Play size={14} />
           </Button>
           <small className="text-muted segment-timestamp">
-            {Math.floor(segment.start / 60)}:
-            {String(Math.floor(segment.start % 60)).padStart(2, '0')} -{' '}
-            {Math.floor(segment.end / 60)}:{String(Math.floor(segment.end % 60)).padStart(2, '0')}
+            {formatTime(segment.start)} - {formatTime(segment.end)}
           </small>
           <Button
             variant="link"

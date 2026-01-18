@@ -6,6 +6,7 @@ for seeking and efficient playback in the browser.
 """
 import logging
 import os
+from pathlib import Path
 
 import aiofiles
 import aiofiles.os
@@ -146,12 +147,22 @@ async def stream_audio(
         raise HTTPException(status_code=404, detail=f"Job {uuid} not found")
 
     file_name = job['file_name']
-    file_path = os.path.join(settings.upload_dir, file_name)
 
-    # Check if file exists
-    if not await aiofiles.os.path.exists(file_path):
-        logger.error("Audio file not found: %s", file_path)
+    # Security: prevent path traversal attacks
+    try:
+        upload_dir_path = Path(settings.upload_dir).resolve(strict=True)
+        file_path = (upload_dir_path / file_name).resolve(strict=True)
+        # Ensure the resolved file path is within the upload directory
+        file_path.relative_to(upload_dir_path)
+    except (ValueError, FileNotFoundError):
+        logger.warning(
+            "Path traversal attempt or file not found for job %s: %s",
+            uuid,
+            file_name,
+        )
         raise HTTPException(status_code=404, detail="Audio file not found")
+
+    file_path = str(file_path)  # Convert Path to string for aiofiles compatibility
 
     # Get file size
     file_size = await get_file_size(file_path)
