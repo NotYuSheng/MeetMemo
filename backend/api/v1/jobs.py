@@ -15,6 +15,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     File,
+    Form,
     HTTPException,
     Query,
     UploadFile,
@@ -55,6 +56,8 @@ router = APIRouter()
 @router.post("/jobs", response_model=JobResponse, status_code=202)
 async def create_job(
     file: UploadFile = File(...),
+    model: str = Form(None),
+    language: str = Form(None),
     audio_service: AudioService = Depends(get_audio_service),
     job_repo: JobRepository = Depends(get_job_repository),
     settings: Settings = Depends(get_settings)
@@ -106,8 +109,8 @@ async def create_job(
                 ) from e
 
         # Create job record
-        await job_repo.create(job_uuid, file_name, file_hash, 'uploaded')
-        logger.info("Job %s created successfully", job_uuid)
+        await job_repo.create(job_uuid, file_name, file_hash, 'uploaded', model, language)
+        logger.info("Job %s created successfully with model=%s, language=%s", job_uuid, model, language)
 
         return JobResponse(
             uuid=job_uuid,
@@ -263,7 +266,8 @@ async def delete_job(
 async def start_transcription(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     background_tasks: BackgroundTasks,
-    model_name: str = Query(default="turbo"),
+    model_name: str = Query(default=None),
+    language: str = Query(default=None),
     transcription_service: TranscriptionService = Depends(get_transcription_service),
     job_repo: JobRepository = Depends(get_job_repository),
     settings: Settings = Depends(get_settings)
@@ -275,12 +279,17 @@ async def start_transcription(  # pylint: disable=too-many-arguments,too-many-po
 
     file_path = os.path.join(settings.upload_dir, job['file_name'])
 
+    # Use stored model_name and language from job, with fallbacks to query params or defaults
+    effective_model = job.get('model_name') or model_name or settings.whisper_model_name
+    effective_language = job.get('language') or language
+
     # Run transcription in background
     background_tasks.add_task(
         transcription_service.transcribe,
         uuid,
         file_path,
-        model_name
+        effective_model,
+        effective_language
     )
 
     return WorkflowActionResponse(

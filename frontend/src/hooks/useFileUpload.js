@@ -15,6 +15,7 @@ export default function useFileUpload(
 ) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState(null); // null = auto-detect
   const fileInputRef = useRef(null);
 
   // Handle file selection
@@ -67,7 +68,7 @@ export default function useFileUpload(
       }
 
       // Upload new file
-      const response = await api.uploadAudio(file);
+      const response = await api.uploadAudio(file, null, selectedLanguage);
       setJobId(response.uuid);
 
       // Backend returns 202 immediately and processes in background
@@ -111,5 +112,7 @@ export default function useFileUpload(
     handleDrop,
     handleUpload,
     setSelectedFile,
+    selectedLanguage,
+    setSelectedLanguage,
   };
 }

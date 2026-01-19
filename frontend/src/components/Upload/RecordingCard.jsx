@@ -8,8 +8,8 @@ export default function RecordingCard({ onStartRecording, isRecording }) {
 
   return (
     <Card className="h-100 record-card">
-      <Card.Body className="text-center p-5">
-        <div className="record-icon mb-4">
+      <Card.Body className="text-center p-5 d-flex flex-column justify-content-center">
+        <div className="record-icon my-4">
           <Mic size={64} strokeWidth={1.5} className="text-danger" />
         </div>
         <h4 className="mb-3">Record Live Meeting</h4>

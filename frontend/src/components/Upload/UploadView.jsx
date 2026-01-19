@@ -16,6 +16,8 @@ export default function UploadView({
   handleDeleteJob,
   onStartRecording,
   isRecording,
+  selectedLanguage,
+  onLanguageChange,
 }) {
   return (
     <Row className="justify-content-center">
@@ -37,6 +39,8 @@ export default function UploadView({
               handleFileSelect={handleFileSelect}
               handleDragOver={handleDragOver}
               handleDrop={handleDrop}
+              selectedLanguage={selectedLanguage}
+              onLanguageChange={onLanguageChange}
             />
           </Col>
 
