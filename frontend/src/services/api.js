@@ -127,10 +127,12 @@ async function apiCall(endpoint, options = {}) {
 }
 
 // Upload audio file
-export async function uploadAudio(file, model = 'turbo', language = null) {
+export async function uploadAudio(file, model = null, language = null) {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('model', model);
+  if (model) {
+    formData.append('model', model);
+  }
   if (language) {
     formData.append('language', language);
   }

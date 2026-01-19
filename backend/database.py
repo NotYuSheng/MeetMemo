@@ -61,19 +61,21 @@ async def add_job(
     file_name: str,
     status_code: int,
     file_hash: Optional[str] = None,
-    workflow_state: str = 'uploaded'
+    workflow_state: str = 'uploaded',
+    model_name: Optional[str] = None,
+    language: Optional[str] = None
 ) -> None:
     """Add new job to database with workflow state."""
     async with get_db() as conn:
         await conn.execute(
-            """INSERT INTO jobs (uuid, file_name, status_code, file_hash, workflow_state)
-               VALUES ($1, $2, $3, $4, $5)""",
-            uuid, file_name, status_code, file_hash, workflow_state
+            """INSERT INTO jobs (uuid, file_name, status_code, file_hash, workflow_state, model_name, language)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+            uuid, file_name, status_code, file_hash, workflow_state, model_name, language
         )
     hash_preview = file_hash[:16] if file_hash else 'None'
     logger.info(
-        "Added job %s with file %s (hash: %s...) state: %s",
-        uuid, file_name, hash_preview, workflow_state
+        "Added job %s with file %s (hash: %s...) state: %s, model: %s, language: %s",
+        uuid, file_name, hash_preview, workflow_state, model_name, language
     )
 
 
@@ -119,7 +121,7 @@ async def get_job(uuid: str) -> Optional[dict]:
         row = await conn.fetchrow(
             """SELECT uuid, file_name, status_code, processing_stage, error_message,
                       file_hash, workflow_state, current_step_progress,
-                      transcription_data, diarization_data, created_at
+                      transcription_data, diarization_data, model_name, language, created_at
                FROM jobs WHERE uuid = $1""",
             uuid
         )

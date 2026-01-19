@@ -68,7 +68,7 @@ export default function useFileUpload(
       }
 
       // Upload new file
-      const response = await api.uploadAudio(file, 'turbo', selectedLanguage);
+      const response = await api.uploadAudio(file, null, selectedLanguage);
       setJobId(response.uuid);
 
       // Backend returns 202 immediately and processes in background

@@ -16,6 +16,15 @@ from config import Settings
 
 logger = logging.getLogger(__name__)
 
+# Language name mapping for common languages
+LANGUAGE_NAMES = {
+    'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+    'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean', 'pt': 'Portuguese',
+    'ru': 'Russian', 'ar': 'Arabic', 'hi': 'Hindi', 'it': 'Italian',
+    'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish', 'vi': 'Vietnamese',
+    'sv': 'Swedish', 'id': 'Indonesian', 'th': 'Thai', 'uk': 'Ukrainian'
+}
+
 
 class SummaryService:
     """Service for LLM-based summarization and speaker identification."""
@@ -81,19 +90,10 @@ The recording was too brief to generate a detailed meeting summary."""
         url = f"{base_url.rstrip('/')}/v1/chat/completions"
         model_name = self.settings.llm_model_name
 
-        # Language name mapping for common languages
-        language_names = {
-            'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-            'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean', 'pt': 'Portuguese',
-            'ru': 'Russian', 'ar': 'Arabic', 'hi': 'Hindi', 'it': 'Italian',
-            'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish', 'vi': 'Vietnamese',
-            'sv': 'Swedish', 'id': 'Indonesian', 'th': 'Thai', 'uk': 'Ukrainian'
-        }
-
         # Determine language instruction
         language_instruction = ""
         if language and language != 'auto':
-            lang_name = language_names.get(language, language)
+            lang_name = LANGUAGE_NAMES.get(language, language)
             language_instruction = (
                 f"Generate the summary in {lang_name}, matching the language of the transcript. "
             )

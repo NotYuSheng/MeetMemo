@@ -33,7 +33,9 @@ class JobRepository:
         uuid: str,
         file_name: str,
         file_hash: Optional[str] = None,
-        workflow_state: str = 'uploaded'
+        workflow_state: str = 'uploaded',
+        model_name: Optional[str] = None,
+        language: Optional[str] = None
     ) -> None:
         """
         Create a new job.
@@ -43,8 +45,10 @@ class JobRepository:
             file_name: Uploaded file name
             file_hash: Optional file hash for duplicate detection
             workflow_state: Initial workflow state (default: 'uploaded')
+            model_name: Optional Whisper model name
+            language: Optional language code for transcription
         """
-        await add_job(uuid, file_name, 200, file_hash, workflow_state)
+        await add_job(uuid, file_name, 200, file_hash, workflow_state, model_name, language)
 
     async def get(self, uuid: str) -> Optional[dict]:
         """
