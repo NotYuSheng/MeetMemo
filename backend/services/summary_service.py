@@ -35,7 +35,8 @@ class SummaryService:
         self,
         transcript: str,
         custom_prompt: Optional[str] = None,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        language: Optional[str] = None
     ) -> str:
         """
         Summarize transcript using LLM.
@@ -44,6 +45,7 @@ class SummaryService:
             transcript: The transcript text to summarize
             custom_prompt: Optional custom user prompt
             system_prompt: Optional custom system prompt
+            language: ISO 639-1 language code or 'auto' for auto-detection
 
         Returns:
             Summary text in markdown format
@@ -79,11 +81,31 @@ The recording was too brief to generate a detailed meeting summary."""
         url = f"{base_url.rstrip('/')}/v1/chat/completions"
         model_name = self.settings.llm_model_name
 
+        # Language name mapping for common languages
+        language_names = {
+            'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+            'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean', 'pt': 'Portuguese',
+            'ru': 'Russian', 'ar': 'Arabic', 'hi': 'Hindi', 'it': 'Italian',
+            'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish', 'vi': 'Vietnamese',
+            'sv': 'Swedish', 'id': 'Indonesian', 'th': 'Thai', 'uk': 'Ukrainian'
+        }
+
+        # Determine language instruction
+        language_instruction = ""
+        if language and language != 'auto':
+            lang_name = language_names.get(language, language)
+            language_instruction = (
+                f"Generate the summary in {lang_name}, matching the language of the transcript. "
+            )
+        else:
+            language_instruction = "Generate the summary in the same language as the transcript. "
+
         # Default prompts
         default_system_prompt = (
             "You are a helpful assistant that summarizes meeting transcripts. "
             "You will give a concise summary of the key points, decisions made, "
             "and any action items, outputting it in markdown format. "
+            f"{language_instruction}"
             "IMPORTANT: Always use the exact speaker names provided in the transcript. "
             "Never change, substitute, or invent different names for speakers. "
             "CRITICAL: Only summarize what is actually present in the transcript. "

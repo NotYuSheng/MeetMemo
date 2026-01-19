@@ -263,7 +263,8 @@ async def delete_job(
 async def start_transcription(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     uuid: str,
     background_tasks: BackgroundTasks,
-    model_name: str = Query(default="turbo"),
+    model_name: str = Query(default=None),
+    language: str = Query(default=None),
     transcription_service: TranscriptionService = Depends(get_transcription_service),
     job_repo: JobRepository = Depends(get_job_repository),
     settings: Settings = Depends(get_settings)
@@ -275,12 +276,16 @@ async def start_transcription(  # pylint: disable=too-many-arguments,too-many-po
 
     file_path = os.path.join(settings.upload_dir, job['file_name'])
 
+    # Use default model from settings if not specified
+    effective_model = model_name if model_name else settings.whisper_model_name
+
     # Run transcription in background
     background_tasks.add_task(
         transcription_service.transcribe,
         uuid,
         file_path,
-        model_name
+        effective_model,
+        language
     )
 
     return WorkflowActionResponse(

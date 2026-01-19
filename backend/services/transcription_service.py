@@ -57,7 +57,8 @@ class TranscriptionService:
         self,
         job_uuid: str,
         file_path: str,
-        model_name: str = "turbo"
+        model_name: str = "turbo",
+        language: str = None
     ) -> dict:
         """
         Transcribe audio file with progress tracking.
@@ -66,6 +67,7 @@ class TranscriptionService:
             job_uuid: Job UUID
             file_path: Path to audio file
             model_name: Whisper model to use
+            language: Language code (ISO 639-1) or None for auto-detection
 
         Returns:
             Transcription data dict with text, segments, and language
@@ -75,7 +77,7 @@ class TranscriptionService:
         """
         try:
             await self.job_repo.update_workflow_state(job_uuid, 'transcribing', 0)
-            logger.info("Starting transcription for job %s", job_uuid)
+            logger.info("Starting transcription for job %s with language: %s", job_uuid, language or "auto")
 
             # Get cached model
             model = self.get_model(model_name)
@@ -87,7 +89,7 @@ class TranscriptionService:
                 None,
                 lambda: model.transcribe(
                     file_path,
-                    language="en",
+                    language=language,
                     fp16=True,
                     beam_size=1,
                     best_of=1,
@@ -106,7 +108,7 @@ class TranscriptionService:
             transcription_data = {
                 "text": asr.get("text", ""),
                 "segments": asr.get("segments", []),
-                "language": asr.get("language", "en")
+                "language": asr.get("language", language or "auto")
             }
             await self.job_repo.save_transcription(job_uuid, transcription_data)
 

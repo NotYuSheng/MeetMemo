@@ -127,10 +127,13 @@ async function apiCall(endpoint, options = {}) {
 }
 
 // Upload audio file
-export async function uploadAudio(file, model = 'turbo') {
+export async function uploadAudio(file, model = 'turbo', language = null) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('model', model);
+  if (language) {
+    formData.append('language', language);
+  }
 
   try {
     console.log('API Request: POST /jobs (File upload)');
@@ -429,8 +432,12 @@ export async function healthCheck() {
 // ============================================================================
 
 // Start transcription step
-export async function startTranscription(uuid, model = 'turbo') {
-  return await apiCall(`/jobs/${uuid}/transcriptions?model_name=${model}`, {
+export async function startTranscription(uuid, model = 'turbo', language = null) {
+  const params = new URLSearchParams({ model_name: model });
+  if (language) {
+    params.append('language', language);
+  }
+  return await apiCall(`/jobs/${uuid}/transcriptions?${params.toString()}`, {
     method: 'POST',
   });
 }

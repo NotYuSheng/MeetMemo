@@ -84,6 +84,8 @@ function App() {
     handleDrop,
     handleUpload,
     setSelectedFile,
+    selectedLanguage,
+    setSelectedLanguage,
   } = useFileUpload(
     setError,
     setCurrentStep,
@@ -179,6 +181,8 @@ function App() {
             handleDeleteJob={handleDeleteJob}
             onStartRecording={startRecording}
             isRecording={isRecording}
+            selectedLanguage={selectedLanguage}
+            onLanguageChange={setSelectedLanguage}
           />
         )}
 
