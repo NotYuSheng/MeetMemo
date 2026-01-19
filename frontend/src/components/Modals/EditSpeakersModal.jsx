@@ -26,6 +26,9 @@ export default function EditSpeakersModal({
             Replace speaker labels with actual names. AI suggestions are automatically applied when
             available.
           </p>
+          <p className="text-muted small mb-2">
+            <strong>Tip:</strong> To add a new speaker, use the ✏️ button on any transcript segment.
+          </p>
           {identifyingSpeakers && (
             <div className="text-muted small">
               <span
