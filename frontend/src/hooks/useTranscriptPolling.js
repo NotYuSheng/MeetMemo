@@ -124,28 +124,37 @@ export default function useTranscriptPolling(
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
           setProcessingProgress(100);
-          // Fetch the transcript
-          const transcriptData = await api.getTranscript(uuid);
-          if (
-            transcriptData.full_transcript &&
-            typeof transcriptData.full_transcript === 'string'
-          ) {
-            try {
-              const parsed = JSON.parse(transcriptData.full_transcript);
-              setTranscriptWithColors({ segments: parsed });
-            } catch (e) {
-              console.error('Failed to parse transcript:', e);
+
+          // Fetch the transcript with separate error handling
+          // (polling is already stopped, so we can't retry)
+          try {
+            const transcriptData = await api.getTranscript(uuid);
+            if (
+              transcriptData.full_transcript &&
+              typeof transcriptData.full_transcript === 'string'
+            ) {
+              try {
+                const parsed = JSON.parse(transcriptData.full_transcript);
+                setTranscriptWithColors({ segments: parsed });
+              } catch (e) {
+                console.error('Failed to parse transcript:', e);
+                setTranscriptWithColors(transcriptData);
+              }
+            } else {
               setTranscriptWithColors(transcriptData);
             }
-          } else {
-            setTranscriptWithColors(transcriptData);
-          }
-          setCurrentStep('transcript');
-          if (setUploading) setUploading(false);
+            setCurrentStep('transcript');
+            if (setUploading) setUploading(false);
 
-          // Auto-identify speakers in the background
-          if (autoIdentifySpeakers) {
-            autoIdentifySpeakers(uuid);
+            // Auto-identify speakers in the background
+            if (autoIdentifySpeakers) {
+              autoIdentifySpeakers(uuid);
+            }
+          } catch (err) {
+            console.error('Failed to fetch transcript:', err);
+            if (setUploading) setUploading(false);
+            setError(err.message || 'Failed to load transcript. Please refresh and try again.');
+            // Don't re-throw, we've already handled it
           }
         } else if (
           workflowState === 'error' ||
@@ -168,7 +177,8 @@ export default function useTranscriptPolling(
           err.message?.includes('timeout');
 
         // Retry logic for transient errors
-        if (isRetryable && retryCountRef.current < maxRetries) {
+        // Only retry if polling interval is still running
+        if (isRetryable && retryCountRef.current < maxRetries && pollingIntervalRef.current) {
           retryCountRef.current += 1;
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 10000);
           console.warn(`Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`);
