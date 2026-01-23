@@ -9,6 +9,7 @@ export default function useTranscriptPolling(
   setTranscriptWithColors,
   setCurrentStep,
   setUploading,
+  setError,
   autoIdentifySpeakers
 ) {
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -18,6 +19,12 @@ export default function useTranscriptPolling(
 
   // Track polling interval for cleanup
   const pollingIntervalRef = useRef(null);
+
+  // Track retry attempts for exponential backoff
+  // Retries transient errors (5xx, network issues) up to 3 times
+  // with exponential backoff: 1s, 2s, 4s (capped at 10s)
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   // Poll job status with workflow state tracking
   const startPolling = (uuid) => {
@@ -40,6 +47,9 @@ export default function useTranscriptPolling(
           status_code: status.status_code,
         });
 
+        // Reset retry count on successful poll
+        retryCountRef.current = 0;
+
         const workflowState = status.workflow_state || 'uploaded';
         const stepProgress = status.current_step_progress || 0;
 
@@ -56,6 +66,10 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start transcription:', err);
               workflowStepsStarted.current.delete('transcription');
+              setError('Failed to start transcription. Please try again.');
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+              if (setUploading) setUploading(false);
             }
           }
         } else if (workflowState === 'transcribing') {
@@ -74,6 +88,10 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start diarization:', err);
               workflowStepsStarted.current.delete('diarization');
+              setError('Failed to start speaker identification. Please try again.');
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+              if (setUploading) setUploading(false);
             }
           }
         } else if (workflowState === 'diarizing') {
@@ -92,6 +110,10 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start alignment:', err);
               workflowStepsStarted.current.delete('alignment');
+              setError('Failed to start alignment. Please try again.');
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+              if (setUploading) setUploading(false);
             }
           }
         } else if (workflowState === 'aligning') {
@@ -119,7 +141,7 @@ export default function useTranscriptPolling(
             setTranscriptWithColors(transcriptData);
           }
           setCurrentStep('transcript');
-          setUploading(false);
+          if (setUploading) setUploading(false);
 
           // Auto-identify speakers in the background
           if (autoIdentifySpeakers) {
@@ -137,9 +159,31 @@ export default function useTranscriptPolling(
         }
       } catch (err) {
         console.error('Polling error:', err);
+
+        // Determine if error is retryable (5xx errors, network errors)
+        const isRetryable =
+          err.category === 'SERVER_ERROR' ||
+          err.category === 'NETWORK_ERROR' ||
+          err.message?.includes('network') ||
+          err.message?.includes('timeout');
+
+        // Retry logic for transient errors
+        if (isRetryable && retryCountRef.current < maxRetries) {
+          retryCountRef.current += 1;
+          const backoffDelay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 10000);
+          console.warn(`Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`);
+          // Don't clear interval, let it retry on next tick
+          return;
+        }
+
+        // Stop polling after max retries or non-retryable error
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
-        setUploading(false);
+        if (setUploading) setUploading(false);
+
+        // Propagate error to UI
+        const errorMessage = err.message || 'An error occurred while processing. Please try again.';
+        setError(errorMessage);
       }
     };
 
