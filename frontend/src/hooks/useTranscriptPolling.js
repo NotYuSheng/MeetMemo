@@ -181,7 +181,9 @@ export default function useTranscriptPolling(
         if (isRetryable && retryCountRef.current < maxRetries && pollingIntervalRef.current) {
           retryCountRef.current += 1;
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 10000);
-          console.warn(`Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`);
+          console.warn(
+            `Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`
+          );
           // Don't clear interval, let it retry on next tick
           return;
         }
