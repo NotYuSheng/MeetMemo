@@ -27,6 +27,8 @@ cp example.env .env
 | `POSTGRES_PASSWORD` | PostgreSQL password | `changeme` |
 | `TIMEZONE_OFFSET` | Timezone offset from UTC (hours) | `+8` |
 | `NVIDIA_VISIBLE_DEVICES` | GPU selection (`all`, `0`, `0,1`) | `all` |
+| `HTTP_PORT` | External HTTP port for nginx | `80` |
+| `HTTPS_PORT` | External HTTPS port for nginx | `443` |
 
 ## Whisper Model Selection
 
@@ -167,25 +169,31 @@ llm_timeout: float = 60.0  # 60 seconds
 
 ## Port Configuration
 
-Default ports in `docker-compose.yml`:
+### Using Environment Variables (Recommended)
 
-```yaml
-nginx:
-  ports:
-    - "80:80"      # HTTP (redirects to HTTPS)
-    - "443:443"    # HTTPS
-```
+Configure external ports via `.env` file:
 
-To avoid conflicts with host services, change to:
-
-```yaml
-nginx:
-  ports:
-    - "8080:80"
-    - "8443:443"
+```bash
+HTTP_PORT=8080
+HTTPS_PORT=8443
 ```
 
 Then access via `https://localhost:8443`
+
+This is the recommended approach as it keeps your configuration in one place and doesn't require editing `docker-compose.yml`.
+
+### Manual Configuration
+
+Alternatively, you can edit `docker-compose.yml` directly:
+
+```yaml
+nginx:
+  ports:
+    - "8080:80"      # HTTP (redirects to HTTPS)
+    - "8443:443"     # HTTPS
+```
+
+**Note**: If both environment variables and manual configuration are present, environment variables take precedence.
 
 ## Nginx Configuration
 

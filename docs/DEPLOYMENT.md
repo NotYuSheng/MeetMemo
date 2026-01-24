@@ -301,7 +301,13 @@ sudo ufw enable
 
 If you need to run MeetMemo alongside other services, you can put another reverse proxy in front:
 
-1. Change docker-compose.yml ports:
+1. Change the external ports using environment variables in `.env`:
+```bash
+HTTP_PORT=8080
+HTTPS_PORT=8443
+```
+
+Alternatively, edit `docker-compose.yml` ports:
 ```yaml
 nginx:
   ports:
