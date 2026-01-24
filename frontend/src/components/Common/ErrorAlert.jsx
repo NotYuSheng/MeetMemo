@@ -1,17 +1,14 @@
-import { Row, Col, Alert } from '@govtechsg/sgds-react';
-import { AlertCircle } from 'lucide-react';
+import './ErrorAlert.css';
 
 export default function ErrorAlert({ error, onClose }) {
   if (!error) return null;
 
   return (
-    <Row className="justify-content-center mb-4">
-      <Col lg={10}>
-        <Alert variant="danger" dismissible onClose={onClose}>
-          <AlertCircle size={20} className="me-2" />
-          <strong>Error:</strong> {error}
-        </Alert>
-      </Col>
-    </Row>
+    <div className="error-alert" role="alert">
+      <strong>Error:</strong> {error}
+      <button onClick={onClose} className="error-alert-close-button" aria-label="Close">
+        ×
+      </button>
+    </div>
   );
 }
