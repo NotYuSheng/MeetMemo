@@ -97,7 +97,9 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start diarization:', err);
               workflowStepsStarted.current.delete('diarization');
-              handlePollingErrorAndStop('Failed to start speaker identification. Please try again.');
+              handlePollingErrorAndStop(
+                'Failed to start speaker identification. Please try again.'
+              );
               return;
             }
           }
@@ -190,7 +192,9 @@ export default function useTranscriptPolling(
         if (isRetryable && retryCountRef.current < maxRetries && pollingIntervalRef.current) {
           retryCountRef.current += 1;
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 10000);
-          console.warn(`Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`);
+          console.warn(
+            `Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`
+          );
           // Schedule retry with exponential backoff
           pollingIntervalRef.current = setTimeout(pollJobStatus, backoffDelay);
           return;
