@@ -72,7 +72,13 @@ function App() {
 
   // Transcript polling (defined before useFileUpload that depends on it)
   const { processingProgress, startPolling, stopPolling, setProcessingProgress } =
-    useTranscriptPolling(setTranscriptWithColors, setCurrentStep, null, setError, autoIdentifySpeakers);
+    useTranscriptPolling(
+      setTranscriptWithColors,
+      setCurrentStep,
+      null,
+      setError,
+      autoIdentifySpeakers
+    );
 
   // File upload
   const {
