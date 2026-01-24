@@ -45,14 +45,13 @@ export default function LoadingScreen({ backendError }) {
           <Col md={6} className="text-center">
             <Card className="shadow-sm border-0">
               <Card.Body className="p-5">
-                <FileText size={64} className="text-primary mb-4" />
+                <FileText size={64} className="text-primary my-4" />
                 <h2 className="mb-3">MeetMemo</h2>
                 <p className="text-muted mb-4">AI-Powered Meeting Transcription</p>
                 <div className="spinner-border text-primary mb-3" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
                 <p className="text-muted small">Connecting to backend services...</p>
-                <ProgressBar animated now={100} className="mt-3" style={{ height: '4px' }} />
               </Card.Body>
             </Card>
           </Col>
