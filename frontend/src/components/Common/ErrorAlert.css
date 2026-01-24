@@ -1,0 +1,25 @@
+.error-alert {
+  background-color: #f8d7da;
+  border: 1px solid #f5c2c7;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin: 1rem auto;
+  max-width: 800px;
+  color: #842029;
+  position: relative;
+}
+
+.error-alert-close-button {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #842029;
+}
+
+.error-alert-close-button:hover {
+  opacity: 0.7;
+}
