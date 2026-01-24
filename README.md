@@ -81,9 +81,9 @@ cp example.env .env
 HF_TOKEN=hf_your_token_here
 LLM_API_URL=http://localhost:1234
 LLM_MODEL_NAME=qwen2.5-14b-instruct
+LLM_API_KEY=
 
 # Optional
-LLM_API_KEY=                    # Leave empty for local LLMs
 POSTGRES_PASSWORD=changeme      # Change in production!
 TIMEZONE_OFFSET=+8              # Your timezone
 ```
