@@ -37,6 +37,8 @@ export default function useJobHistory(
       setRecentJobs(sortedJobs);
     } catch (err) {
       console.error('Failed to fetch recent jobs:', err);
+      // Don't show error to user - recent jobs is optional feature
+      // User can still upload new files even if history fails to load
     } finally {
       setLoadingJobs(false);
     }
