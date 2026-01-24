@@ -7,25 +7,19 @@
   --secondary: #64748b;
   --success: #2563eb;
   --muted: #94a3b8;
-  --border: #e2e8f0;
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
 }
 
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--background);
+  background-color: var(--bg-secondary);
 }
 
 /* Header */
 .app-header {
-  background-color: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -33,7 +27,7 @@
 
 /* Workflow Steps */
 .workflow-steps {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .steps-container {
@@ -50,7 +44,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   transition: all 0.3s ease;
 }
 
@@ -66,7 +60,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: #f1f5f9;
+  background-color: var(--gray-200);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -92,7 +86,7 @@
 .step-divider {
   width: 60px;
   height: 2px;
-  background-color: var(--border);
+  background-color: var(--border-color);
   margin: 0 1rem;
   margin-bottom: 24px;
 }
@@ -136,10 +130,10 @@
 
 /* Upload Dropzone */
 .upload-dropzone {
-  border: 2px dashed var(--border);
+  border: 2px dashed var(--border-color);
   border-radius: 0.5rem;
   padding: 2rem 1rem;
-  background-color: var(--background);
+  background-color: var(--bg-secondary);
   transition: all 0.3s ease;
 }
 
@@ -175,7 +169,7 @@
   align-items: center;
   padding: 1rem;
   margin-bottom: 0.5rem;
-  background-color: var(--background);
+  background-color: var(--bg-secondary);
   border-radius: 0.5rem;
   opacity: 0.5;
   transition: all 0.3s ease;
@@ -189,14 +183,14 @@
 
 .processing-step.completed {
   opacity: 1;
-  background-color: #f1f5f9;
+  background-color: var(--gray-100);
 }
 
 .step-number {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: var(--border);
+  background-color: var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,13 +233,13 @@
 }
 
 .transcript-segment {
-  background-color: var(--background);
+  background-color: var(--bg-secondary);
   border-radius: 0.5rem;
   transition: all 0.2s ease;
 }
 
 .transcript-segment:hover {
-  background-color: #f1f5f9;
+  background-color: var(--gray-100);
   transform: translateX(4px);
 }
 
@@ -253,7 +247,7 @@
 .summary-content h6 {
   color: var(--text-primary);
   font-weight: 600;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--border-color);
   padding-bottom: 0.5rem;
 }
 
@@ -279,12 +273,12 @@
 /* Footer */
 .app-footer {
   margin-top: auto;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-color);
 }
 
 /* Card improvements */
 .card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.3s ease;
 }
@@ -376,8 +370,8 @@
    ============================================================================ */
 
 .audio-player-card {
-  border: 1px solid var(--border);
-  background-color: var(--surface);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
 }
 
 .audio-player-card .card-body {
@@ -443,7 +437,7 @@
 }
 
 .audio-control-btn:disabled {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   opacity: 0.5;
 }
 

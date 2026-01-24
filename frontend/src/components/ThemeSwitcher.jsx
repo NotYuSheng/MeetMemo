@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Dropdown, Button } from '@govtechsg/sgds-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Dropdown } from '@govtechsg/sgds-react';
 import { Palette } from 'lucide-react';
 
 const THEMES = [
+  { id: 'system', name: 'System', color: 'linear-gradient(135deg, #ffffff 50%, #1a1a1a 50%)' },
   { id: 'default', name: 'Singapore Blue', color: '#0d6efd' },
   { id: 'teal', name: 'Teal Professional', color: '#00b8ad' },
   { id: 'purple', name: 'Purple Modern', color: '#9333ea' },
@@ -13,29 +14,57 @@ const THEMES = [
   { id: 'dark', name: 'Dark Mode', color: '#1a1a1a' },
 ];
 
-function ThemeSwitcher() {
-  const [currentTheme, setCurrentTheme] = useState('default');
+// Get system preference
+const getSystemTheme = () => {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+  return 'default';
+};
 
-  const changeTheme = (themeId) => {
-    setCurrentTheme(themeId);
-    if (themeId === 'default') {
+function ThemeSwitcher() {
+  // Initialize with saved theme or default to 'system'
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    return localStorage.getItem('meetmemo-theme') || 'system';
+  });
+
+  // Apply theme to document
+  const applyTheme = useCallback((themeId) => {
+    const themeToApply = themeId === 'system' ? getSystemTheme() : themeId;
+
+    if (themeToApply === 'default') {
       document.documentElement.removeAttribute('data-theme');
     } else {
-      document.documentElement.setAttribute('data-theme', themeId);
-    }
-    // Save to localStorage
-    localStorage.setItem('meetmemo-theme', themeId);
-  };
-
-  // Load theme from localStorage on mount
-  useState(() => {
-    const savedTheme = localStorage.getItem('meetmemo-theme');
-    if (savedTheme && savedTheme !== 'default') {
-      changeTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', themeToApply);
     }
   }, []);
 
-  const currentThemeName = THEMES.find((t) => t.id === currentTheme)?.name || 'Singapore Blue';
+  const changeTheme = (themeId) => {
+    setCurrentTheme(themeId);
+    applyTheme(themeId);
+    localStorage.setItem('meetmemo-theme', themeId);
+  };
+
+  // Apply theme on mount and when currentTheme changes
+  useEffect(() => {
+    applyTheme(currentTheme);
+  }, [currentTheme, applyTheme]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    if (currentTheme !== 'system') return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleChange = () => {
+      applyTheme('system');
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [currentTheme, applyTheme]);
+
+  const currentThemeName = THEMES.find((t) => t.id === currentTheme)?.name || 'System';
 
   return (
     <Dropdown>
@@ -57,8 +86,8 @@ function ThemeSwitcher() {
                   width: '20px',
                   height: '20px',
                   borderRadius: '4px',
-                  backgroundColor: theme.color,
-                  border: theme.id === 'dark' ? '1px solid #fff' : 'none',
+                  background: theme.color,
+                  border: theme.id === 'dark' || theme.id === 'system' ? '1px solid #aaa' : 'none',
                 }}
               />
               <span>{theme.name}</span>
