@@ -193,7 +193,7 @@ nginx:
     - "8443:443"     # HTTPS
 ```
 
-**Note**: If both environment variables and manual configuration are present, environment variables take precedence.
+**Note**: The `docker-compose.yml` file is already configured to use these environment variables with fallback defaults (80 for HTTP, 443 for HTTPS). Setting `HTTP_PORT` or `HTTPS_PORT` in your `.env` file will override these defaults.
 
 ## Nginx Configuration
 
