@@ -80,7 +80,9 @@ export default function useSpeakerManagement(jobId, transcript, setTranscriptWit
       }
     } catch (err) {
       console.error('Failed to auto-identify speakers:', err);
-      // Don't show error to user - this is a background enhancement
+      // Show error to user so they know speaker identification failed
+      const errorMessage = err.message || 'Failed to identify speakers automatically';
+      setError(errorMessage);
     } finally {
       setIdentifyingSpeakers(false);
     }
