@@ -70,9 +70,9 @@ function App() {
     handleRejectSuggestion,
   } = useSpeakerManagement(jobId, transcript, setTranscriptWithColors, setError);
 
-  // Transcript polling
+  // Transcript polling (defined before useFileUpload that depends on it)
   const { processingProgress, startPolling, stopPolling, setProcessingProgress } =
-    useTranscriptPolling(setTranscriptWithColors, setCurrentStep, () => {}, autoIdentifySpeakers);
+    useTranscriptPolling(setTranscriptWithColors, setCurrentStep, null, setError, autoIdentifySpeakers);
 
   // File upload
   const {

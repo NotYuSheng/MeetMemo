@@ -9,6 +9,7 @@ export default function useTranscriptPolling(
   setTranscriptWithColors,
   setCurrentStep,
   setUploading,
+  setError,
   autoIdentifySpeakers
 ) {
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -19,15 +20,32 @@ export default function useTranscriptPolling(
   // Track polling interval for cleanup
   const pollingIntervalRef = useRef(null);
 
+  // Track retry attempts for exponential backoff
+  // Retries transient errors (5xx, network issues) up to 3 times
+  // with exponential backoff: 1s, 2s, 4s (capped at 10s)
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+
   // Poll job status with workflow state tracking
   const startPolling = (uuid) => {
-    // Clear any existing polling interval
+    // Clear any existing polling timeout
     if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
+      clearTimeout(pollingIntervalRef.current);
     }
 
     // Reset the workflow steps tracker for this new job
     workflowStepsStarted.current = new Set();
+
+    // Reset retry count for new polling session
+    retryCountRef.current = 0;
+
+    // Helper function to handle errors and stop polling
+    const handlePollingErrorAndStop = (errorMessage) => {
+      setError(errorMessage);
+      clearTimeout(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+      if (setUploading) setUploading(false);
+    };
 
     // Define the polling function so we can call it immediately
     const pollJobStatus = async () => {
@@ -39,6 +57,9 @@ export default function useTranscriptPolling(
           available_actions: status.available_actions,
           status_code: status.status_code,
         });
+
+        // Reset retry count on successful poll
+        retryCountRef.current = 0;
 
         const workflowState = status.workflow_state || 'uploaded';
         const stepProgress = status.current_step_progress || 0;
@@ -56,6 +77,8 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start transcription:', err);
               workflowStepsStarted.current.delete('transcription');
+              handlePollingErrorAndStop('Failed to start transcription. Please try again.');
+              return;
             }
           }
         } else if (workflowState === 'transcribing') {
@@ -74,6 +97,8 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start diarization:', err);
               workflowStepsStarted.current.delete('diarization');
+              handlePollingErrorAndStop('Failed to start speaker identification. Please try again.');
+              return;
             }
           }
         } else if (workflowState === 'diarizing') {
@@ -92,6 +117,8 @@ export default function useTranscriptPolling(
             } catch (err) {
               console.error('Failed to start alignment:', err);
               workflowStepsStarted.current.delete('alignment');
+              handlePollingErrorAndStop('Failed to start alignment. Please try again.');
+              return;
             }
           }
         } else if (workflowState === 'aligning') {
@@ -99,59 +126,95 @@ export default function useTranscriptPolling(
           // Ensure at least 91% to show as active
           setProcessingProgress(Math.max(91, 90 + Math.floor(stepProgress * 0.1)));
         } else if (workflowState === 'completed') {
-          clearInterval(pollingIntervalRef.current);
+          clearTimeout(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
           setProcessingProgress(100);
-          // Fetch the transcript
-          const transcriptData = await api.getTranscript(uuid);
-          if (
-            transcriptData.full_transcript &&
-            typeof transcriptData.full_transcript === 'string'
-          ) {
-            try {
-              const parsed = JSON.parse(transcriptData.full_transcript);
-              setTranscriptWithColors({ segments: parsed });
-            } catch (e) {
-              console.error('Failed to parse transcript:', e);
+
+          // Fetch the transcript with separate error handling
+          // (polling is already stopped, so we can't retry)
+          try {
+            const transcriptData = await api.getTranscript(uuid);
+            if (
+              transcriptData.full_transcript &&
+              typeof transcriptData.full_transcript === 'string'
+            ) {
+              try {
+                const parsed = JSON.parse(transcriptData.full_transcript);
+                setTranscriptWithColors({ segments: parsed });
+              } catch (e) {
+                console.error('Failed to parse transcript:', e);
+                setTranscriptWithColors(transcriptData);
+              }
+            } else {
               setTranscriptWithColors(transcriptData);
             }
-          } else {
-            setTranscriptWithColors(transcriptData);
-          }
-          setCurrentStep('transcript');
-          setUploading(false);
+            setCurrentStep('transcript');
+            if (setUploading) setUploading(false);
 
-          // Auto-identify speakers in the background
-          if (autoIdentifySpeakers) {
-            autoIdentifySpeakers(uuid);
+            // Auto-identify speakers in the background
+            if (autoIdentifySpeakers) {
+              autoIdentifySpeakers(uuid);
+            }
+          } catch (err) {
+            console.error('Failed to fetch transcript:', err);
+            if (setUploading) setUploading(false);
+            setError(err.message || 'Failed to load transcript. Please refresh and try again.');
+            // Don't re-throw, we've already handled it
           }
+          return;
         } else if (
           workflowState === 'error' ||
           status.status_code === '500' ||
           status.status_code === 500
         ) {
-          clearInterval(pollingIntervalRef.current);
+          clearTimeout(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
           const errorMsg = status.error_message || 'Processing failed. Please try again.';
           throw new Error(errorMsg);
         }
+
+        // Schedule next poll with normal interval
+        pollingIntervalRef.current = setTimeout(pollJobStatus, 2000);
       } catch (err) {
         console.error('Polling error:', err);
-        clearInterval(pollingIntervalRef.current);
+
+        // Determine if error is retryable (5xx errors, network errors)
+        const isRetryable =
+          err.category === 'SERVER_ERROR' ||
+          err.category === 'NETWORK_ERROR' ||
+          err.message?.includes('network') ||
+          err.message?.includes('timeout');
+
+        // Retry logic for transient errors
+        // Only retry if polling timeout is still running
+        if (isRetryable && retryCountRef.current < maxRetries && pollingIntervalRef.current) {
+          retryCountRef.current += 1;
+          const backoffDelay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 10000);
+          console.warn(`Retrying in ${backoffDelay}ms (attempt ${retryCountRef.current}/${maxRetries})...`);
+          // Schedule retry with exponential backoff
+          pollingIntervalRef.current = setTimeout(pollJobStatus, backoffDelay);
+          return;
+        }
+
+        // Stop polling after max retries or non-retryable error
+        clearTimeout(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
-        setUploading(false);
+        if (setUploading) setUploading(false);
+
+        // Propagate error to UI
+        const errorMessage = err.message || 'An error occurred while processing. Please try again.';
+        setError(errorMessage);
       }
     };
 
-    // Call immediately to avoid initial delay, then set up interval
+    // Call immediately to avoid initial delay
     pollJobStatus();
-    pollingIntervalRef.current = setInterval(pollJobStatus, 2000);
   };
 
   // Stop polling
   const stopPolling = () => {
     if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
+      clearTimeout(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
   };
@@ -160,7 +223,7 @@ export default function useTranscriptPolling(
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+        clearTimeout(pollingIntervalRef.current);
       }
     };
   }, []);
