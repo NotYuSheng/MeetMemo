@@ -1,13 +1,14 @@
 """
-Transcription service using OpenAI Whisper.
+Transcription service using faster-whisper.
 
 This service handles Whisper model loading, caching, and transcription processing
-with progress tracking.
+with progress tracking. Uses faster-whisper with CTranslate2 for 4x performance
+improvement over openai-whisper.
 """
 import asyncio
 import logging
 
-import whisper
+from faster_whisper import WhisperModel
 
 from config import Settings
 from database import update_error
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class TranscriptionService:
-    """Service for audio transcription using Whisper."""
+    """Service for audio transcription using faster-whisper."""
 
     def __init__(self, settings: Settings, job_repo: JobRepository):
         """
@@ -33,23 +34,34 @@ class TranscriptionService:
 
     def get_model(self, model_name: str = "turbo"):
         """
-        Get cached Whisper model.
+        Get cached faster-whisper model.
 
         Args:
-            model_name: Name of the Whisper model (turbo, base, small, etc.)
+            model_name: Name of the Whisper model (turbo, large-v3, base, small, etc.)
 
         Returns:
-            Loaded Whisper model
+            Loaded WhisperModel instance
         """
         if model_name not in self._model_cache:
-            logger.info("Loading Whisper model: %s", model_name)
-            model = whisper.load_model(model_name)
-            model = model.to(self.settings.device)
+            logger.info("Loading faster-whisper model: %s", model_name)
+
+            # Determine compute type based on device
+            compute_type = self.settings.compute_type if hasattr(self.settings, 'compute_type') else None
+            if compute_type is None:
+                compute_type = "float16" if "cuda" in self.settings.device else "int8"
+
+            # Load model with faster-whisper
+            model = WhisperModel(
+                model_name,
+                device=self.settings.device.split(':')[0],  # Extract 'cuda' or 'cpu'
+                compute_type=compute_type
+            )
             self._model_cache[model_name] = model
             logger.info(
-                "Whisper model %s loaded successfully on %s",
+                "faster-whisper model %s loaded successfully on %s with %s precision",
                 model_name,
-                self.settings.device
+                self.settings.device,
+                compute_type
             )
         return self._model_cache[model_name]
 
@@ -61,7 +73,7 @@ class TranscriptionService:
         language: str = None
     ) -> dict:
         """
-        Transcribe audio file with progress tracking.
+        Transcribe audio file with progress tracking using faster-whisper.
 
         Args:
             job_uuid: Job UUID
@@ -82,33 +94,58 @@ class TranscriptionService:
             # Get cached model
             model = self.get_model(model_name)
 
-            # Transcribe with optimized settings - run in executor to avoid blocking event loop
+            # Transcribe with faster-whisper - run in executor to avoid blocking event loop
             await self.job_repo.update_step_progress(job_uuid, 10)
             loop = asyncio.get_event_loop()
-            asr = await loop.run_in_executor(
+
+            # faster-whisper returns (segments_generator, info) instead of dict
+            segments_gen, info = await loop.run_in_executor(
                 None,
                 lambda: model.transcribe(
                     file_path,
                     language=language,
-                    fp16=True,
                     beam_size=1,
                     best_of=1,
                     temperature=0.0,
+                    vad_filter=False,  # Disable VAD to match openai-whisper behavior
+                    condition_on_previous_text=False,
                     no_speech_threshold=0.6,
-                    logprob_threshold=-1.0,
-                    compression_ratio_threshold=2.4,
-                    condition_on_previous_text=False
+                    log_prob_threshold=-1.0,
+                    compression_ratio_threshold=2.4
                 )
             )
+
+            await self.job_repo.update_step_progress(job_uuid, 50)
+
+            # Convert generator to list and build compatible output format
+            segments_list = []
+            full_text = []
+
+            for segment in segments_gen:
+                # Build segment dict matching openai-whisper format
+                segment_dict = {
+                    "start": segment.start,
+                    "end": segment.end,
+                    "text": segment.text,
+                    "id": segment.id,
+                    "seek": segment.seek,
+                    "tokens": segment.tokens,
+                    "temperature": segment.temperature,
+                    "avg_logprob": segment.avg_logprob,
+                    "compression_ratio": segment.compression_ratio,
+                    "no_speech_prob": segment.no_speech_prob
+                }
+                segments_list.append(segment_dict)
+                full_text.append(segment.text)
 
             await self.job_repo.update_step_progress(job_uuid, 90)
             logger.info("Transcription complete for job %s", job_uuid)
 
-            # Save transcription data to database
+            # Build transcription data matching openai-whisper output format
             transcription_data = {
-                "text": asr.get("text", ""),
-                "segments": asr.get("segments", []),
-                "language": asr.get("language", language or "auto")
+                "text": "".join(full_text),
+                "segments": segments_list,
+                "language": info.language if info.language else (language or "auto")
             }
             await self.job_repo.save_transcription(job_uuid, transcription_data)
 

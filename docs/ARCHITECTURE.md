@@ -25,7 +25,7 @@ MeetMemo is a containerized application with four main services orchestrated via
 │   React Frontend    │         │   FastAPI Backend   │
 │  (meetmemo-frontend)│         │  (meetmemo-backend) │
 │                     │         │                     │
-│  • Recording UI     │         │  • Whisper (turbo)  │
+│  • Recording UI     │         │  • faster-whisper   │
 │  • Transcript View  │         │  • PyAnnote 3.1     │
 │  • Summary Display  │         │  • LLM Integration  │
 │  • Export Options   │         │  • PDF Generation   │
@@ -104,7 +104,7 @@ Business logic with dependency injection:
 
 | Service | Purpose |
 |---------|---------|
-| `transcription_service.py` | Whisper model management and transcription |
+| `transcription_service.py` | faster-whisper model management and transcription |
 | `diarization_service.py` | PyAnnote pipeline and speaker diarization |
 | `alignment_service.py` | Align transcription with diarization data |
 | `summary_service.py` | LLM integration for summarization |
@@ -230,7 +230,7 @@ src/
 | **Architecture** | Layered architecture with Repository and Service patterns |
 | **Frontend** | React 19, Vite, Lucide Icons, jsPDF |
 | **Reverse Proxy** | Nginx with SSL/TLS (self-signed certs included) |
-| **ML Models** | OpenAI Whisper (turbo), PyAnnote.audio 3.1 |
+| **ML Models** | faster-whisper with CTranslate2 (4x speedup), PyAnnote.audio 3.1 |
 | **Database** | PostgreSQL 16 with asyncpg |
 | **Containerization** | Docker, Docker Compose, NVIDIA Container Toolkit |
 | **PDF Generation** | ReportLab, svglib |
@@ -248,7 +248,7 @@ src/
    ↓
 4. Create job in PostgreSQL
    ↓
-5. Whisper Transcription
+5. faster-whisper Transcription (CTranslate2)
    ↓
 6. PyAnnote Diarization
    ↓
@@ -293,8 +293,8 @@ All runtime data is stored in Docker volumes (not local directories):
 | `meetmemo_summary` | AI summaries | `/app/summary` |
 | `meetmemo_exports` | PDF/Markdown exports | `/app/exports` |
 | `meetmemo_logs` | Application logs | `/app/logs` |
-| `meetmemo_whisper_cache` | Whisper model cache | `/root/.cache/whisper` |
-| `meetmemo_huggingface_cache` | PyAnnote model cache | `/root/.cache/huggingface` |
+| `meetmemo_whisper_cache` | Legacy cache (unused) | `/root/.cache/whisper` |
+| `meetmemo_huggingface_cache` | Whisper + PyAnnote models | `/root/.cache/huggingface` |
 | `meetmemo_torch_cache` | PyTorch cache | `/root/.cache/torch` |
 | `meetmemo_postgres_data` | PostgreSQL data | `/var/lib/postgresql/data` |
 
@@ -314,7 +314,8 @@ All runtime data is stored in Docker volumes (not local directories):
 - **Model Caching**: ML models loaded once at startup
 - **HTTP Client Reuse**: Single shared HTTP client for LLM calls
 - **Background Cleanup**: Scheduled cleanup of old jobs and exports
-- **GPU Acceleration**: CUDA support for Whisper and PyAnnote
+- **GPU Acceleration**: CUDA support with CTranslate2 optimization (4x faster than openai-whisper)
+- **Quantization**: Configurable FP16/INT8 precision for memory/speed trade-offs
 
 ## Scalability Considerations
 

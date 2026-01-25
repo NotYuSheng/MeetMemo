@@ -36,7 +36,7 @@ A meeting transcription application that runs entirely offline. It converts spee
 | Feature | Description |
 |---------|-------------|
 | **Audio Recording & Upload** | Record meetings directly in browser or upload files (MP3, WAV, M4A, FLAC, WebM, OGG) |
-| **Speech Recognition** | OpenAI Whisper (turbo model) for high-accuracy transcription in 99+ languages |
+| **Speech Recognition** | faster-whisper with CTranslate2 (4x speedup, 99+ languages) |
 | **Speaker Diarization** | PyAnnote.audio 3.1 for automatic speaker identification and labeling |
 | **Audio Playback & Sync** | Built-in audio player with transcript synchronization - click any segment to jump to that timestamp |
 | **AI Summarization** | LLM-powered summaries with key points, action items, and insights |
@@ -53,7 +53,7 @@ A meeting transcription application that runs entirely offline. It converts spee
 |----------|---------|---------|
 | Docker | Latest | Container runtime |
 | Docker Compose | Latest | Multi-container orchestration |
-| NVIDIA GPU | CUDA 11.8+ | ML model inference (optional, CPU fallback available) |
+| NVIDIA GPU | CUDA 12.1+ | ML model inference (optional, CPU fallback available) |
 | LLM Server | Any OpenAI-compatible API | Summarization (e.g., LM Studio, Ollama, OpenAI) |
 
 **Minimum Hardware:**
@@ -132,7 +132,7 @@ MP3, WAV, M4A, FLAC, WebM, OGG (max 100MB default)
 | **Architecture** | Layered architecture (API → Service → Repository → Database) |
 | **Frontend** | React 19, Vite, Lucide Icons |
 | **Reverse Proxy** | Nginx with SSL/TLS (self-signed certs included) |
-| **ML Models** | OpenAI Whisper (turbo), PyAnnote.audio 3.1 |
+| **ML Models** | faster-whisper with CTranslate2, PyAnnote.audio 3.1 |
 | **Database** | PostgreSQL 16 with asyncpg |
 | **Containerization** | Docker, Docker Compose, NVIDIA Container Toolkit |
 | **PDF Generation** | ReportLab, svglib |
