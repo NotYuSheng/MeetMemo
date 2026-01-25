@@ -46,9 +46,10 @@ class TranscriptionService:
             logger.info("Loading faster-whisper model: %s", model_name)
 
             # Determine compute type based on device
-            compute_type = self.settings.compute_type if hasattr(self.settings, 'compute_type') else None
-            if compute_type is None:
-                compute_type = "float16" if "cuda" in self.settings.device else "int8"
+            compute_type = self.settings.compute_type
+            if "cpu" in self.settings.device and compute_type == "float16":
+                logger.warning("compute_type 'float16' not supported on CPU. Falling back to 'int8'.")
+                compute_type = "int8"
 
             # Load model with faster-whisper
             model = WhisperModel(
@@ -123,18 +124,7 @@ class TranscriptionService:
 
             for segment in segments_gen:
                 # Build segment dict matching openai-whisper format
-                segment_dict = {
-                    "start": segment.start,
-                    "end": segment.end,
-                    "text": segment.text,
-                    "id": segment.id,
-                    "seek": segment.seek,
-                    "tokens": segment.tokens,
-                    "temperature": segment.temperature,
-                    "avg_logprob": segment.avg_logprob,
-                    "compression_ratio": segment.compression_ratio,
-                    "no_speech_prob": segment.no_speech_prob
-                }
+                segment_dict = segment._asdict()
                 segments_list.append(segment_dict)
                 full_text.append(segment.text)
 
