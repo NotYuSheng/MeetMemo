@@ -18,7 +18,7 @@ export default function TranscriptSegment({
     if (isActive && segmentRef.current) {
       segmentRef.current.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
+        block: 'nearest',
       });
     }
   }, [isActive]);
