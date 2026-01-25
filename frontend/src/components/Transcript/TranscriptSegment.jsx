@@ -16,9 +16,12 @@ export default function TranscriptSegment({
   // Auto-scroll to active segment
   useEffect(() => {
     if (isActive && segmentRef.current) {
+      // Respect user's motion preference for accessibility
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       segmentRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'nearest',
       });
     }
   }, [isActive]);
