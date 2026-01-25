@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     hf_token: str
     whisper_model_name: str = "turbo"
     pyannote_model_name: str = "pyannote/speaker-diarization-3.1"
+    compute_type: str = "float16"  # Options: float16, int8, int8_float16
 
     # File Storage Paths
     upload_dir: str = "audiofiles"

@@ -25,6 +25,8 @@ cp example.env .env
 |----------|-------------|---------|
 | `LLM_API_KEY` | API key for LLM service | Empty (none) |
 | `POSTGRES_PASSWORD` | PostgreSQL password | `changeme` |
+| `WHISPER_MODEL_NAME` | Whisper model for transcription | `turbo` |
+| `COMPUTE_TYPE` | Inference precision (float16/int8) | `float16` |
 | `TIMEZONE_OFFSET` | Timezone offset from UTC (hours) | `+8` |
 | `NVIDIA_VISIBLE_DEVICES` | GPU selection (`all`, `0`, `0,1`) | `all` |
 | `HTTP_PORT` | External HTTP port for nginx | `80` |
@@ -32,7 +34,9 @@ cp example.env .env
 
 ## Whisper Model Selection
 
-Edit `backend/config.py` or set `WHISPER_MODEL_NAME` environment variable:
+MeetMemo uses **faster-whisper** with CTranslate2 for 4x faster transcription compared to openai-whisper, while maintaining the same accuracy and 99+ language support.
+
+Set `WHISPER_MODEL_NAME` environment variable:
 
 | Model | VRAM | Speed | Accuracy | Use Case |
 |-------|------|-------|----------|----------|
@@ -42,6 +46,24 @@ Edit `backend/config.py` or set `WHISPER_MODEL_NAME` environment variable:
 | `medium` | ~5GB | Slow | High | Important recordings |
 | `large` | ~10GB | Slowest | Highest | Critical accuracy needs |
 | **`turbo`** | **~6GB** | **Fast** | **High** | **Default - Best balance** |
+| `large-v3` | ~10GB | Very Slow | Highest+ | 10-20% better than large-v2 |
+
+### Compute Type Configuration
+
+Control inference precision with `COMPUTE_TYPE` environment variable:
+
+| Compute Type | Memory Usage | Speed | Quality | Best For |
+|-------------|--------------|-------|---------|----------|
+| **`float16`** | Medium | Fast | High | **GPU (default, recommended)** |
+| `int8` | Low | Very Fast | Good | CPU or low VRAM |
+| `int8_float16` | Low-Medium | Fast | Good-High | Hybrid scenarios |
+
+**Example:**
+```bash
+# In .env file
+WHISPER_MODEL_NAME=turbo
+COMPUTE_TYPE=float16
+```
 
 ## File Storage Limits
 
@@ -76,8 +98,8 @@ All runtime data is stored in named Docker volumes:
 | `meetmemo_summary` | Summary files | `/app/summary` |
 | `meetmemo_exports` | PDF/Markdown exports | `/app/exports` |
 | `meetmemo_logs` | Application logs | `/app/logs` |
-| `meetmemo_whisper_cache` | Whisper models | `/root/.cache/whisper` |
-| `meetmemo_huggingface_cache` | PyAnnote models | `/root/.cache/huggingface` |
+| `meetmemo_whisper_cache` | Legacy (unused) | `/root/.cache/whisper` |
+| `meetmemo_huggingface_cache` | Whisper + PyAnnote models | `/root/.cache/huggingface` |
 | `meetmemo_torch_cache` | PyTorch cache | `/root/.cache/torch` |
 | `meetmemo_postgres_data` | Database | `/var/lib/postgresql/data` |
 
