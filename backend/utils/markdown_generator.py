@@ -8,7 +8,7 @@ from datetime import datetime
 from io import BytesIO
 
 from config import Settings, get_settings
-from utils.formatters import format_speaker_name
+from utils.formatters import format_speaker_name, format_timestamp
 
 
 def generate_summary_markdown(
@@ -58,9 +58,9 @@ def generate_summary_markdown(
         for entry in transcript_data:
             speaker = format_speaker_name(entry.get('speaker', 'Unknown Speaker'))
             text = entry.get('text', '')
-            start_time = entry.get('start', '0.00')
-            end_time = entry.get('end', '0.00')
-            markdown_content += f"**{speaker}** *({start_time}s - {end_time}s)*: {text}\n\n"
+            start_time = format_timestamp(entry.get('start', '0.00'))
+            end_time = format_timestamp(entry.get('end', '0.00'))
+            markdown_content += f"**{speaker}** *({start_time} - {end_time})*: {text}\n\n"
 
     # Return as BytesIO buffer
     return BytesIO(markdown_content.encode('utf-8'))
@@ -107,9 +107,9 @@ def generate_transcript_markdown(
         for entry in transcript_data:
             speaker = format_speaker_name(entry.get('speaker', 'Unknown Speaker'))
             text = entry.get('text', '')
-            start_time = entry.get('start', '0.00')
-            end_time = entry.get('end', '0.00')
-            markdown_content += f"**{speaker}** *({start_time}s - {end_time}s)*: {text}\n\n"
+            start_time = format_timestamp(entry.get('start', '0.00'))
+            end_time = format_timestamp(entry.get('end', '0.00'))
+            markdown_content += f"**{speaker}** *({start_time} - {end_time})*: {text}\n\n"
 
     # Return as BytesIO buffer
     return BytesIO(markdown_content.encode('utf-8'))

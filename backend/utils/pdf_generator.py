@@ -20,7 +20,7 @@ from reportlab.platypus.frames import Frame
 from svglib.svglib import svg2rlg
 
 from config import Settings, get_settings
-from utils.formatters import format_speaker_name
+from utils.formatters import format_speaker_name, format_timestamp
 
 
 def _process_markdown_text(text: str) -> str:
@@ -308,10 +308,10 @@ def _add_transcript_section(
     for entry in transcript_data:
         speaker = format_speaker_name(entry.get('speaker', 'Unknown Speaker'))
         text = entry.get('text', '')
-        start_time = entry.get('start', '0.00')
-        end_time = entry.get('end', '0.00')
+        start_time = format_timestamp(entry.get('start', '0.00'))
+        end_time = format_timestamp(entry.get('end', '0.00'))
 
-        timestamp_text = f"[{start_time}s - {end_time}s]"
+        timestamp_text = f"[{start_time} - {end_time}]"
         speaker_line = f"<b>{speaker}</b> {timestamp_text}"
         story.append(Paragraph(speaker_line, styles['speaker']))
         story.append(Paragraph(text, styles['transcript']))
