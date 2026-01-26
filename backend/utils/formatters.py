@@ -37,6 +37,30 @@ def format_result(diarized: list) -> list[dict]:
     return full_transcript
 
 
+def format_timestamp(seconds_str: str) -> str:
+    """
+    Format timestamp from seconds to MM:SS format.
+
+    Args:
+        seconds_str: Time in seconds as string (e.g., "65.50")
+
+    Returns:
+        Formatted timestamp in MM:SS format (e.g., "1:05")
+
+    Example:
+        >>> format_timestamp("65.50")
+        '1:05'
+        >>> format_timestamp("5.25")
+        '0:05'
+    """
+    try:
+        total_seconds = max(0, int(float(seconds_str)))
+        minutes, seconds = divmod(total_seconds, 60)
+        return f"{minutes}:{seconds:02d}"
+    except (ValueError, TypeError):
+        return "0:00"
+
+
 def format_speaker_name(speaker_name: str) -> str:
     """
     Format speaker name from SPEAKER_XX format to 'Speaker X' format.
