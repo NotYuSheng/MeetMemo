@@ -54,9 +54,8 @@ def format_timestamp(seconds_str: str) -> str:
         '0:05'
     """
     try:
-        total_seconds = float(seconds_str)
-        minutes = int(total_seconds // 60)
-        seconds = int(total_seconds % 60)
+        total_seconds = max(0, int(float(seconds_str)))
+        minutes, seconds = divmod(total_seconds, 60)
         return f"{minutes}:{seconds:02d}"
     except (ValueError, TypeError):
         return "0:00"
