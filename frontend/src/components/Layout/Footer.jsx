@@ -7,7 +7,7 @@ export default function Footer() {
         <Row>
           <Col className="text-center text-muted">
             <small>
-              MeetMemo &copy; 2024 - AI-Powered Meeting Transcription with Speaker Diarization
+              MeetMemo &copy; 2025 - AI-Powered Meeting Transcription with Speaker Diarization
             </small>
           </Col>
         </Row>
