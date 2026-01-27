@@ -156,6 +156,15 @@ def get_export_service(
     return ExportService(settings, export_repo)
 
 
+def get_live_service(
+    settings: Settings = Depends(get_settings),
+    transcription_service=Depends(get_transcription_service),
+):
+    """Get LiveService instance."""
+    from services.live_service import LiveService
+    return LiveService(settings, transcription_service)
+
+
 def get_cleanup_service(
     settings: Settings = Depends(get_settings),
     job_repo = Depends(get_job_repository),

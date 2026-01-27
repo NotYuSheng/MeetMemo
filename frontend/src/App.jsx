@@ -189,6 +189,7 @@ function App() {
             isRecording={isRecording}
             selectedLanguage={selectedLanguage}
             onLanguageChange={setSelectedLanguage}
+            setError={setError}
           />
         )}
 

@@ -18,6 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.v1 import api_router
+from api.ws import ws_router
 from config import get_settings
 from database import close_database, init_database
 from dependencies import close_http_client, init_http_client
@@ -263,6 +264,10 @@ app.add_middleware(
 
 # Register v1 API routes
 app.include_router(api_router, prefix="/api/v1")
+
+# Register WebSocket routes
+app.include_router(ws_router, prefix="/ws")
+
 
 # Health check root
 @app.get("/")

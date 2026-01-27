@@ -1,6 +1,7 @@
 import { Row, Col } from '@govtechsg/sgds-react';
 import FileUploadCard from './FileUploadCard';
 import RecordingCard from './RecordingCard';
+import LiveAudioControls from './LiveAudioControls';
 import RecentJobsList from './RecentJobsList';
 
 export default function UploadView({
@@ -18,6 +19,7 @@ export default function UploadView({
   isRecording,
   selectedLanguage,
   onLanguageChange,
+  setError,
 }) {
   return (
     <Row className="justify-content-center">
@@ -30,7 +32,7 @@ export default function UploadView({
           </p>
         </div>
 
-        <Row className="g-4">
+        <Row className="g-4 mb-4">
           <Col md={6}>
             <FileUploadCard
               uploading={uploading}
@@ -45,7 +47,10 @@ export default function UploadView({
           </Col>
 
           <Col md={6}>
-            <RecordingCard onStartRecording={onStartRecording} isRecording={isRecording} />
+            <div className="d-flex flex-column h-100 gap-4">
+              <RecordingCard onStartRecording={onStartRecording} isRecording={isRecording} />
+              <LiveAudioControls onError={setError} />
+            </div>
           </Col>
         </Row>
 

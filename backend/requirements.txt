@@ -18,3 +18,4 @@ asyncpg==0.29.0
 pydub==0.25.1
 reportlab==4.2.5
 svglib==1.5.1
+websockets==14.1
