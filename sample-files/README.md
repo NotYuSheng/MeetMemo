@@ -22,7 +22,8 @@ This directory contains example outputs demonstrating MeetMemo's capabilities.
 
 | File | Description |
 |------|-------------|
-| `GenAI_Week_-_AI_x_SaaS_Summary.md` | AI-generated summary with key insights and action items |
+| `GenAI_Week_-_AI_x_SaaS_Summary.pdf` | Professional PDF summary with key insights and action items |
+| `GenAI_Week_-_AI_x_SaaS_Summary.md` | Markdown version of the summary |
 
 ## Demo
 
