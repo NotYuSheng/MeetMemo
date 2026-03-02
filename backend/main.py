@@ -159,7 +159,7 @@ async def lifespan(fastapi_app: FastAPI):  # pylint: disable=unused-argument
         )
 
         try:
-            transcription_service.get_model("turbo")
+            transcription_service.get_model(app_settings.whisper_model_name)
             logger.info("Whisper model preloaded successfully")
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to preload Whisper model: %s", e)
