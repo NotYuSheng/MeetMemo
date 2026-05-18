@@ -1,6 +1,6 @@
 import { Card, Badge } from '@govtechsg/sgds-react';
 import { FileText } from 'lucide-react';
-import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors';
+import { getSpeakerColor, getSpeakerBorderColor } from '../../utils/speakerColors';
 
 export default function CollapsibleTranscript({
   transcript,
@@ -31,7 +31,7 @@ export default function CollapsibleTranscript({
                   style={{ borderColor: getSpeakerBorderColor(segment.speaker) }}
                 >
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>{segment.speaker}</Badge>
+                    <Badge style={{ backgroundColor: getSpeakerColor(segment.speaker).bg, color: getSpeakerColor(segment.speaker).text }}>{segment.speaker}</Badge>
                     <small className="text-muted">
                       {Math.floor(segment.start / 60)}:
                       {String(Math.floor(segment.start % 60)).padStart(2, '0')} -{' '}

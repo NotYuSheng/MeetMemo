@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Badge, Button } from '@govtechsg/sgds-react';
 import { Pencil, Play } from 'lucide-react';
-import { getSpeakerBadgeVariant, getSpeakerBorderColor } from '../../utils/speakerColors';
+import { getSpeakerColor, getSpeakerBorderColor } from '../../utils/speakerColors';
 import { formatTime } from '../../utils/timeFormat';
 
 export default function TranscriptSegment({
@@ -49,7 +49,7 @@ export default function TranscriptSegment({
     >
       <div className="d-flex justify-content-between align-items-center mb-2">
         <div className="d-flex align-items-center gap-2">
-          <Badge bg={getSpeakerBadgeVariant(segment.speaker)}>{segment.speaker}</Badge>
+          <Badge style={{ backgroundColor: getSpeakerColor(segment.speaker).bg, color: getSpeakerColor(segment.speaker).text }}>{segment.speaker}</Badge>
           {isActive && (
             <span className="audio-playing-indicator" title="Currently playing">
               <span className="audio-playing-dot"></span>

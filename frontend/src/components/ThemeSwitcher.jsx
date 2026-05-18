@@ -1,72 +1,66 @@
-import { useState } from 'react';
-import { Dropdown, Button } from '@govtechsg/sgds-react';
-import { Palette } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sun, Moon, Monitor } from 'lucide-react';
 
-const THEMES = [
-  { id: 'default', name: 'Singapore Blue', color: '#0d6efd' },
-  { id: 'teal', name: 'Teal Professional', color: '#00b8ad' },
-  { id: 'purple', name: 'Purple Modern', color: '#9333ea' },
-  { id: 'emerald', name: 'Emerald Green', color: '#059669' },
-  { id: 'indigo', name: 'Indigo Deep', color: '#6366f1' },
-  { id: 'rose', name: 'Rose Elegant', color: '#f43f5e' },
-  { id: 'orange', name: 'Orange Vibrant', color: '#f97316' },
-  { id: 'dark', name: 'Dark Mode', color: '#1a1a1a' },
-];
+const CYCLE = ['light', 'dark', 'system'];
+
+const ICONS = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+};
+
+const LABELS = {
+  light: 'Light mode — click for dark',
+  dark: 'Dark mode — click for system',
+  system: 'System mode — click for light',
+};
+
+function useResolvedDark(themeMode) {
+  const [sysDark, setSysDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+  useEffect(() => {
+    if (themeMode !== 'system') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setSysDark(mq.matches);
+    const handler = (e) => setSysDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [themeMode]);
+  if (themeMode === 'light') return false;
+  if (themeMode === 'dark') return true;
+  return sysDark;
+}
 
 function ThemeSwitcher() {
-  const [currentTheme, setCurrentTheme] = useState('default');
+  const [themeMode, setThemeMode] = useState(() => {
+    return localStorage.getItem('meetmemo-theme') || 'system';
+  });
 
-  const changeTheme = (themeId) => {
-    setCurrentTheme(themeId);
-    if (themeId === 'default') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', themeId);
-    }
-    // Save to localStorage
-    localStorage.setItem('meetmemo-theme', themeId);
+  const isDark = useResolvedDark(themeMode);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  const cycleTheme = () => {
+    const next = CYCLE[(CYCLE.indexOf(themeMode) + 1) % CYCLE.length];
+    setThemeMode(next);
+    localStorage.setItem('meetmemo-theme', next);
   };
 
-  // Load theme from localStorage on mount
-  useState(() => {
-    const savedTheme = localStorage.getItem('meetmemo-theme');
-    if (savedTheme && savedTheme !== 'default') {
-      changeTheme(savedTheme);
-    }
-  }, []);
-
-  const currentThemeName = THEMES.find((t) => t.id === currentTheme)?.name || 'Singapore Blue';
+  const Icon = ICONS[themeMode];
 
   return (
-    <Dropdown>
-      <Dropdown.Toggle variant="outline-secondary" size="sm" id="theme-dropdown">
-        <Palette size={16} className="me-2" />
-        {currentThemeName}
-      </Dropdown.Toggle>
-
-      <Dropdown.Menu>
-        {THEMES.map((theme) => (
-          <Dropdown.Item
-            key={theme.id}
-            onClick={() => changeTheme(theme.id)}
-            active={currentTheme === theme.id}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <div
-                style={{
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '4px',
-                  backgroundColor: theme.color,
-                  border: theme.id === 'dark' ? '1px solid #fff' : 'none',
-                }}
-              />
-              <span>{theme.name}</span>
-            </div>
-          </Dropdown.Item>
-        ))}
-      </Dropdown.Menu>
-    </Dropdown>
+    <button
+      type="button"
+      className="btn btn-sm btn-outline-secondary"
+      onClick={cycleTheme}
+      aria-label={LABELS[themeMode]}
+      title={LABELS[themeMode]}
+    >
+      <Icon size={16} />
+    </button>
   );
 }
 

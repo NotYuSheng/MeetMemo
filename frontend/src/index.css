@@ -12,7 +12,8 @@ body {
     'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
+  background-color: var(--mm-bg, #f8f9fa);
+  color: var(--mm-text, #212529);
 }
 
 #root {
