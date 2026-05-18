@@ -70,11 +70,6 @@ export default function FileUploadCard({
             <span>Uploading...</span>
           </div>
         )}
-        {selectedFile && !uploading && (
-          <div className="mt-3">
-            <small className="text-success">Selected: {selectedFile.name}</small>
-          </div>
-        )}
       </Card.Body>
     </Card>
   );
