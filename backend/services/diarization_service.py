@@ -83,7 +83,7 @@ class DiarizationService:
             logger.info("Diarization complete for job %s", job_uuid)
 
             # Convert diarization to serializable format
-            # pyannote 4.x returns a DiarizeOutput object; itertracks is on the inner Annotation
+            # pyannote 4.x returns a DiarizeOutput; itertracks is on the inner Annotation
             diarization_data = {
                 "segments": []
             }
