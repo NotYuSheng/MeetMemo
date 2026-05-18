@@ -1,18 +1,18 @@
 /* MeetMemo App Styles - Professional & Minimalistic */
 
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #dbeafe;
+  --primary: var(--mm-primary, #0d6efd);
+  --primary-hover: var(--mm-primary-hover, #0056d6);
+  --primary-light: var(--mm-primary-subtle, #e7f1ff);
   --secondary: #64748b;
-  --success: #2563eb;
-  --muted: #94a3b8;
-  --border: #e2e8f0;
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
+  --success: var(--mm-success, #198754);
+  --muted: var(--mm-text-muted, #94a3b8);
+  --border: var(--mm-border, #dee2e6);
+  --background: var(--mm-bg, #f8fafc);
+  --surface: var(--mm-surface, #ffffff);
+  --text-primary: var(--mm-text, #1e293b);
+  --text-secondary: var(--mm-text-muted, #64748b);
+  --text-muted: var(--mm-text-muted, #94a3b8);
 }
 
 .app {
@@ -66,7 +66,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: #f1f5f9;
+  background-color: var(--mm-bg-subtle, #f1f5f9);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -139,7 +139,7 @@
   border: 2px dashed var(--border);
   border-radius: 0.5rem;
   padding: 2rem 1rem;
-  background-color: var(--background);
+  background-color: var(--mm-bg-subtle, var(--background));
   transition: all 0.3s ease;
 }
 
@@ -175,7 +175,7 @@
   align-items: center;
   padding: 1rem;
   margin-bottom: 0.5rem;
-  background-color: var(--background);
+  background-color: var(--mm-bg-subtle, var(--background));
   border-radius: 0.5rem;
   opacity: 0.5;
   transition: all 0.3s ease;
@@ -189,7 +189,7 @@
 
 .processing-step.completed {
   opacity: 1;
-  background-color: #f1f5f9;
+  background-color: var(--mm-bg-subtle, #f1f5f9);
 }
 
 .step-number {
@@ -239,13 +239,13 @@
 }
 
 .transcript-segment {
-  background-color: var(--background);
+  background-color: var(--mm-bg-subtle, var(--background));
   border-radius: 0.5rem;
   transition: all 0.2s ease;
 }
 
 .transcript-segment:hover {
-  background-color: #f1f5f9;
+  background-color: var(--mm-surface-hover, #f1f5f9);
   transform: translateX(4px);
 }
 
@@ -361,7 +361,7 @@
 
 /* Progress bar */
 .progress {
-  background-color: #f1f5f9;
+  background-color: var(--mm-bg-subtle, #f1f5f9);
   border-radius: 0.5rem;
   overflow: hidden;
 }
@@ -394,7 +394,7 @@
 .audio-progress-bar {
   position: relative;
   height: 6px;
-  background-color: #e2e8f0;
+  background-color: var(--mm-border, #e2e8f0);
   border-radius: 3px;
   overflow: visible;
 }
@@ -461,7 +461,7 @@
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: #e2e8f0;
+  background: var(--mm-border, #e2e8f0);
   border-radius: 2px;
   outline: none;
   margin-left: 4px;
@@ -490,7 +490,7 @@
 .audio-error {
   text-align: center;
   padding: 0.5rem;
-  background-color: #fef2f2;
+  background-color: var(--mm-bg-subtle, #fef2f2);
   border-radius: 4px;
 }
 

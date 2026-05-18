@@ -1,6 +1,6 @@
 import { Card, Button, Badge } from '@govtechsg/sgds-react';
 import { Users, Sparkles, Download, AlertCircle } from 'lucide-react';
-import { getSpeakerBadgeVariant } from '../../utils/speakerColors';
+import { getSpeakerColor } from '../../utils/speakerColors';
 import * as api from '../../services/api';
 
 export default function MeetingInfoSidebar({
@@ -38,9 +38,8 @@ export default function MeetingInfoSidebar({
                 [...new Set(transcript.segments.map((s) => s.speaker))].map((speaker) => (
                   <Badge
                     key={speaker}
-                    bg={getSpeakerBadgeVariant(speaker)}
                     title={speaker}
-                    style={{ maxWidth: '160px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    style={{ backgroundColor: getSpeakerColor(speaker).bg, color: getSpeakerColor(speaker).text, maxWidth: '160px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                   >
                     {speaker}
                   </Badge>
