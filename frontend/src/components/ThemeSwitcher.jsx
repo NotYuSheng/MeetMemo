@@ -22,6 +22,7 @@ function useResolvedDark(themeMode) {
   useEffect(() => {
     if (themeMode !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setSysDark(mq.matches);
     const handler = (e) => setSysDark(e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
