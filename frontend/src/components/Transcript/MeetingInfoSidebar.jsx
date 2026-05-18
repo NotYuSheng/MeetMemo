@@ -39,7 +39,8 @@ export default function MeetingInfoSidebar({
                   <Badge
                     key={speaker}
                     title={speaker}
-                    style={{ backgroundColor: getSpeakerColor(speaker).bg, color: getSpeakerColor(speaker).text, maxWidth: '160px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    className="text-truncate"
+                    style={{ backgroundColor: getSpeakerColor(speaker).bg, color: getSpeakerColor(speaker).text, maxWidth: '160px' }}
                   >
                     {speaker}
                   </Badge>
