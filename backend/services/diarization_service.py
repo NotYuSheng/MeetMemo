@@ -44,7 +44,7 @@ class DiarizationService:
             logger.info("Loading PyAnnote speaker diarization pipeline")
             self._pipeline_cache = Pipeline.from_pretrained(
                 self.settings.pyannote_model_name,
-                use_auth_token=self.settings.hf_token
+                token=self.settings.hf_token
             )
             self._pipeline_cache = self._pipeline_cache.to(
                 torch.device(self.settings.device)
@@ -83,11 +83,12 @@ class DiarizationService:
             logger.info("Diarization complete for job %s", job_uuid)
 
             # Convert diarization to serializable format
+            # pyannote 4.x returns a DiarizeOutput object; itertracks is on the inner Annotation
             diarization_data = {
                 "segments": []
             }
 
-            for turn, _, speaker in diarization.itertracks(yield_label=True):
+            for turn, _, speaker in diarization.speaker_diarization.itertracks(yield_label=True):
                 diarization_data["segments"].append({
                     "start": turn.start,
                     "end": turn.end,

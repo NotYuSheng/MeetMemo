@@ -1,5 +1,6 @@
-## Use official PyTorch image with CUDA 12.1 support
-FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+## Use official PyTorch image with CUDA 12.6 + PyTorch 2.12.0
+## RTX 50xx (Blackwell) is supported via NVIDIA's forward compatibility layer (driver 570+)
+FROM pytorch/pytorch:2.12.0-cuda12.6-cudnn9-runtime
 
 # Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,11 +29,8 @@ RUN apt-get update && \
 # Copy dependencies list
 COPY requirements.txt /app/requirements.txt
 
-# Install Python dependencies and ensure CUDA-enabled PyTorch remains
-RUN pip install -r requirements.txt \
-    && pip uninstall -y torch torchvision torchaudio \
-    && pip install --index-url https://download.pytorch.org/whl/cu121 \
-         torch==2.5.1 torchvision torchaudio
+# Install Python dependencies (torch 2.12.0 + CUDA 13 pulled in by pyannote.audio)
+RUN pip install --break-system-packages -r requirements.txt
 
 # Copy application code
 COPY . /app
