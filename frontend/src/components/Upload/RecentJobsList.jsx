@@ -1,4 +1,5 @@
-import { Card, Badge, Button } from '@govtechsg/sgds-react';
+import { useState } from 'react';
+import { Card, Badge, Button, Modal } from '@govtechsg/sgds-react';
 import { Clock, AlertCircle, Trash2 } from 'lucide-react';
 
 const DATE_TIME_FORMAT_OPTIONS = {
@@ -15,7 +16,20 @@ export default function RecentJobsList({
   handleLoadJob,
   handleDeleteJob,
 }) {
+  const [pendingDeleteUuid, setPendingDeleteUuid] = useState(null);
+
+  const onDeleteClick = (uuid, e) => {
+    e.stopPropagation();
+    setPendingDeleteUuid(uuid);
+  };
+
+  const onConfirmDelete = () => {
+    handleDeleteJob(pendingDeleteUuid);
+    setPendingDeleteUuid(null);
+  };
+
   return (
+    <>
     <Card className="mt-4">
       <Card.Header>
         <h5 className="mb-0">
@@ -55,20 +69,20 @@ export default function RecentJobsList({
                         ? 'success'
                         : job.status_code === 202 || job.status_code === '202'
                           ? 'warning'
-                          : 'secondary'
+                          : 'danger'
                     }
                   >
                     {job.status_code === 200 || job.status_code === '200'
                       ? 'Complete'
                       : job.status_code === 202 || job.status_code === '202'
                         ? 'Processing'
-                        : 'Unknown'}
+                        : 'Failed'}
                   </Badge>
                   <Button
                     variant="link"
                     size="sm"
                     className="p-0 text-danger"
-                    onClick={(e) => handleDeleteJob(job.uuid, e)}
+                    onClick={(e) => onDeleteClick(job.uuid, e)}
                     title="Delete this meeting"
                   >
                     <Trash2 size={16} />
@@ -90,5 +104,23 @@ export default function RecentJobsList({
         </div>
       </Card.Body>
     </Card>
+
+      <Modal show={!!pendingDeleteUuid} onHide={() => setPendingDeleteUuid(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete Meeting</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to delete this meeting? This action cannot be undone.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setPendingDeleteUuid(null)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={onConfirmDelete}>
+            Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }
