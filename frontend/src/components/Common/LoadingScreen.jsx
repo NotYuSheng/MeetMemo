@@ -7,7 +7,7 @@ export default function LoadingScreen({ backendError }) {
     return (
       <div
         className="app d-flex align-items-center justify-content-center"
-        style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}
+        style={{ minHeight: '100vh', backgroundColor: 'var(--mm-bg, #f8fafc)' }}
       >
         <Container>
           <Row className="justify-content-center">
@@ -38,7 +38,7 @@ export default function LoadingScreen({ backendError }) {
   return (
     <div
       className="app d-flex align-items-center justify-content-center"
-      style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}
+      style={{ minHeight: '100vh', backgroundColor: 'var(--mm-bg, #f8fafc)' }}
     >
       <Container>
         <Row className="justify-content-center">

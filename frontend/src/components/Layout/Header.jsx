@@ -1,5 +1,6 @@
 import { Container } from '@govtechsg/sgds-react';
 import { FileText } from 'lucide-react';
+import ThemeSwitcher from '../ThemeSwitcher';
 
 export default function Header({ onStartNewMeeting }) {
   return (
@@ -17,6 +18,7 @@ export default function Header({ onStartNewMeeting }) {
               <small className="text-muted">AI Meeting Summary</small>
             </div>
           </div>
+          <ThemeSwitcher />
         </div>
       </Container>
     </div>

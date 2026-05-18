@@ -81,7 +81,7 @@ export default function RecentJobsList({
                     <Button
                       variant="link"
                       size="sm"
-                      className="p-0 text-danger"
+                      className="p-0 text-danger d-flex align-items-center"
                       onClick={(e) => onDeleteClick(job.uuid, e)}
                       title="Delete this meeting"
                     >
