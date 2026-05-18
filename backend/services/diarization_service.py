@@ -44,7 +44,7 @@ class DiarizationService:
             logger.info("Loading PyAnnote speaker diarization pipeline")
             self._pipeline_cache = Pipeline.from_pretrained(
                 self.settings.pyannote_model_name,
-                use_auth_token=self.settings.hf_token
+                token=self.settings.hf_token
             )
             self._pipeline_cache = self._pipeline_cache.to(
                 torch.device(self.settings.device)
