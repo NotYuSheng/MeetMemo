@@ -33,10 +33,15 @@ export default function MeetingInfoSidebar({
           </div>
           <div className="info-item mb-3">
             <small className="text-muted">Speakers</small>
-            <div className="mb-2">
+            <div className="mb-2 d-flex flex-wrap gap-1">
               {transcript?.segments ? (
                 [...new Set(transcript.segments.map((s) => s.speaker))].map((speaker) => (
-                  <Badge key={speaker} bg={getSpeakerBadgeVariant(speaker)} className="me-1">
+                  <Badge
+                    key={speaker}
+                    bg={getSpeakerBadgeVariant(speaker)}
+                    title={speaker}
+                    style={{ maxWidth: '160px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
                     {speaker}
                   </Badge>
                 ))
