@@ -113,12 +113,12 @@ export default function RecentJobsList({
           Are you sure you want to delete this meeting? This action cannot be undone.
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setPendingDeleteUuid(null)}>
+          <button type="button" className="btn btn-outline-secondary" onClick={() => setPendingDeleteUuid(null)}>
             Cancel
-          </Button>
-          <Button variant="danger" onClick={onConfirmDelete}>
+          </button>
+          <button type="button" className="btn btn-outline-danger" onClick={onConfirmDelete}>
             Delete
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
     </>
