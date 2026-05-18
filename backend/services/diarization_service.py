@@ -83,12 +83,17 @@ class DiarizationService:
             logger.info("Diarization complete for job %s", job_uuid)
 
             # Convert diarization to serializable format
-            # pyannote 4.x returns a DiarizeOutput object; itertracks is on the inner Annotation
+            # pyannote 4.x (legacy=False) returns DiarizeOutput; legacy=True or <4.x returns Annotation directly
+            annotation = (
+                diarization.speaker_diarization
+                if hasattr(diarization, "speaker_diarization")
+                else diarization
+            )
             diarization_data = {
                 "segments": []
             }
 
-            for turn, _, speaker in diarization.speaker_diarization.itertracks(yield_label=True):
+            for turn, _, speaker in annotation.itertracks(yield_label=True):
                 diarization_data["segments"].append({
                     "start": turn.start,
                     "end": turn.end,
