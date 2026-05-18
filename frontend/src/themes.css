@@ -205,38 +205,6 @@
 }
 
 /* Danger — softer in dark mode */
-/* !important on custom properties beats any specificity/load-order issue */
-[data-theme='dark'] .btn-danger {
-  --sgds-btn-bg: #b91c1c !important;
-  --sgds-btn-border-color: #b91c1c !important;
-  --sgds-btn-color: #fef2f2 !important;
-  --sgds-btn-hover-bg: #991b1b !important;
-  --sgds-btn-hover-border-color: #991b1b !important;
-  --sgds-btn-hover-color: #fef2f2 !important;
-  --sgds-btn-active-bg: #991b1b !important;
-  --sgds-btn-active-border-color: #991b1b !important;
-  --sgds-btn-active-color: #fef2f2 !important;
-}
-
-[data-theme='dark'] .btn-outline-danger {
-  --sgds-btn-color: #fca5a5 !important;
-  --sgds-btn-border-color: #b91c1c !important;
-  --sgds-btn-hover-bg: #b91c1c !important;
-  --sgds-btn-hover-border-color: #b91c1c !important;
-  --sgds-btn-hover-color: #fef2f2 !important;
-  --sgds-btn-active-bg: #991b1b !important;
-  --sgds-btn-active-border-color: #991b1b !important;
-  --sgds-btn-active-color: #fef2f2 !important;
-}
-
-[data-theme='dark'] .text-danger {
-  color: #fca5a5 !important;
-}
-
-[data-theme='dark'] .progress-bar.bg-danger,
-[data-theme='dark'] .bg-danger {
-  background-color: #b91c1c !important;
-}
 
 /* Buttons */
 [data-theme='dark'] .btn-outline-secondary {
@@ -268,12 +236,6 @@
 }
 
 /* Alerts */
-[data-theme='dark'] .alert-danger {
-  background-color: #3d1a1a;
-  border-color: #6b2d2d;
-  color: #f8a5a5;
-}
-
 [data-theme='dark'] .alert-warning {
   background-color: #3d2e0a;
   border-color: #6b4f10;
