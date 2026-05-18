@@ -97,15 +97,7 @@ export default function useJobHistory(
   };
 
   // Delete a job
-  const handleDeleteJob = async (uuid, event) => {
-    event.stopPropagation(); // Prevent triggering the job load
-
-    if (
-      !window.confirm('Are you sure you want to delete this meeting? This action cannot be undone.')
-    ) {
-      return;
-    }
-
+  const handleDeleteJob = async (uuid) => {
     try {
       setError(null);
       await api.deleteJob(uuid);
