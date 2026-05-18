@@ -1,5 +1,6 @@
-## Use official PyTorch image with CUDA 13.0 support (required for RTX 50xx / Blackwell)
-FROM pytorch/pytorch:2.12.0-cuda13.0-cudnn9-runtime
+## Use official PyTorch image with CUDA 12.6 + PyTorch 2.12.0
+## RTX 50xx (Blackwell) is supported via NVIDIA's forward compatibility layer (driver 570+)
+FROM pytorch/pytorch:2.12.0-cuda12.6-cudnn9-runtime
 
 # Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1
