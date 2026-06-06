@@ -9,6 +9,7 @@ import logging
 from typing import Optional
 
 import torch
+import torchaudio
 from pyannote.audio import Pipeline
 
 from config import Settings
@@ -74,10 +75,16 @@ class DiarizationService:
             # Get cached pipeline
             pipeline = self.get_pipeline()
 
-            # Diarize audio - run in executor to avoid blocking event loop
+            # Diarize audio - run in executor to avoid blocking event loop.
+            # torchaudio.load + pipeline are both blocking; bundle them together
+            # so neither runs on the event loop thread. Passing the waveform dict
+            # bypasses torchcodec, which fails on CUDA 12.8.
             await self.job_repo.update_step_progress(job_uuid, 10)
             loop = asyncio.get_event_loop()
-            diarization = await loop.run_in_executor(None, pipeline, file_path)
+            def _load_and_diarize():
+                waveform, sample_rate = torchaudio.load(file_path)
+                return pipeline({"waveform": waveform, "sample_rate": sample_rate})
+            diarization = await loop.run_in_executor(None, _load_and_diarize)
 
             await self.job_repo.update_step_progress(job_uuid, 90)
             logger.info("Diarization complete for job %s", job_uuid)
