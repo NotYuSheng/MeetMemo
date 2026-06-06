@@ -1,6 +1,6 @@
-## Use official PyTorch image with CUDA 12.6 + PyTorch 2.12.0
-## RTX 50xx (Blackwell) is supported via NVIDIA's forward compatibility layer (driver 570+)
-FROM pytorch/pytorch:2.12.0-cuda12.6-cudnn9-runtime
+## Use PyTorch 2.8.0 + CUDA 12.8 for native RTX 50xx (Blackwell / sm_120) kernel support.
+## CUDA 12.x keeps libcublas.so.12 intact for ctranslate2/faster-whisper.
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
 
 # Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -29,7 +29,7 @@ RUN apt-get update && \
 # Copy dependencies list
 COPY requirements.txt /app/requirements.txt
 
-# Install Python dependencies (torch 2.12.0 + CUDA 13 pulled in by pyannote.audio)
+# Install Python dependencies
 RUN pip install --break-system-packages -r requirements.txt
 
 # Copy application code
