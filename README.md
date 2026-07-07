@@ -243,14 +243,12 @@ The [`sample-files/`](sample-files/) directory contains example outputs:
 
 ## Star History
 
-If you find MeetMemo useful, consider giving it a star! ⭐
-
-<a href="https://star-history.com/#NotYuSheng/MeetMemo&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=NotYuSheng/MeetMemo&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=NotYuSheng/MeetMemo&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=NotYuSheng/MeetMemo&type=Date" />
-  </picture>
+<a href="https://www.star-history.com/?repos=NotYuSheng%2FMeetMemo&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=NotYuSheng/MeetMemo&type=date&theme=dark&legend=top-left&sealed_token=7IcbtOMOR64Em6XLdOuyU9RTIA3UQ9ykxTHdifwt7QCsEWNwd5gm2XLWifV_WETP6Ib976DOnemcZllno5W24h1Wi5EycqPER4IKM6mySYG3WV8XIzKFU8gedV0Gk8Y8itWGdESg6ZDjxwissY4KXanBmi3TBvKD1QnqqiI3jSQkxeD8Gut_wXaMhRUS" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=NotYuSheng/MeetMemo&type=date&legend=top-left&sealed_token=7IcbtOMOR64Em6XLdOuyU9RTIA3UQ9ykxTHdifwt7QCsEWNwd5gm2XLWifV_WETP6Ib976DOnemcZllno5W24h1Wi5EycqPER4IKM6mySYG3WV8XIzKFU8gedV0Gk8Y8itWGdESg6ZDjxwissY4KXanBmi3TBvKD1QnqqiI3jSQkxeD8Gut_wXaMhRUS" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=NotYuSheng/MeetMemo&type=date&legend=top-left&sealed_token=7IcbtOMOR64Em6XLdOuyU9RTIA3UQ9ykxTHdifwt7QCsEWNwd5gm2XLWifV_WETP6Ib976DOnemcZllno5W24h1Wi5EycqPER4IKM6mySYG3WV8XIzKFU8gedV0Gk8Y8itWGdESg6ZDjxwissY4KXanBmi3TBvKD1QnqqiI3jSQkxeD8Gut_wXaMhRUS" />
+ </picture>
 </a>
 
 ## License
