@@ -52,9 +52,12 @@ export default function useJobHistory(
     }
   };
 
-  // Fetch recent jobs on mount (only after backend is ready)
+  // Fetch recent jobs on mount (only after backend is ready).
+  // fetchRecentJobs sets a loading flag synchronously so the spinner shows
+  // immediately; this one-shot data fetch is an intentional effect.
   useEffect(() => {
     if (!backendReady) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount with an immediate loading indicator
     fetchRecentJobs();
   }, [backendReady]);
 

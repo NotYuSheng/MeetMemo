@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -17,18 +17,23 @@ const LABELS: Record<ThemeMode, string> = {
   system: 'System mode — click for light',
 };
 
+const PREFERS_DARK_QUERY = '(prefers-color-scheme: dark)';
+
+// Subscribe to the OS colour-scheme preference as an external store. Using
+// useSyncExternalStore keeps the value in sync without calling setState inside
+// an effect, and always reflects the live media-query result.
+function subscribeSystemDark(callback: () => void): () => void {
+  const mq = window.matchMedia(PREFERS_DARK_QUERY);
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+
+function getSystemDark(): boolean {
+  return window.matchMedia(PREFERS_DARK_QUERY).matches;
+}
+
 function useResolvedDark(themeMode: ThemeMode): boolean {
-  const [sysDark, setSysDark] = useState(
-    () => window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
-  useEffect(() => {
-    if (themeMode !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    setSysDark(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setSysDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [themeMode]);
+  const sysDark = useSyncExternalStore(subscribeSystemDark, getSystemDark, () => false);
   if (themeMode === 'light') return false;
   if (themeMode === 'dark') return true;
   return sysDark;

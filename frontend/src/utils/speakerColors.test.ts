@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  getSpeakerColor,
-  getSpeakerBorderColor,
-  getSpeakerBadgeVariant,
-  initializeSpeakerColors,
-} from './speakerColors';
+import { getSpeakerColor, getSpeakerBorderColor, initializeSpeakerColors } from './speakerColors';
 
 describe('getSpeakerColor', () => {
   it('maps SPEAKER_NN labels to a palette entry by index (mod palette size)', () => {
@@ -35,12 +30,6 @@ describe('getSpeakerColor', () => {
 describe('getSpeakerBorderColor', () => {
   it('returns the background color of the mapped palette entry', () => {
     expect(getSpeakerBorderColor('SPEAKER_01')).toBe(getSpeakerColor('SPEAKER_01').bg);
-  });
-});
-
-describe('getSpeakerBadgeVariant', () => {
-  it('returns null (kept for backwards compatibility)', () => {
-    expect(getSpeakerBadgeVariant('SPEAKER_00')).toBeNull();
   });
 });
 

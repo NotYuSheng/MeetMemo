@@ -287,17 +287,6 @@ export async function generateSummary(
   });
 }
 
-// Get summary - uses the same endpoint, returns generated summary
-export async function getSummary(uuid: string): Promise<Summary> {
-  return await apiCall<Summary>(`/jobs/${uuid}/summaries`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({}),
-  });
-}
-
 interface DownloadResult {
   success: boolean;
 }
@@ -461,21 +450,11 @@ export async function startTranscription(
   });
 }
 
-// Get transcription data
-export async function getTranscriptionData(uuid: string): Promise<unknown> {
-  return await apiCall(`/jobs/${uuid}/transcriptions`);
-}
-
 // Start diarization step
 export async function startDiarization(uuid: string): Promise<unknown> {
   return await apiCall(`/jobs/${uuid}/diarizations`, {
     method: 'POST',
   });
-}
-
-// Get diarization data
-export async function getDiarizationData(uuid: string): Promise<unknown> {
-  return await apiCall(`/jobs/${uuid}/diarizations`);
 }
 
 // Start alignment step

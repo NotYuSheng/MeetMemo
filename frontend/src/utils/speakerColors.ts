@@ -63,11 +63,6 @@ export function initializeSpeakerColors(segments: TranscriptSegment[] | null | u
   }
 }
 
-export function getSpeakerBadgeVariant(_speakerLabel: string): null {
-  // No longer used for Bootstrap variant — kept for compatibility
-  return null;
-}
-
 export function getSpeakerBorderColor(speakerLabel: string | null | undefined): string {
   return getSpeakerColor(speakerLabel).bg;
 }

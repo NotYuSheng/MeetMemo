@@ -26,6 +26,63 @@ export default function useAudioRecording(
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Upload recording to backend
+  const uploadRecording = useCallback(
+    async (audioBlob: Blob) => {
+      try {
+        // Create form data
+        const formData = new FormData();
+
+        // Create file from blob with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `recording-${timestamp}.webm`;
+        const file = new File([audioBlob], fileName, { type: audioBlob.type });
+
+        formData.append('file', file);
+        formData.append('model_name', 'turbo');
+
+        // Upload to backend
+        setCurrentStep('processing');
+        setProcessingProgress(10);
+
+        const response = await axios.post<UploadResponse>('/api/v1/jobs', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        const newJobId = response.data.uuid;
+        setJobId(newJobId);
+        setProcessingProgress(20);
+
+        // Check if this is a duplicate
+        if (response.data.status_code === 200) {
+          // Duplicate - load existing transcript
+          const transcriptResponse = await axios.get<Transcript>(
+            `/api/v1/jobs/${newJobId}/transcript`
+          );
+          setTranscript(transcriptResponse.data);
+          setCurrentStep('transcript');
+          setProcessingProgress(100);
+        } else {
+          // New job - start polling
+          startPolling(newJobId);
+        }
+      } catch (err) {
+        console.error('Error uploading recording:', err);
+        const axiosErr = err as AxiosError<{ detail?: string }>;
+        setError(axiosErr.response?.data?.detail || 'Failed to upload recording');
+        setCurrentStep('upload');
+        setProcessingProgress(0);
+      } finally {
+        // Reset recording state
+        setRecordingTime(0);
+        audioChunksRef.current = [];
+      }
+    },
+    [setCurrentStep, setProcessingProgress, setJobId, setTranscript, startPolling, setError]
+  );
+
   // Start recording
   const startRecording = useCallback(async () => {
     try {
@@ -103,7 +160,7 @@ export default function useAudioRecording(
         setError(`Failed to start recording: ${error.message}`);
       }
     }
-  }, [setError]);
+  }, [setError, uploadRecording]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
@@ -112,60 +169,6 @@ export default function useAudioRecording(
       setIsRecording(false);
     }
   }, [isRecording]);
-
-  // Upload recording to backend
-  const uploadRecording = async (audioBlob: Blob) => {
-    try {
-      // Create form data
-      const formData = new FormData();
-
-      // Create file from blob with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `recording-${timestamp}.webm`;
-      const file = new File([audioBlob], fileName, { type: audioBlob.type });
-
-      formData.append('file', file);
-      formData.append('model_name', 'turbo');
-
-      // Upload to backend
-      setCurrentStep('processing');
-      setProcessingProgress(10);
-
-      const response = await axios.post<UploadResponse>('/api/v1/jobs', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const newJobId = response.data.uuid;
-      setJobId(newJobId);
-      setProcessingProgress(20);
-
-      // Check if this is a duplicate
-      if (response.data.status_code === 200) {
-        // Duplicate - load existing transcript
-        const transcriptResponse = await axios.get<Transcript>(
-          `/api/v1/jobs/${newJobId}/transcript`
-        );
-        setTranscript(transcriptResponse.data);
-        setCurrentStep('transcript');
-        setProcessingProgress(100);
-      } else {
-        // New job - start polling
-        startPolling(newJobId);
-      }
-    } catch (err) {
-      console.error('Error uploading recording:', err);
-      const axiosErr = err as AxiosError<{ detail?: string }>;
-      setError(axiosErr.response?.data?.detail || 'Failed to upload recording');
-      setCurrentStep('upload');
-      setProcessingProgress(0);
-    } finally {
-      // Reset recording state
-      setRecordingTime(0);
-      audioChunksRef.current = [];
-    }
-  };
 
   // Cleanup on unmount
   const cleanup = useCallback(() => {

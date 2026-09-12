@@ -29,7 +29,7 @@ export default function useBackendHealth() {
           setBackendReady(true);
           setBackendError(null);
           return;
-        } catch (err) {
+        } catch {
           retryCount++;
           if (retryCount >= maxRetries) {
             setBackendError('Backend is not responding. Please check if the service is running.');
