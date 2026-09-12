@@ -64,11 +64,23 @@ describe('SystemInfoBar', () => {
     await waitFor(() => expect(screen.getByText(/memory-hungry/)).toBeInTheDocument());
   });
 
+  it('renders every warning, not just the first', async () => {
+    vi.mocked(api.getSystemInfo).mockResolvedValue({
+      ...gpuInfo,
+      warnings: ['first warning', 'second warning'],
+    });
+    render(<SystemInfoBar />);
+
+    await waitFor(() => expect(screen.getByText(/first warning/)).toBeInTheDocument());
+    expect(screen.getByText(/second warning/)).toBeInTheDocument();
+  });
+
   it('renders nothing when /system is unavailable', async () => {
     vi.mocked(api.getSystemInfo).mockRejectedValue(new Error('404'));
     const { container } = render(<SystemInfoBar />);
-    // Give the rejected promise a tick to settle; component stays empty.
-    await Promise.resolve();
-    expect(container).toBeEmptyDOMElement();
+    // Wait until the failed fetch has been attempted and settled, then confirm
+    // the component stayed empty (info never set).
+    await waitFor(() => expect(api.getSystemInfo).toHaveBeenCalled());
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 });

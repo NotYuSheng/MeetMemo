@@ -117,6 +117,11 @@ class Settings(BaseSettings):
         self._gpu_name = detect_gpu_name()
         self._resolved_profile = resolve_profile(self.hardware_profile, self._vram_gb)
 
+        # A GPU is "present" only when detection returned a real, positive VRAM
+        # figure. Using an explicit check (not truthiness) keeps a genuine 0.0 /
+        # sub-GB reading from being mistaken for "no GPU".
+        has_gpu = self._vram_gb is not None and self._vram_gb > 0
+
         # Apply the profile's defaults for any field the user did not set.
         profile = PROFILES.get(self._resolved_profile)
         if profile is not None:
@@ -127,11 +132,18 @@ class Settings(BaseSettings):
         # Device fallbacks (only when the user did not pin a device):
         if "device" not in user_set:
             if self.device is None:
-                self.device = "cuda:0" if self._vram_gb else "cpu"
+                self.device = "cuda:0" if has_gpu else "cpu"
             # A CUDA device with no CUDA GPU available downgrades to CPU so the
             # app still starts instead of failing at model load.
-            if str(self.device).startswith("cuda") and not self._vram_gb:
+            if str(self.device).startswith("cuda") and not has_gpu:
                 self.device = "cpu"
+
+        # If we end up on CPU without an explicitly-chosen precision, force a
+        # CPU-appropriate compute type. This matters when a GPU profile is forced
+        # on a CPU-only host: the device is downgraded above, but the profile's
+        # float16 would otherwise remain (float16 is not usable on CPU).
+        if str(self.device).startswith("cpu") and "compute_type" not in user_set:
+            self.compute_type = "int8"
 
     @property
     def timezone(self) -> timezone:
@@ -225,14 +237,15 @@ class Settings(BaseSettings):
             logging and for the read-only /system endpoint.
         """
         warnings: list[str] = []
+        has_gpu = self._vram_gb is not None and self._vram_gb > 0
 
-        if str(self.device).startswith("cuda") and not self._vram_gb:
+        if str(self.device).startswith("cuda") and not has_gpu:
             warnings.append(
                 "Configured for CUDA but no CUDA GPU was detected; falling back to CPU."
             )
         if (
             self.pyannote_model_name == PYANNOTE_COMMUNITY_1
-            and self._vram_gb
+            and has_gpu
             and self._vram_gb < 12
         ):
             warnings.append(
@@ -244,7 +257,7 @@ class Settings(BaseSettings):
             "hardware_profile_requested": self.hardware_profile,
             "resolved_profile": self._resolved_profile,
             "gpu_name": self._gpu_name,
-            "vram_gb": round(self._vram_gb, 1) if self._vram_gb else None,
+            "vram_gb": round(self._vram_gb, 1) if has_gpu else None,
             "device": self.device,
             "whisper_model_name": self.whisper_model_name,
             "compute_type": self.compute_type,

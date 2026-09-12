@@ -85,7 +85,10 @@ def profile_for_vram(vram_gb: float | None) -> str:
     """
     if not vram_gb or vram_gb <= 0:
         return "cpu"
-    if vram_gb < 6:
+    # Thresholds match the documented per-profile targets (low ~4 GB, balanced
+    # ~8 GB, high 12 GB+). The boundaries are deliberately conservative so `auto`
+    # errs toward a profile that fits rather than one that risks OOM.
+    if vram_gb < 8:
         return "low"
     if vram_gb < 12:
         return "balanced"

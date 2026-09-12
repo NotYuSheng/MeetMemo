@@ -51,11 +51,11 @@ export default function SystemInfoBar() {
       <span>whisper: {info.whisper_model_name}</span>
       {' · '}
       <span>diarization: {diarization}</span>
-      {info.warnings.length > 0 && (
-        <span className="text-warning d-block mt-1" role="status">
-          ⚠ {info.warnings[0]}
+      {info.warnings.map((warning) => (
+        <span key={warning} className="text-warning d-block mt-1" role="status">
+          ⚠ {warning}
         </span>
-      )}
+      ))}
     </div>
   );
 }
