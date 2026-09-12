@@ -10,9 +10,8 @@ Note: Imports are intentionally placed inside functions to avoid circular depend
 from typing import Optional
 
 import httpx
-from fastapi import Depends
-
 from config import Settings, get_settings
+from fastapi import Depends
 
 # Global HTTP client for LLM calls
 _http_client: Optional[httpx.AsyncClient] = None  # pylint: disable=invalid-name

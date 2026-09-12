@@ -1,0 +1,25 @@
+# Ruff configuration for the MeetMemo backend (Python).
+#
+# The repo previously had no ruff config, so `ruff check .` ran a broad default
+# ruleset the codebase never adhered to (hundreds of findings, dominated by
+# FastAPI's idiomatic `Depends()`-in-defaults pattern). This pins a deterministic,
+# high-signal set instead: pyflakes correctness checks + import ordering.
+#
+# More rule groups (e.g. pycodestyle "E", bugbear "B") can be enabled later, but
+# would require a formatting pass first (some lines exceed 200 chars), so they are
+# intentionally left out for now.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+extend-exclude = [
+    "frontend",
+    "**/migrations",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",  # pyflakes: undefined names, unused imports/variables, etc. (real bugs)
+    "I",  # isort: import ordering
+]

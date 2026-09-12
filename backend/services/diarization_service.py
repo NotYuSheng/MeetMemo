@@ -10,10 +10,9 @@ from typing import Optional
 
 import torch
 import torchaudio
-from pyannote.audio import Pipeline
-
 from config import Settings
 from database import update_error
+from pyannote.audio import Pipeline
 from repositories.job_repository import JobRepository
 
 logger = logging.getLogger(__name__)

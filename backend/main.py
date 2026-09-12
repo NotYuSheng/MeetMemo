@@ -13,14 +13,13 @@ import time
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 
-from dotenv import load_dotenv
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from api.v1 import api_router
 from config import get_settings
 from database import close_database, init_database
 from dependencies import close_http_client, init_http_client
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from repositories.export_repository import ExportRepository
 from repositories.job_repository import JobRepository
 from services.cleanup_service import CleanupService

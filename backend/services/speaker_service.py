@@ -8,7 +8,6 @@ import logging
 import os
 
 import aiofiles
-
 from config import Settings
 from utils.formatters import format_speaker_name, format_transcript_for_llm
 

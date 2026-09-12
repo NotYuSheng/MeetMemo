@@ -5,10 +5,9 @@ Simple health check for monitoring application status.
 """
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
-
 from config import Settings, get_settings
 from database import get_jobs_count
+from fastapi import APIRouter, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 

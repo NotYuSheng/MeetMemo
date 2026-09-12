@@ -10,9 +10,8 @@ from typing import Optional
 
 import aiofiles
 import httpx
-from fastapi import HTTPException
-
 from config import Settings
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
