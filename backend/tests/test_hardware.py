@@ -47,7 +47,23 @@ def test_profile_contents():
     }
 
 
-def test_detection_helpers_are_safe_without_torch():
-    # Must return None (not raise) when torch/CUDA is unavailable.
-    assert h.detect_vram_gb() is None
-    assert h.detect_gpu_name() is None
+def test_detection_helpers_never_raise():
+    # The helpers must never raise, regardless of environment. Their return
+    # type must agree with CUDA availability: None when torch/CUDA is absent,
+    # a positive VRAM figure and a device name when a CUDA GPU is present.
+    try:
+        import torch
+
+        cuda_available = torch.cuda.is_available()
+    except Exception:
+        cuda_available = False
+
+    vram = h.detect_vram_gb()
+    name = h.detect_gpu_name()
+
+    if cuda_available:
+        assert isinstance(vram, float) and vram > 0
+        assert isinstance(name, str) and name
+    else:
+        assert vram is None
+        assert name is None
