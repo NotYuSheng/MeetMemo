@@ -8,7 +8,6 @@ import logging
 import os
 
 import aiofiles.os
-
 from config import Settings
 from repositories.export_repository import ExportRepository
 from repositories.job_repository import JobRepository

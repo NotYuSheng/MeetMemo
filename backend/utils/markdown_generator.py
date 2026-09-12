@@ -8,6 +8,7 @@ from datetime import datetime
 from io import BytesIO
 
 from config import Settings, get_settings
+
 from utils.formatters import format_speaker_name, format_timestamp
 
 

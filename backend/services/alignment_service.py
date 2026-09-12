@@ -9,7 +9,6 @@ import logging
 import os
 
 import aiofiles
-
 from config import Settings
 from database import update_error, update_status
 from repositories.job_repository import JobRepository

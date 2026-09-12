@@ -8,10 +8,9 @@ improvement over openai-whisper.
 import asyncio
 import logging
 
-from faster_whisper import WhisperModel
-
 from config import Settings
 from database import update_error
+from faster_whisper import WhisperModel
 from repositories.job_repository import JobRepository
 
 logger = logging.getLogger(__name__)

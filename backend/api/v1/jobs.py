@@ -10,6 +10,15 @@ import uuid as uuid_lib
 
 import aiofiles
 import aiofiles.os as aioos
+from config import Settings, get_settings
+from database import update_status
+from dependencies import (
+    get_alignment_service,
+    get_audio_service,
+    get_diarization_service,
+    get_job_repository,
+    get_transcription_service,
+)
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -19,16 +28,6 @@ from fastapi import (
     HTTPException,
     Query,
     UploadFile,
-)
-
-from config import Settings, get_settings
-from database import update_status
-from dependencies import (
-    get_alignment_service,
-    get_audio_service,
-    get_diarization_service,
-    get_job_repository,
-    get_transcription_service,
 )
 from models import (
     DeleteResponse,
