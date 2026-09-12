@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
 import { normalizeTranscript } from '../utils/transcript';
-import type { RecentJob } from '../types/api';
+import type { ApiError, RecentJob } from '../types/api';
 import type {
   HandleUpload,
   SetCurrentStep,
@@ -86,7 +86,7 @@ export default function useJobHistory(
         setCurrentStep('transcript');
       } catch (err) {
         // Transcript not found - might be incomplete job
-        if ((err as Error).message?.includes('404')) {
+        if ((err as ApiError).status === 404) {
           setError(
             'Transcript not found for this meeting. It may have been deleted or failed to process.'
           );

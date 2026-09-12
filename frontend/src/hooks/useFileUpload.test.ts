@@ -22,7 +22,7 @@ function setup() {
       startPolling
     )
   );
-  return { hook, setError, setCurrentStep, setJobId, startPolling };
+  return { hook, setError, setCurrentStep, setJobId, startPolling, setTranscriptWithColors };
 }
 
 beforeEach(() => {
@@ -69,6 +69,26 @@ describe('useFileUpload.handleUpload', () => {
     });
 
     expect(api.uploadAudio).toHaveBeenCalledWith(file, null, 'es');
+  });
+
+  it('normalizes the transcript on immediate completion (200)', async () => {
+    vi.mocked(api.uploadAudio).mockResolvedValue({
+      uuid: 'j',
+      status_code: 200,
+      transcript: {
+        full_transcript: JSON.stringify([{ speaker: 'SPEAKER_00', start: 0, end: 1, text: 'hi' }]),
+      },
+    });
+    const { hook, setTranscriptWithColors } = setup();
+    const file = new File(['x'], 'meeting.mp3');
+
+    await act(async () => {
+      await hook.result.current.handleUpload(file);
+    });
+
+    expect(setTranscriptWithColors).toHaveBeenCalledWith({
+      segments: [{ speaker: 'SPEAKER_00', start: 0, end: 1, text: 'hi' }],
+    });
   });
 
   it('reports an error and returns to the upload step on failure', async () => {

@@ -91,4 +91,32 @@ describe('useTranscriptPolling', () => {
 
     await waitFor(() => expect(setError).toHaveBeenCalledWith('Processing failed'));
   });
+
+  it('retries a retryable error on the immediate first poll', async () => {
+    vi.useFakeTimers();
+    try {
+      // First (immediate) poll fails with a retryable server error, then succeeds.
+      const retryable = Object.assign(new Error('boom'), { category: 'SERVER_ERROR' });
+      vi.mocked(api.getJobStatus)
+        .mockRejectedValueOnce(retryable)
+        .mockResolvedValue({ workflow_state: 'transcribing', current_step_progress: 0 });
+
+      const { hook, setError } = setup();
+      act(() => hook.result.current.startPolling('job1'));
+
+      // Let the rejected immediate poll settle without advancing wall-clock time.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api.getJobStatus).toHaveBeenCalledTimes(1);
+      expect(setError).not.toHaveBeenCalled(); // retried, not surfaced
+
+      // Advance past the first backoff (1s) so the retry fires.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(api.getJobStatus).toHaveBeenCalledTimes(2);
+      expect(setError).not.toHaveBeenCalled();
+
+      act(() => hook.result.current.stopPolling());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

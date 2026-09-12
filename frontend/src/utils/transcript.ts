@@ -13,7 +13,12 @@ export function normalizeTranscript(data: Transcript): Transcript {
   if (data && typeof data.full_transcript === 'string') {
     try {
       const parsed = JSON.parse(data.full_transcript);
-      return { segments: parsed };
+      // Only treat it as segments if it actually parsed to an array; a non-array
+      // payload would otherwise crash the downstream `.map` calls.
+      if (Array.isArray(parsed)) {
+        return { segments: parsed };
+      }
+      return data;
     } catch (e) {
       console.error('Failed to parse transcript:', e);
       return data;

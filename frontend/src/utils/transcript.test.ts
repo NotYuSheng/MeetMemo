@@ -20,4 +20,11 @@ describe('normalizeTranscript', () => {
     expect(normalizeTranscript(data)).toBe(data);
     vi.restoreAllMocks();
   });
+
+  it('returns the original payload when full_transcript parses to a non-array', () => {
+    // A valid JSON object (not an array) must not become { segments: <object> },
+    // which would crash downstream .map calls.
+    const data = { full_transcript: JSON.stringify({ oops: true }) };
+    expect(normalizeTranscript(data)).toBe(data);
+  });
 });

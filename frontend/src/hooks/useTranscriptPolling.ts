@@ -29,6 +29,11 @@ export default function useTranscriptPolling(
   // Track polling interval for cleanup
   const pollingIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Track whether the current polling session has been stopped. The interval
+  // ref is null during the immediate first poll, so it can't be used to tell
+  // "still polling" apart from "stopped"; this flag is used for the retry guard.
+  const stoppedRef = useRef(false);
+
   // Track retry attempts for exponential backoff
   // Retries transient errors (5xx, network issues) up to 3 times
   // with exponential backoff: 1s, 2s, 4s (capped at 10s)
@@ -48,11 +53,15 @@ export default function useTranscriptPolling(
     // Reset retry count for new polling session
     retryCountRef.current = 0;
 
+    // Mark this polling session as active
+    stoppedRef.current = false;
+
     // Helper function to handle errors and stop polling
     const handlePollingErrorAndStop = (errorMessage: string) => {
       setError(errorMessage);
       clearTimeout(pollingIntervalRef.current ?? undefined);
       pollingIntervalRef.current = null;
+      stoppedRef.current = true;
       if (setUploading) setUploading(false);
     };
 
@@ -187,8 +196,8 @@ export default function useTranscriptPolling(
           error.message?.includes('timeout');
 
         // Retry logic for transient errors
-        // Only retry if polling timeout is still running
-        if (isRetryable && retryCountRef.current < maxRetries && pollingIntervalRef.current) {
+        // Only retry if this polling session hasn't been stopped
+        if (isRetryable && retryCountRef.current < maxRetries && !stoppedRef.current) {
           retryCountRef.current += 1;
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 10000);
           console.warn(
@@ -202,6 +211,7 @@ export default function useTranscriptPolling(
         // Stop polling after max retries or non-retryable error
         clearTimeout(pollingIntervalRef.current ?? undefined);
         pollingIntervalRef.current = null;
+        stoppedRef.current = true;
         if (setUploading) setUploading(false);
 
         // Propagate error to UI
@@ -217,6 +227,7 @@ export default function useTranscriptPolling(
 
   // Stop polling
   const stopPolling = () => {
+    stoppedRef.current = true;
     if (pollingIntervalRef.current) {
       clearTimeout(pollingIntervalRef.current ?? undefined);
       pollingIntervalRef.current = null;

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
 import * as api from '../services/api';
+import { normalizeTranscript } from '../utils/transcript';
 import type { SelectedFile } from '../types/api';
 import type {
   SetCurrentStep,
@@ -101,7 +102,7 @@ export default function useFileUpload(
         setUploading(false);
         setProcessingProgress(100);
         if (response.transcript) {
-          setTranscriptWithColors(response.transcript);
+          setTranscriptWithColors(normalizeTranscript(response.transcript));
           setTimeout(() => {
             setCurrentStep('transcript');
           }, 500);

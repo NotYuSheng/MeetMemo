@@ -23,7 +23,7 @@ function setup() {
       handleUpload
     )
   );
-  return { hook, setCurrentStep, setSelectedFile, setTranscriptWithColors };
+  return { hook, setCurrentStep, setSelectedFile, setTranscriptWithColors, setError };
 }
 
 beforeEach(() => {
@@ -87,6 +87,22 @@ describe('useJobHistory', () => {
       segments: [{ speaker: 'SPEAKER_00', start: 0, end: 1, text: 'hi' }],
     });
     expect(setCurrentStep).toHaveBeenCalledWith('transcript');
+  });
+
+  it('shows a friendly message when the transcript is missing (404)', async () => {
+    vi.mocked(api.getJobs).mockResolvedValue({ jobs: {} });
+    const notFound = Object.assign(new Error('The requested resource was not found.'), {
+      status: 404,
+    });
+    vi.mocked(api.getTranscript).mockRejectedValue(notFound);
+
+    const { hook, setError } = setup();
+
+    await act(async () => {
+      await hook.result.current.handleLoadJob({ uuid: 'u1', filename: 'a.mp3', status_code: 200 });
+    });
+
+    expect(setError).toHaveBeenCalledWith(expect.stringMatching(/transcript not found/i));
   });
 
   it('deletes a job then refreshes the list', async () => {
