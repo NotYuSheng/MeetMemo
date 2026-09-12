@@ -6,9 +6,8 @@ frontend (and operators) can see which hardware profile is active.
 """
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
-
 from config import Settings, get_settings
+from fastapi import APIRouter, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 

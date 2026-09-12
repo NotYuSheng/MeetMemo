@@ -13,8 +13,7 @@ import pytest
 pytest.importorskip("pydantic_settings")
 pytest.importorskip("torch")
 
-import hardware  # noqa: E402
-
+import hardware
 
 # Minimal required env for Settings to construct.
 BASE_ENV = {

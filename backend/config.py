@@ -7,10 +7,6 @@ with validation, defaults, and computed properties.
 from datetime import timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
-
-from pydantic import PrivateAttr
-from pydantic_settings import BaseSettings
 
 from hardware import (
     PROFILE_MANAGED_FIELDS,
@@ -20,6 +16,8 @@ from hardware import (
     detect_vram_gb,
     resolve_profile,
 )
+from pydantic import PrivateAttr
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -31,7 +29,7 @@ class Settings(BaseSettings):
     # LLM Configuration
     llm_api_url: str
     llm_model_name: str
-    llm_api_key: Optional[str] = None
+    llm_api_key: str | None = None
     llm_timeout: float = 60.0
 
     # Hardware Configuration
@@ -67,11 +65,11 @@ class Settings(BaseSettings):
     ]
 
     # Processing Configuration
-    device: Optional[str] = None  # Will be computed if not set
+    device: str | None = None  # Will be computed if not set
 
     # Detected hardware, populated during __init__ (not read from env)
-    _vram_gb: Optional[float] = PrivateAttr(default=None)
-    _gpu_name: Optional[str] = PrivateAttr(default=None)
+    _vram_gb: float | None = PrivateAttr(default=None)
+    _gpu_name: str | None = PrivateAttr(default=None)
     _resolved_profile: str = PrivateAttr(default="cpu")
 
     # Cleanup & Maintenance
@@ -209,12 +207,12 @@ class Settings(BaseSettings):
         return self._resolved_profile
 
     @property
-    def detected_vram_gb(self) -> Optional[float]:
+    def detected_vram_gb(self) -> float | None:
         """Detected VRAM of the default GPU in GiB, or None on CPU-only hosts."""
         return self._vram_gb
 
     @property
-    def detected_gpu_name(self) -> Optional[str]:
+    def detected_gpu_name(self) -> str | None:
         """Detected default GPU name, or None on CPU-only hosts."""
         return self._gpu_name
 
@@ -255,7 +253,7 @@ class Settings(BaseSettings):
         }
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Get cached settings instance.

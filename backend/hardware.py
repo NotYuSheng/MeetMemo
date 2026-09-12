@@ -12,7 +12,6 @@ imports ``torch`` lazily inside the detection helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 # Diarization model identifiers
 PYANNOTE_3_1 = "pyannote/speaker-diarization-3.1"
@@ -73,7 +72,7 @@ PROFILE_MANAGED_FIELDS = (
 )
 
 
-def profile_for_vram(vram_gb: Optional[float]) -> str:
+def profile_for_vram(vram_gb: float | None) -> str:
     """
     Choose a concrete profile from available GPU VRAM.
 
@@ -93,7 +92,7 @@ def profile_for_vram(vram_gb: Optional[float]) -> str:
     return "high"
 
 
-def resolve_profile(profile: Optional[str], vram_gb: Optional[float]) -> str:
+def resolve_profile(profile: str | None, vram_gb: float | None) -> str:
     """
     Resolve a requested profile name to a concrete one.
 
@@ -116,7 +115,7 @@ def resolve_profile(profile: Optional[str], vram_gb: Optional[float]) -> str:
     return profile_for_vram(vram_gb)
 
 
-def detect_vram_gb() -> Optional[float]:
+def detect_vram_gb() -> float | None:
     """
     Detect total VRAM (GiB) of the default CUDA device.
 
@@ -136,7 +135,7 @@ def detect_vram_gb() -> Optional[float]:
         return None
 
 
-def detect_gpu_name() -> Optional[str]:
+def detect_gpu_name() -> str | None:
     """Return the default CUDA device name, or None if unavailable."""
     try:
         import torch
