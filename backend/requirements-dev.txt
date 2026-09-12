@@ -1,0 +1,2 @@
+# Backend development / test dependencies (installed on top of requirements.txt)
+pytest>=8.0

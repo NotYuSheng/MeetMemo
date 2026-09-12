@@ -36,8 +36,14 @@ services:
       - LLM_API_URL=${LLM_API_URL:-CHANGEME}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-CHANGEME}
       - TIMEZONE_OFFSET=${TIMEZONE_OFFSET:-+8}
-      - WHISPER_MODEL_NAME=${WHISPER_MODEL_NAME:-turbo}
-      - COMPUTE_TYPE=${COMPUTE_TYPE:-float16}
+      # Hardware profile + ML overrides. Passed through only when set in the
+      # environment (bare form), so an unset value lets HARDWARE_PROFILE's
+      # auto-detection/defaults take effect instead of a hardcoded override.
+      - HARDWARE_PROFILE
+      - WHISPER_MODEL_NAME
+      - COMPUTE_TYPE
+      - PYANNOTE_MODEL_NAME
+      - DEVICE
       - DATABASE_URL=postgresql://meetmemo:${POSTGRES_PASSWORD:-changeme}@postgres:5432/meetmemo
       - PYTHONUNBUFFERED=1
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}

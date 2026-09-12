@@ -13,6 +13,7 @@ import type {
   JobsResponse,
   SpeakerMapping,
   Summary,
+  SystemInfo,
   Transcript,
   TranscriptSegment,
   UploadResponse,
@@ -397,6 +398,11 @@ export async function deleteJob(uuid: string): Promise<unknown> {
 // Health check
 export async function healthCheck(): Promise<unknown> {
   return await apiCall('/health');
+}
+
+// Detected hardware + resolved ML configuration
+export async function getSystemInfo(): Promise<SystemInfo> {
+  return await apiCall<SystemInfo>('/system');
 }
 
 // ============================================================================

@@ -131,6 +131,24 @@ async def lifespan(fastapi_app: FastAPI):  # pylint: disable=unused-argument
     logger = configure_logging(app_settings)
     logger.info("Starting MeetMemo API with configured logging...")
 
+    # Log the resolved hardware profile and ML configuration so operators can
+    # see what was auto-detected (or overridden) at a glance.
+    info = app_settings.system_info()
+    logger.info(
+        "Hardware: profile=%s (requested=%s), gpu=%s, vram=%s GB, device=%s | "
+        "whisper=%s, compute=%s, diarization=%s",
+        info["resolved_profile"],
+        info["hardware_profile_requested"],
+        info["gpu_name"] or "none",
+        info["vram_gb"] if info["vram_gb"] is not None else "n/a",
+        info["device"],
+        info["whisper_model_name"],
+        info["compute_type"],
+        info["pyannote_model_name"],
+    )
+    for warning in info["warnings"]:
+        logger.warning("Hardware config: %s", warning)
+
     # Startup
     try:
         # Ensure required directories exist
