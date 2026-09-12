@@ -7,10 +7,9 @@ import logging
 import os
 
 import aiofiles
-from fastapi import APIRouter, Depends, HTTPException
-
 from config import Settings, get_settings
 from dependencies import get_job_repository, get_summary_service
+from fastapi import APIRouter, Depends, HTTPException
 from models import SummarizeRequest, SummaryResponse, UpdateSummaryRequest
 from repositories.job_repository import JobRepository
 from services.summary_service import SummaryService

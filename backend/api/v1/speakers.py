@@ -7,10 +7,9 @@ import logging
 import os
 
 import aiofiles
-from fastapi import APIRouter, Depends, HTTPException
-
 from config import Settings, get_settings
 from dependencies import get_job_repository, get_speaker_service, get_summary_service
+from fastapi import APIRouter, Depends, HTTPException
 from models import (
     SpeakerIdentificationRequest,
     SpeakerIdentificationResponse,

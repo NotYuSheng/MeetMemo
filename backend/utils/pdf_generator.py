@@ -9,6 +9,7 @@ import re
 from datetime import datetime
 from io import BytesIO
 
+from config import Settings, get_settings
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
@@ -19,7 +20,6 @@ from reportlab.platypus.doctemplate import BaseDocTemplate, PageTemplate
 from reportlab.platypus.frames import Frame
 from svglib.svglib import svg2rlg
 
-from config import Settings, get_settings
 from utils.formatters import format_speaker_name, format_timestamp
 
 
