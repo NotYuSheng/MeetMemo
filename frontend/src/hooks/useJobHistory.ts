@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../services/api';
+import { normalizeTranscript } from '../utils/transcript';
 import type { RecentJob } from '../types/api';
 import type {
   HandleUpload,
@@ -40,8 +41,10 @@ export default function useJobHistory(
         created_at: job.created_at,
       }));
 
-      // Sort by most recent and limit to 5
-      const sortedJobs = jobsArray.slice(0, 5);
+      // Sort by most recent (newest created_at first) and limit to 5
+      const sortedJobs = jobsArray
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        .slice(0, 5);
       setRecentJobs(sortedJobs);
     } catch (err) {
       console.error('Failed to fetch recent jobs:', err);
@@ -79,18 +82,7 @@ export default function useJobHistory(
       // Try to fetch transcript
       try {
         const transcriptData = await api.getTranscript(job.uuid);
-        if (transcriptData.full_transcript && typeof transcriptData.full_transcript === 'string') {
-          try {
-            const parsed = JSON.parse(transcriptData.full_transcript);
-            setTranscriptWithColors({ segments: parsed });
-          } catch (e) {
-            console.error('Failed to parse transcript:', e);
-            setTranscriptWithColors(transcriptData);
-          }
-        } else {
-          setTranscriptWithColors(transcriptData);
-        }
-
+        setTranscriptWithColors(normalizeTranscript(transcriptData));
         setCurrentStep('transcript');
       } catch (err) {
         // Transcript not found - might be incomplete job

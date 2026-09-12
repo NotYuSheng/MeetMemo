@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import type { AxiosError } from 'axios';
-import type { Transcript, UploadResponse } from '../types/api';
+import * as api from '../services/api';
+import { normalizeTranscript } from '../utils/transcript';
+import type { UploadResponse } from '../types/api';
 import type {
   SetCurrentStep,
   SetError,
@@ -57,11 +59,10 @@ export default function useAudioRecording(
 
         // Check if this is a duplicate
         if (response.data.status_code === 200) {
-          // Duplicate - load existing transcript
-          const transcriptResponse = await axios.get<Transcript>(
-            `/api/v1/jobs/${newJobId}/transcript`
-          );
-          setTranscript(transcriptResponse.data);
+          // Duplicate - load existing transcript via the shared API layer,
+          // normalizing the full_transcript payload like every other load site.
+          const transcriptData = await api.getTranscript(newJobId);
+          setTranscript(normalizeTranscript(transcriptData));
           setCurrentStep('transcript');
           setProcessingProgress(100);
         } else {

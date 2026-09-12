@@ -164,44 +164,12 @@ export async function uploadAudio(
     formData.append('language', language);
   }
 
-  try {
-    console.log('API Request: POST /jobs (File upload)');
-
-    const response = await fetch(`${API_BASE_URL}/jobs`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      let errorData: { detail?: string } | null;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = null;
-      }
-
-      const errorCategory = categorizeError(response, new Error());
-      const error: ApiError = new Error(errorData?.detail || errorCategory.userMessage);
-      error.status = response.status;
-      error.category = errorCategory.type;
-      error.responseData = errorData;
-
-      logApiError('POST', '/jobs', error, errorData);
-      throw error;
-    }
-
-    console.log('API Response: POST /jobs - Success');
-    return (await response.json()) as UploadResponse;
-  } catch (err) {
-    const error = err as ApiError;
-    if (!error.category) {
-      const errorCategory = categorizeError(null, error);
-      error.category = errorCategory.type;
-      error.message = errorCategory.userMessage;
-      logApiError('POST', '/jobs', error);
-    }
-    throw error;
-  }
+  // Reuse the shared apiCall for error categorization + logging. The browser
+  // sets the multipart Content-Type (with boundary) automatically for FormData.
+  return await apiCall<UploadResponse>('/jobs', {
+    method: 'POST',
+    body: formData,
+  });
 }
 
 // Get all jobs

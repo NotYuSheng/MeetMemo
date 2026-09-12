@@ -70,7 +70,9 @@ export default function AudioPlayer({ jobId, onTimeUpdate, currentSegmentRef }: 
     setError(null);
   }, []);
 
-  // Toggle play/pause
+  // Toggle play/pause. isPlaying is driven authoritatively by the audio
+  // element's onPlay/onPause handlers, so we don't set it optimistically here
+  // (a rejected play() would otherwise leave isPlaying stuck true).
   const togglePlay = useCallback(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -81,7 +83,6 @@ export default function AudioPlayer({ jobId, onTimeUpdate, currentSegmentRef }: 
           setError('Playback failed. Please try again.');
         });
       }
-      setIsPlaying(!isPlaying);
     }
   }, [isPlaying]);
 

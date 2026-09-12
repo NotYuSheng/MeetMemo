@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import useAudioRecording from './useAudioRecording';
 import axios from 'axios';
+import * as api from '../services/api';
 
 vi.mock('axios', () => ({
   default: { post: vi.fn(), get: vi.fn() },
 }));
+vi.mock('../services/api');
 
 // Minimal MediaRecorder stand-in that lets tests drive the stop -> upload flow.
 const instances: FakeMediaRecorder[] = [];
@@ -94,7 +96,7 @@ describe('useAudioRecording', () => {
 
   it('loads the existing transcript when the recording is a duplicate (200)', async () => {
     vi.mocked(axios.post).mockResolvedValue({ data: { uuid: 'rec1', status_code: 200 } });
-    vi.mocked(axios.get).mockResolvedValue({ data: { segments: [] } });
+    vi.mocked(api.getTranscript).mockResolvedValue({ segments: [] });
     const { hook, setCurrentStep, setTranscript } = setup();
 
     await act(async () => {

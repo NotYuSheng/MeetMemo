@@ -42,12 +42,33 @@ describe('useJobHistory', () => {
     const { hook } = setup();
 
     await waitFor(() => expect(hook.result.current.recentJobs).toHaveLength(2));
-    expect(hook.result.current.recentJobs[0]).toEqual({
+    // Sorted newest-first, so u2 (Jan 2) comes before u1 (Jan 1).
+    expect(hook.result.current.recentJobs.map((j) => j.uuid)).toEqual(['u2', 'u1']);
+    expect(hook.result.current.recentJobs[1]).toEqual({
       uuid: 'u1',
       filename: 'a.mp3',
       status_code: 200,
       created_at: '2024-01-01',
     });
+  });
+
+  it('sorts recent jobs by created_at, newest first', async () => {
+    vi.mocked(api.getJobs).mockResolvedValue({
+      jobs: {
+        older: { file_name: 'older.mp3', status_code: 200, created_at: '2024-01-01T00:00:00Z' },
+        newer: { file_name: 'newer.mp3', status_code: 200, created_at: '2024-03-01T00:00:00Z' },
+        middle: { file_name: 'middle.mp3', status_code: 200, created_at: '2024-02-01T00:00:00Z' },
+      },
+    });
+
+    const { hook } = setup();
+
+    await waitFor(() => expect(hook.result.current.recentJobs).toHaveLength(3));
+    expect(hook.result.current.recentJobs.map((j) => j.filename)).toEqual([
+      'newer.mp3',
+      'middle.mp3',
+      'older.mp3',
+    ]);
   });
 
   it('loads a completed job by fetching and parsing its transcript', async () => {

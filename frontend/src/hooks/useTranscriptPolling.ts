@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import * as api from '../services/api';
+import { normalizeTranscript } from '../utils/transcript';
 import type { ApiError } from '../types/api';
 import type {
   AutoIdentifySpeakers,
@@ -144,20 +145,7 @@ export default function useTranscriptPolling(
           // (polling is already stopped, so we can't retry)
           try {
             const transcriptData = await api.getTranscript(uuid);
-            if (
-              transcriptData.full_transcript &&
-              typeof transcriptData.full_transcript === 'string'
-            ) {
-              try {
-                const parsed = JSON.parse(transcriptData.full_transcript);
-                setTranscriptWithColors({ segments: parsed });
-              } catch (e) {
-                console.error('Failed to parse transcript:', e);
-                setTranscriptWithColors(transcriptData);
-              }
-            } else {
-              setTranscriptWithColors(transcriptData);
-            }
+            setTranscriptWithColors(normalizeTranscript(transcriptData));
             setCurrentStep('transcript');
             if (setUploading) setUploading(false);
 

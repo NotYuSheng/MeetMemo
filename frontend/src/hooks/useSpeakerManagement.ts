@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as api from '../services/api';
+import { normalizeTranscript } from '../utils/transcript';
 import type { SpeakerMapping, SpeakerSuggestions, Transcript } from '../types/api';
 import type { SetError, SetTranscriptWithColors } from '../types/ui';
 
@@ -65,20 +66,7 @@ export default function useSpeakerManagement(
 
             // Reload transcript to reflect updated speaker names
             const transcriptData = await api.getTranscript(uuid);
-            if (
-              transcriptData.full_transcript &&
-              typeof transcriptData.full_transcript === 'string'
-            ) {
-              try {
-                const parsed = JSON.parse(transcriptData.full_transcript);
-                setTranscriptWithColors({ segments: parsed });
-              } catch (e) {
-                console.error('Failed to parse transcript:', e);
-                setTranscriptWithColors(transcriptData);
-              }
-            } else {
-              setTranscriptWithColors(transcriptData);
-            }
+            setTranscriptWithColors(normalizeTranscript(transcriptData));
           } catch (err) {
             console.error('Failed to auto-apply speaker names:', err);
           }
