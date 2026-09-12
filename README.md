@@ -61,6 +61,26 @@ A meeting transcription application that runs entirely offline. It converts spee
 - RAM: 8GB (16GB+ recommended)
 - Storage: 10GB (for models and data)
 
+### Hardware profiles
+
+MeetMemo fits itself to your machine via the `HARDWARE_PROFILE` setting. Leave it
+at `auto` (the default) and it detects your GPU VRAM and picks a profile at
+startup; the choice is logged and exposed read-only at `GET /api/v1/system` (and
+shown in the app footer). Any individual setting (e.g. `WHISPER_MODEL_NAME`)
+always overrides the profile.
+
+| Profile | Target VRAM | Whisper | Precision | Diarization |
+|---------|-------------|---------|-----------|-------------|
+| `cpu` | none (CPU) | base | int8 | speaker-diarization-3.1 |
+| `low` | ~4 GB | small | int8_float16 | speaker-diarization-3.1 |
+| `balanced` | ~8 GB | turbo | float16 | speaker-diarization-3.1 |
+| `high` | 12 GB+ | large-v3 | float16 | speaker-diarization-community-1 |
+| `custom` | — | (your env vars only) | | |
+
+> The `high` profile uses **pyannote community-1**, which is more accurate but
+> needs ~12 GB VRAM and a one-time license acceptance on Hugging Face. On smaller
+> GPUs, stick with `balanced` (or let `auto` decide).
+
 ### Installation
 
 **1. Clone and setup:**

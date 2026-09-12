@@ -7,9 +7,16 @@ with validation, defaults, and computed properties.
 from datetime import timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
-import torch
+from hardware import (
+    PROFILE_MANAGED_FIELDS,
+    PROFILES,
+    PYANNOTE_COMMUNITY_1,
+    detect_gpu_name,
+    detect_vram_gb,
+    resolve_profile,
+)
+from pydantic import PrivateAttr
 from pydantic_settings import BaseSettings
 
 
@@ -22,8 +29,14 @@ class Settings(BaseSettings):
     # LLM Configuration
     llm_api_url: str
     llm_model_name: str
-    llm_api_key: Optional[str] = None
+    llm_api_key: str | None = None
     llm_timeout: float = 60.0
+
+    # Hardware Configuration
+    # Named profile that bundles hardware-appropriate ML defaults.
+    # Options: auto (detect VRAM), cpu, low, balanced, high, custom.
+    # Any field explicitly set below (or via env) overrides the profile.
+    hardware_profile: str = "auto"
 
     # ML Models Configuration
     hf_token: str
@@ -52,7 +65,12 @@ class Settings(BaseSettings):
     ]
 
     # Processing Configuration
-    device: Optional[str] = None  # Will be computed if not set
+    device: str | None = None  # Will be computed if not set
+
+    # Detected hardware, populated during __init__ (not read from env)
+    _vram_gb: float | None = PrivateAttr(default=None)
+    _gpu_name: str | None = PrivateAttr(default=None)
+    _resolved_profile: str = PrivateAttr(default="cpu")
 
     # Cleanup & Maintenance
     cleanup_interval_hours: int = 1
@@ -80,12 +98,52 @@ class Settings(BaseSettings):
         extra = "ignore"  # Ignore extra fields in .env
 
     def __init__(self, **kwargs):
-        """Initialize settings with computed device if not provided."""
+        """Initialize settings, resolving the hardware profile and device.
+
+        Precedence for the profile-managed fields (whisper_model_name,
+        compute_type, pyannote_model_name, device): an explicitly-set value
+        (env var or constructor arg) always wins over the resolved profile,
+        which in turn wins over the base default.
+        """
         super().__init__(**kwargs)
 
-        # Auto-detect device if not explicitly set
-        if self.device is None:
-            self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        # Capture which fields the user set explicitly *before* we mutate any,
+        # so profile application never clobbers an explicit choice.
+        user_set = set(self.model_fields_set)
+
+        # Detect hardware and resolve "auto" (or an unknown value) to a concrete
+        # profile based on available VRAM.
+        self._vram_gb = detect_vram_gb()
+        self._gpu_name = detect_gpu_name()
+        self._resolved_profile = resolve_profile(self.hardware_profile, self._vram_gb)
+
+        # A GPU is "present" only when detection returned a real, positive VRAM
+        # figure. Using an explicit check (not truthiness) keeps a genuine 0.0 /
+        # sub-GB reading from being mistaken for "no GPU".
+        has_gpu = self._vram_gb is not None and self._vram_gb > 0
+
+        # Apply the profile's defaults for any field the user did not set.
+        profile = PROFILES.get(self._resolved_profile)
+        if profile is not None:
+            for field in PROFILE_MANAGED_FIELDS:
+                if field not in user_set:
+                    setattr(self, field, getattr(profile, field))
+
+        # Device fallbacks (only when the user did not pin a device):
+        if "device" not in user_set:
+            if self.device is None:
+                self.device = "cuda:0" if has_gpu else "cpu"
+            # A CUDA device with no CUDA GPU available downgrades to CPU so the
+            # app still starts instead of failing at model load.
+            if str(self.device).startswith("cuda") and not has_gpu:
+                self.device = "cpu"
+
+        # If we end up on CPU without an explicitly-chosen precision, force a
+        # CPU-appropriate compute type. This matters when a GPU profile is forced
+        # on a CPU-only host: the device is downgraded above, but the profile's
+        # float16 would otherwise remain (float16 is not usable on CPU).
+        if str(self.device).startswith("cpu") and "compute_type" not in user_set:
+            self.compute_type = "int8"
 
     @property
     def timezone(self) -> timezone:
@@ -155,8 +213,60 @@ class Settings(BaseSettings):
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
 
+    @property
+    def resolved_profile(self) -> str:
+        """The concrete hardware profile in effect (never 'auto')."""
+        return self._resolved_profile
 
-@lru_cache()
+    @property
+    def detected_vram_gb(self) -> float | None:
+        """Detected VRAM of the default GPU in GiB, or None on CPU-only hosts."""
+        return self._vram_gb
+
+    @property
+    def detected_gpu_name(self) -> str | None:
+        """Detected default GPU name, or None on CPU-only hosts."""
+        return self._gpu_name
+
+    def system_info(self) -> dict:
+        """
+        Summarize detected hardware and the resolved ML configuration.
+
+        Returns:
+            dict: Hardware/config summary plus any fit warnings, suitable for
+            logging and for the read-only /system endpoint.
+        """
+        warnings: list[str] = []
+        has_gpu = self._vram_gb is not None and self._vram_gb > 0
+
+        if str(self.device).startswith("cuda") and not has_gpu:
+            warnings.append(
+                "Configured for CUDA but no CUDA GPU was detected; falling back to CPU."
+            )
+        if (
+            self.pyannote_model_name == PYANNOTE_COMMUNITY_1
+            and has_gpu
+            and self._vram_gb < 12
+        ):
+            warnings.append(
+                "community-1 diarization is memory-hungry (~12 GB VRAM recommended); "
+                f"detected {self._vram_gb:.1f} GB. Consider the 'balanced' profile if you hit OOM."
+            )
+
+        return {
+            "hardware_profile_requested": self.hardware_profile,
+            "resolved_profile": self._resolved_profile,
+            "gpu_name": self._gpu_name,
+            "vram_gb": round(self._vram_gb, 1) if has_gpu else None,
+            "device": self.device,
+            "whisper_model_name": self.whisper_model_name,
+            "compute_type": self.compute_type,
+            "pyannote_model_name": self.pyannote_model_name,
+            "warnings": warnings,
+        }
+
+
+@lru_cache
 def get_settings() -> Settings:
     """
     Get cached settings instance.

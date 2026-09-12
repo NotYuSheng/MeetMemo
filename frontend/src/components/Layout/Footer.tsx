@@ -1,4 +1,5 @@
 import { Container, Row, Col } from '@govtechsg/sgds-react';
+import SystemInfoBar from './SystemInfoBar';
 
 export default function Footer() {
   return (
@@ -9,6 +10,7 @@ export default function Footer() {
             <small>
               MeetMemo &copy; 2025 - AI-Powered Meeting Transcription with Speaker Diarization
             </small>
+            <SystemInfoBar />
           </Col>
         </Row>
       </Container>

@@ -79,6 +79,19 @@ export type SelectedFile = File | { name: string } | null;
 /** The current workflow step shown in the UI. */
 export type WorkflowStep = 'upload' | 'processing' | 'transcript' | 'summary';
 
+/** Detected hardware + resolved ML configuration from the backend /system endpoint. */
+export interface SystemInfo {
+  hardware_profile_requested: string;
+  resolved_profile: string;
+  gpu_name: string | null;
+  vram_gb: number | null;
+  device: string;
+  whisper_model_name: string;
+  compute_type: string;
+  pyannote_model_name: string;
+  warnings: string[];
+}
+
 /** Error thrown by the API layer, augmented with response metadata. */
 export interface ApiError extends Error {
   status?: number;
