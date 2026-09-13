@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     llm_model_name: str
     llm_api_key: str | None = None
     llm_timeout: float = 60.0
+    # Ask the LLM for a JSON object via response_format on structured requests
+    # (e.g. speaker identification). Most OpenAI-compatible servers support it;
+    # set to false if your server rejects the field. The response is always
+    # parsed defensively regardless, so disabling this only removes the hint.
+    llm_json_mode: bool = True
 
     # Hardware Configuration
     # Named profile that bundles hardware-appropriate ML defaults.
