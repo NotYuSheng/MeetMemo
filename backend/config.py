@@ -17,7 +17,7 @@ from hardware import (
     resolve_profile,
 )
 from pydantic import PrivateAttr
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -91,11 +91,11 @@ class Settings(BaseSettings):
     log_backup_count: int = 5  # Keep 5 backup files
     log_to_console: bool = True  # Also log to stdout/stderr
 
-    class Config:
-        """Pydantic configuration."""
-        env_file = ".env"
-        case_sensitive = False
-        extra = "ignore"  # Ignore extra fields in .env
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",  # Ignore extra fields in .env
+    )
 
     def __init__(self, **kwargs):
         """Initialize settings, resolving the hardware profile and device.
