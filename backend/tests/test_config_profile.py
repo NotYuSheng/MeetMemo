@@ -1,9 +1,10 @@
 """
 Tests for hardware-profile application in Settings.
 
-These require the full backend dependencies (pydantic-settings, torch). They are
-skipped automatically where those are unavailable so the torch-free
-test_hardware.py suite can still run standalone.
+These need pydantic-settings (skipped automatically if unavailable so the
+test_hardware.py suite can still run standalone). They do NOT need torch: the
+detection helpers are monkeypatched, so the real torch/CUDA path never runs and
+these tests exercise only the pure profile-resolution logic in config.py.
 
 Note: the detection helpers are patched on the ``config`` namespace
 (``config.detect_vram_gb``), not ``hardware.detect_vram_gb``. config.py does
@@ -16,7 +17,6 @@ from unittest import mock
 import pytest
 
 pytest.importorskip("pydantic_settings")
-pytest.importorskip("torch")
 
 import hardware
 

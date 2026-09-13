@@ -1,2 +1,17 @@
-# Backend development / test dependencies (installed on top of requirements.txt)
+# Backend test dependencies.
+#
+# This is a *lean* set: the light-weight packages the unit tests import at
+# collection/run time, pinned to match requirements.txt. It deliberately does
+# NOT pull the heavy ML stack (faster-whisper, pyannote.audio, speechbrain and
+# their torch dependency) from requirements.txt — the tests exercise the
+# torch-free profile logic and pure helpers, and hardware.py imports torch
+# lazily with a graceful fallback. Installing only this keeps CI fast.
+#
+# If a test is added that needs the full ML stack, install requirements.txt
+# alongside this file for that job.
 pytest>=8.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+httpx==0.27.0
+aiofiles==23.2.1
+fastapi==0.110.1
