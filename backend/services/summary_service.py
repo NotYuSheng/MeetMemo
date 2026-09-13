@@ -268,6 +268,12 @@ The recording was too brief to generate a detailed meeting summary."""
             ],
         }
 
+        # Request a JSON object where the serving stack supports it. Servers
+        # that ignore the field still work (the response is parsed defensively
+        # below); the toggle exists for servers that reject unknown fields.
+        if self.settings.llm_json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
         try:
             headers = {"Content-Type": "application/json"}
             if self.settings.llm_api_key:
