@@ -25,6 +25,70 @@ LANGUAGE_NAMES = {
 }
 
 
+def _extract_speaker_mapping(content: str) -> Optional[dict]:
+    """
+    Extract a speaker->name mapping from an LLM response.
+
+    LLMs do not reliably return a bare JSON object: the mapping may be fenced in
+    a markdown code block, or embedded in surrounding prose. This tolerantly
+    recovers the first valid JSON object and validates it is a flat mapping of
+    string labels to string names.
+
+    Args:
+        content: Raw assistant message content.
+
+    Returns:
+        A dict of speaker label -> suggested name, or None if no valid mapping
+        could be parsed.
+    """
+    if not content:
+        return None
+
+    candidates = []
+
+    # 1) Fenced code block (```json ... ``` or ``` ... ```), if present.
+    if "```" in content:
+        fenced = content.split("```", 2)
+        if len(fenced) >= 2:
+            block = fenced[1]
+            if block.lstrip().lower().startswith("json"):
+                block = block.lstrip()[len("json"):]
+            candidates.append(block.strip())
+
+    # 2) The whole (stripped) string.
+    candidates.append(content.strip())
+
+    # 3) Every balanced {...} object found in the text, in order. Scanning all
+    #    of them (not just the first) means a leading non-mapping object does
+    #    not hide a valid mapping that appears later in the prose.
+    depth = 0
+    obj_start = -1
+    for i, ch in enumerate(content):
+        if ch == "{":
+            if depth == 0:
+                obj_start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and obj_start != -1:
+                candidates.append(content[obj_start:i + 1])
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            parsed = json.loads(candidate)
+        except (ValueError, TypeError):
+            continue
+        # Only accept a flat mapping of string -> string.
+        if isinstance(parsed, dict) and parsed and all(
+            isinstance(k, str) and isinstance(v, str) for k, v in parsed.items()
+        ):
+            return parsed
+
+    return None
+
+
 class SummaryService:
     """Service for LLM-based summarization and speaker identification."""
 
@@ -219,14 +283,16 @@ The recording was too brief to generate a detailed meeting summary."""
             data = response.json()
             content = data["choices"][0]["message"]["content"].strip()
 
-            # Try to parse JSON from response
-            # Extract JSON from markdown code blocks if present
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-
-            suggestions = json.loads(content)
+            suggestions = _extract_speaker_mapping(content)
+            if suggestions is None:
+                logger.error(
+                    "Speaker identification could not parse a speaker mapping from LLM output"
+                )
+                logger.debug("Unparseable speaker-identification content: %r", content)
+                return {
+                    "status": "error",
+                    "message": "Could not parse speaker suggestions from the model response."
+                }
             return {"status": "success", "suggestions": suggestions}
 
         except Exception as e:  # pylint: disable=broad-exception-caught
